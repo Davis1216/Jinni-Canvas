@@ -1,0 +1,24 @@
+{
+  "id": "a5eb8d0dd9aa4017918ccdec2aa456e3",
+  "title": "门店设计",
+  "icon": "🧩",
+  "kind": "classic",
+  "owner": "",
+  "color": "",
+  "pinned": false,
+  "project": "ff06ee18985d4fbfafa5bb8558d023b3",
+  "created_at": 1784101055493,
+  "updated_at": 1784101095837,
+  "nodes": [],
+  "connections": [],
+  "viewport": {
+    "x": 0,
+    "y": 0,
+    "scale": 1
+  },
+  "board_x": -491.0,
+  "board_y": -519.0,
+  "logs": [],
+  "settings": {},
+  "deleted_at": 1784101095837
+}

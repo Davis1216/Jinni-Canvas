@@ -1,0 +1,1365 @@
+{
+  "id": "760d2cc651b94fd798488ac9389d24e4",
+  "title": "产品白底精修抠图",
+  "icon": "🧩",
+  "kind": "classic",
+  "owner": "",
+  "color": "",
+  "pinned": false,
+  "project": "5d517893c542413d82c04124039015ae",
+  "created_at": 1783583921098,
+  "updated_at": 1784018055953,
+  "nodes": [
+    {
+      "id": "img_f43a7077f7fa38_1783583923227",
+      "type": "image",
+      "x": 56.90371035444355,
+      "y": 259.08932110271326,
+      "url": "/assets/input/ai_ref_02487b75b122.jpg",
+      "name": "ae53ff7b7c6dc99ed88a189071a76a1d.jpg",
+      "primaryReference": false,
+      "mediaKind": "image",
+      "_naturalSizeLoading": false,
+      "natural_w": 6000,
+      "natural_h": 4000
+    },
+    {
+      "id": "prompt_322034830a649_1783583925993",
+      "type": "prompt",
+      "x": 36.74361992123477,
+      "y": 629.1218099606174,
+      "text": "{argument name=\"subject\" default=\"product\"}\n\nStrictly use the uploaded real product image as the ONLY source of truth.\n\nThis is an image-to-image commercial product retouching task, NOT a redesign or recreation.\n\nReference fidelity has absolute priority over aesthetics.\n\nPreserve exactly:\n- geometry\n- proportions\n- viewpoint\n- camera angle\n- orientation\n- position\n- scale\n- materials\n- textures\n- finishes\n- colors\n- logos\n- labels\n- typography\n- engravings\n- surface details\n- edges\n- contours\n- openings\n- buttons\n- ports\n- screws\n- seams\n- all visible structures\n- every visible manufacturing detail\n\nNever:\n- redesign\n- reconstruct\n- hallucinate\n- invent unseen geometry\n- generate hidden structures\n- rotate\n- change viewpoint\n- change perspective\n- change proportions\n- beautify the design\n- simplify details\n- replace components\n- add accessories\n- create a different product model\n- modify any visible product features\n\nOnly remove objects that are NOT part of the actual product.\n\nRemove all external objects, including but not limited to:\n- hands\n- fingers\n- people\n- arms\n- gloves\n- supports\n- holders\n- display stands\n- mounting fixtures\n- clips\n- wires\n- cables\n- strings\n- hooks\n- tape\n- labels not attached to the product\n- packaging\n- protective films\n- foam\n- plastic bags\n- boxes\n- backgrounds\n- tables\n- shelves\n- walls\n- floors\n- reflections of surrounding objects\n- dust\n- dirt\n- fingerprints\n- stains\n- scratches caused by photography\n- watermarks\n- camera equipment\n- props\n- any unrelated objects\n\nDo not allow removed objects to influence the product shape.\n\nDo not fill removed areas with fabricated product geometry.\n\nOnly reconstruct regions that are directly supported by the visible reference image.\n\nNever infer invisible structures.\n\nCommercial product retouching only.\n\n{argument name=\"background\"\ndefault=\"Pure solid #FFFFFF background. Perfectly isolated product. No cast shadows. No floor shadows. No reflections. No props. Clean cutout with crisp edges. Maintain subtle natural edge separation so white products remain clearly distinguishable from the white background without artificial outlines.\"}\n\n{argument name=\"lighting\"\ndefault=\"Neutral professional commercial studio lighting. Soft and even illumination. Accurate material appearance. Preserve true colors. High dynamic range. Clean highlights without overexposure. Maintain natural contrast between the product and the white background.\"}\n\n{argument name=\"quality\"\ndefault=\"Ultra high-end e-commerce product retouching. Catalog-quality white background product image. Maximum reference fidelity. Pixel-accurate reconstruction from the uploaded image. Extremely sharp details. Professional commercial retouching. No artistic interpretation.\"}\n\nPriority Rules:\n1. Preserve the real product exactly as photographed.\n2. Remove only non-product objects.\n3. Never alter the product in order to improve aesthetics.\n4. If there is any conflict between visual accuracy and visual beauty, always choose visual accuracy.\n5. Every visible product detail has higher priority than background cleanup."
+    },
+    {
+      "id": "gen_b41dd9ee646178_1783583936687",
+      "type": "generator",
+      "x": 439.0843545967172,
+      "y": 304.9007561436673,
+      "apiProvider": "custom-api",
+      "model": "gpt-image-2",
+      "ratio": "square",
+      "resolution": "1k",
+      "customRatio": "",
+      "customSize": "",
+      "customRatioWidth": "",
+      "customRatioHeight": "",
+      "customWidth": "",
+      "customHeight": "",
+      "quality": "auto",
+      "temperature": 0,
+      "inputs": [
+        "grp_8e28af4cf927b_1783583946954:prompts",
+        "grp_8e28af4cf927b_1783583946954:img_f43a7077f7fa38_1783583923227"
+      ],
+      "_apiResolutionUserSet": false,
+      "generatedOutputs": [
+        "/assets/output/online_934bf2133b.png"
+      ]
+    },
+    {
+      "id": "grp_8e28af4cf927b_1783583946954",
+      "type": "group",
+      "x": 12.743619921234767,
+      "y": 161.12180996061738,
+      "w": 358,
+      "h": 738,
+      "items": [
+        "prompt_322034830a649_1783583925993",
+        "img_f43a7077f7fa38_1783583923227"
+      ]
+    },
+    {
+      "id": "out_4a354bd49cdac_1783583948216",
+      "type": "output",
+      "x": 920.0173655182685,
+      "y": 315.7490536546917,
+      "images": [
+        {
+          "url": "/assets/output/online_934bf2133b.png",
+          "viewed": true,
+          "runMs": 69538,
+          "run": {
+            "nodeType": "generator",
+            "node": {
+              "id": "gen_b41dd9ee646178_1783583936687",
+              "type": "generator",
+              "x": 439.0843545967172,
+              "y": 304.9007561436673,
+              "apiProvider": "custom-api",
+              "model": "gpt-image-2",
+              "ratio": "square",
+              "resolution": "1k",
+              "customRatio": "",
+              "customSize": "",
+              "customRatioWidth": "",
+              "customRatioHeight": "",
+              "customWidth": "",
+              "customHeight": "",
+              "quality": "auto",
+              "temperature": 0,
+              "_apiResolutionUserSet": false,
+              "generatedOutputs": [
+                "/assets/output/online_bdf52016bc.png"
+              ]
+            },
+            "prompt": "{argument name=\"subject\" default=\"product\"}\n\nStrictly use the uploaded real product image as the ONLY source of truth.\n\nThis is an image-to-image commercial product retouching task, NOT a redesign or recreation.\n\nReference fidelity has absolute priority over aesthetics.\n\nPreserve exactly:\n- geometry\n- proportions\n- viewpoint\n- camera angle\n- orientation\n- position\n- scale\n- materials\n- textures\n- finishes\n- colors\n- logos\n- labels\n- typography\n- engravings\n- surface details\n- edges\n- contours\n- openings\n- buttons\n- ports\n- screws\n- seams\n- all visible structures\n- every visible manufacturing detail\n\nNever:\n- redesign\n- reconstruct\n- hallucinate\n- invent unseen geometry\n- generate hidden structures\n- rotate\n- change viewpoint\n- change perspective\n- change proportions\n- beautify the design\n- simplify details\n- replace components\n- add accessories\n- create a different product model\n- modify any visible product features\n\nOnly remove objects that are NOT part of the actual product.\n\nRemove all external objects, including but not limited to:\n- hands\n- fingers\n- people\n- arms\n- gloves\n- supports\n- holders\n- display stands\n- mounting fixtures\n- clips\n- wires\n- cables\n- strings\n- hooks\n- tape\n- labels not attached to the product\n- packaging\n- protective films\n- foam\n- plastic bags\n- boxes\n- backgrounds\n- tables\n- shelves\n- walls\n- floors\n- reflections of surrounding objects\n- dust\n- dirt\n- fingerprints\n- stains\n- scratches caused by photography\n- watermarks\n- camera equipment\n- props\n- any unrelated objects\n\nDo not allow removed objects to influence the product shape.\n\nDo not fill removed areas with fabricated product geometry.\n\nOnly reconstruct regions that are directly supported by the visible reference image.\n\nNever infer invisible structures.\n\nCommercial product retouching only.\n\n{argument name=\"background\"\ndefault=\"Pure solid #FFFFFF background. Perfectly isolated product. No cast shadows. No floor shadows. No reflections. No props. Clean cutout with crisp edges. Maintain subtle natural edge separation so white products remain clearly distinguishable from the white background without artificial outlines.\"}\n\n{argument name=\"lighting\"\ndefault=\"Neutral professional commercial studio lighting. Soft and even illumination. Accurate material appearance. Preserve true colors. High dynamic range. Clean highlights without overexposure. Maintain natural contrast between the product and the white background.\"}\n\n{argument name=\"quality\"\ndefault=\"Ultra high-end e-commerce product retouching. Catalog-quality white background product image. Maximum reference fidelity. Pixel-accurate reconstruction from the uploaded image. Extremely sharp details. Professional commercial retouching. No artistic interpretation.\"}\n\nPriority Rules:\n1. Preserve the real product exactly as photographed.\n2. Remove only non-product objects.\n3. Never alter the product in order to improve aesthetics.\n4. If there is any conflict between visual accuracy and visual beauty, always choose visual accuracy.\n5. Every visible product detail has higher priority than background cleanup.",
+            "refs": [
+              {
+                "url": "/assets/input/ai_ref_02487b75b122.jpg",
+                "name": "ae53ff7b7c6dc99ed88a189071a76a1d.jpg"
+              }
+            ],
+            "request": {
+              "task_id": "",
+              "request_id": "chatcmpl-1783591262024",
+              "provider_id": "custom-api",
+              "backend": "",
+              "prompt_id": "",
+              "workflow_json": "",
+              "seed": ""
+            }
+          }
+        }
+      ],
+      "w": 430,
+      "h": 433,
+      "_pending": [],
+      "imageComparisons": {
+        "/assets/output/online_934bf2133b.png": {
+          "url": "/assets/input/ai_ref_02487b75b122.jpg",
+          "name": "ae53ff7b7c6dc99ed88a189071a76a1d.jpg"
+        }
+      }
+    },
+    {
+      "id": "group_4e206bb4405028_1783585150161",
+      "type": "group",
+      "x": 11.460265893358724,
+      "y": 992.6570068432924,
+      "w": 358,
+      "h": 738,
+      "items": [
+        "prompt_c92f51c5cef9b_1783585150161",
+        "image_252ee827859188_1783585150161"
+      ]
+    },
+    {
+      "id": "prompt_c92f51c5cef9b_1783585150161",
+      "type": "prompt",
+      "x": 35.460265893358724,
+      "y": 1460.6570068432923,
+      "text": "{argument name=\"subject\" default=\"product\"}\n\nStrictly use the uploaded real product image as the ONLY source of truth.\n\nThis is an image-to-image commercial product retouching task, NOT a redesign or recreation.\n\nReference fidelity has absolute priority over aesthetics.\n\nPreserve exactly:\n- geometry\n- proportions\n- viewpoint\n- camera angle\n- orientation\n- position\n- scale\n- materials\n- textures\n- finishes\n- colors\n- logos\n- labels\n- typography\n- engravings\n- surface details\n- edges\n- contours\n- openings\n- buttons\n- ports\n- screws\n- seams\n- all visible structures\n- every visible manufacturing detail\n\nNever:\n- redesign\n- reconstruct\n- hallucinate\n- invent unseen geometry\n- generate hidden structures\n- rotate\n- change viewpoint\n- change perspective\n- change proportions\n- beautify the design\n- simplify details\n- replace components\n- add accessories\n- create a different product model\n- modify any visible product features\n\nOnly remove objects that are NOT part of the actual product.\n\nRemove all external objects, including but not limited to:\n- hands\n- fingers\n- people\n- arms\n- gloves\n- supports\n- holders\n- display stands\n- mounting fixtures\n- clips\n- wires\n- cables\n- strings\n- hooks\n- tape\n- labels not attached to the product\n- packaging\n- protective films\n- foam\n- plastic bags\n- boxes\n- backgrounds\n- tables\n- shelves\n- walls\n- floors\n- reflections of surrounding objects\n- dust\n- dirt\n- fingerprints\n- stains\n- scratches caused by photography\n- watermarks\n- camera equipment\n- props\n- any unrelated objects\n\nDo not allow removed objects to influence the product shape.\n\nDo not fill removed areas with fabricated product geometry.\n\nOnly reconstruct regions that are directly supported by the visible reference image.\n\nNever infer invisible structures.\n\nCommercial product retouching only.\n\n{argument name=\"background\"\ndefault=\"Pure solid #FFFFFF background. Perfectly isolated product. No cast shadows. No floor shadows. No reflections. No props. Clean cutout with crisp edges. Maintain subtle natural edge separation so white products remain clearly distinguishable from the white background without artificial outlines.\"}\n\n{argument name=\"lighting\"\ndefault=\"Neutral professional commercial studio lighting. Soft and even illumination. Accurate material appearance. Preserve true colors. High dynamic range. Clean highlights without overexposure. Maintain natural contrast between the product and the white background.\"}\n\n{argument name=\"quality\"\ndefault=\"Ultra high-end e-commerce product retouching. Catalog-quality white background product image. Maximum reference fidelity. Pixel-accurate reconstruction from the uploaded image. Extremely sharp details. Professional commercial retouching. No artistic interpretation.\"}\n\nPriority Rules:\n1. Preserve the real product exactly as photographed.\n2. Remove only non-product objects.\n3. Never alter the product in order to improve aesthetics.\n4. If there is any conflict between visual accuracy and visual beauty, always choose visual accuracy.\n5. Every visible product detail has higher priority than background cleanup."
+    },
+    {
+      "id": "image_252ee827859188_1783585150161",
+      "type": "image",
+      "x": 55.6203563265675,
+      "y": 1090.6245179853881,
+      "url": "/assets/input/ai_ref_53c3ab8f8a0b.jpg",
+      "name": "ae53ff7b7c6dc99ed88a189071a76a1d.jpg",
+      "primaryReference": false,
+      "mediaKind": "image",
+      "_naturalSizeLoading": false,
+      "natural_w": 6000,
+      "natural_h": 4000
+    },
+    {
+      "id": "generator_36f81237f405b8_1783585150161",
+      "type": "generator",
+      "x": 437.80100056884123,
+      "y": 1136.435953026342,
+      "apiProvider": "custom-api",
+      "model": "gpt-image-2",
+      "ratio": "story",
+      "resolution": "1k",
+      "customRatio": "",
+      "customSize": "",
+      "customRatioWidth": "",
+      "customRatioHeight": "",
+      "customWidth": "",
+      "customHeight": "",
+      "quality": "auto",
+      "temperature": 0,
+      "inputs": [
+        "group_4e206bb4405028_1783585150161:prompts",
+        "group_4e206bb4405028_1783585150161:image_252ee827859188_1783585150161"
+      ],
+      "_apiResolutionUserSet": false,
+      "generatedOutputs": [
+        "/assets/output/online_48a05d88d0.png"
+      ]
+    },
+    {
+      "id": "output_1e06790c3ceb7_1783585150161",
+      "type": "output",
+      "x": 918.7340114903924,
+      "y": 1147.2842505373667,
+      "images": [
+        {
+          "url": "/assets/output/online_48a05d88d0.png",
+          "viewed": true,
+          "runMs": 46344,
+          "run": {
+            "nodeType": "generator",
+            "node": {
+              "id": "generator_36f81237f405b8_1783585150161",
+              "type": "generator",
+              "x": 437.80100056884123,
+              "y": 1136.435953026342,
+              "apiProvider": "custom-api",
+              "model": "gpt-image-2",
+              "ratio": "story",
+              "resolution": "1k",
+              "customRatio": "",
+              "customSize": "",
+              "customRatioWidth": "",
+              "customRatioHeight": "",
+              "customWidth": "",
+              "customHeight": "",
+              "quality": "auto",
+              "temperature": 0,
+              "_apiResolutionUserSet": false,
+              "generatedOutputs": [
+                "/assets/output/online_5f46ff369f.png"
+              ]
+            },
+            "prompt": "{argument name=\"subject\" default=\"product\"}\n\nStrictly use the uploaded real product image as the ONLY source of truth.\n\nThis is an image-to-image commercial product retouching task, NOT a redesign or recreation.\n\nReference fidelity has absolute priority over aesthetics.\n\nPreserve exactly:\n- geometry\n- proportions\n- viewpoint\n- camera angle\n- orientation\n- position\n- scale\n- materials\n- textures\n- finishes\n- colors\n- logos\n- labels\n- typography\n- engravings\n- surface details\n- edges\n- contours\n- openings\n- buttons\n- ports\n- screws\n- seams\n- all visible structures\n- every visible manufacturing detail\n\nNever:\n- redesign\n- reconstruct\n- hallucinate\n- invent unseen geometry\n- generate hidden structures\n- rotate\n- change viewpoint\n- change perspective\n- change proportions\n- beautify the design\n- simplify details\n- replace components\n- add accessories\n- create a different product model\n- modify any visible product features\n\nOnly remove objects that are NOT part of the actual product.\n\nRemove all external objects, including but not limited to:\n- hands\n- fingers\n- people\n- arms\n- gloves\n- supports\n- holders\n- display stands\n- mounting fixtures\n- clips\n- wires\n- cables\n- strings\n- hooks\n- tape\n- labels not attached to the product\n- packaging\n- protective films\n- foam\n- plastic bags\n- boxes\n- backgrounds\n- tables\n- shelves\n- walls\n- floors\n- reflections of surrounding objects\n- dust\n- dirt\n- fingerprints\n- stains\n- scratches caused by photography\n- watermarks\n- camera equipment\n- props\n- any unrelated objects\n\nDo not allow removed objects to influence the product shape.\n\nDo not fill removed areas with fabricated product geometry.\n\nOnly reconstruct regions that are directly supported by the visible reference image.\n\nNever infer invisible structures.\n\nCommercial product retouching only.\n\n{argument name=\"background\"\ndefault=\"Pure solid #FFFFFF background. Perfectly isolated product. No cast shadows. No floor shadows. No reflections. No props. Clean cutout with crisp edges. Maintain subtle natural edge separation so white products remain clearly distinguishable from the white background without artificial outlines.\"}\n\n{argument name=\"lighting\"\ndefault=\"Neutral professional commercial studio lighting. Soft and even illumination. Accurate material appearance. Preserve true colors. High dynamic range. Clean highlights without overexposure. Maintain natural contrast between the product and the white background.\"}\n\n{argument name=\"quality\"\ndefault=\"Ultra high-end e-commerce product retouching. Catalog-quality white background product image. Maximum reference fidelity. Pixel-accurate reconstruction from the uploaded image. Extremely sharp details. Professional commercial retouching. No artistic interpretation.\"}\n\nPriority Rules:\n1. Preserve the real product exactly as photographed.\n2. Remove only non-product objects.\n3. Never alter the product in order to improve aesthetics.\n4. If there is any conflict between visual accuracy and visual beauty, always choose visual accuracy.\n5. Every visible product detail has higher priority than background cleanup.",
+            "refs": [
+              {
+                "url": "/assets/input/ai_ref_53c3ab8f8a0b.jpg",
+                "name": "ae53ff7b7c6dc99ed88a189071a76a1d.jpg"
+              }
+            ],
+            "request": {
+              "task_id": "",
+              "request_id": "chatcmpl-1783591238172",
+              "provider_id": "custom-api",
+              "backend": "",
+              "prompt_id": "",
+              "workflow_json": "",
+              "seed": ""
+            }
+          }
+        }
+      ],
+      "w": 430,
+      "h": 433,
+      "_pending": [],
+      "imageComparisons": {
+        "/assets/output/online_48a05d88d0.png": {
+          "url": "/assets/input/ai_ref_53c3ab8f8a0b.jpg",
+          "name": "ae53ff7b7c6dc99ed88a189071a76a1d.jpg"
+        }
+      }
+    },
+    {
+      "id": "group_f8d3da2c61bc48_1783585152704",
+      "type": "group",
+      "x": 17.97132665465665,
+      "y": 1858.6280880959212,
+      "w": 358,
+      "h": 738,
+      "items": [
+        "prompt_c40c8d5ff9a83_1783585152704",
+        "image_b4e911887fd578_1783585152704"
+      ]
+    },
+    {
+      "id": "prompt_c40c8d5ff9a83_1783585152704",
+      "type": "prompt",
+      "x": 41.97132665465665,
+      "y": 2326.628088095921,
+      "text": "{argument name=\"subject\" default=\"product\"}\n\nStrictly use the uploaded real product image as the ONLY source of truth.\n\nThis is an image-to-image commercial product retouching task, NOT a redesign or recreation.\n\nReference fidelity has absolute priority over aesthetics.\n\nPreserve exactly:\n- geometry\n- proportions\n- viewpoint\n- camera angle\n- orientation\n- position\n- scale\n- materials\n- textures\n- finishes\n- colors\n- logos\n- labels\n- typography\n- engravings\n- surface details\n- edges\n- contours\n- openings\n- buttons\n- ports\n- screws\n- seams\n- all visible structures\n- every visible manufacturing detail\n\nNever:\n- redesign\n- reconstruct\n- hallucinate\n- invent unseen geometry\n- generate hidden structures\n- rotate\n- change viewpoint\n- change perspective\n- change proportions\n- beautify the design\n- simplify details\n- replace components\n- add accessories\n- create a different product model\n- modify any visible product features\n\nOnly remove objects that are NOT part of the actual product.\n\nRemove all external objects, including but not limited to:\n- hands\n- fingers\n- people\n- arms\n- gloves\n- supports\n- holders\n- display stands\n- mounting fixtures\n- clips\n- wires\n- cables\n- strings\n- hooks\n- tape\n- labels not attached to the product\n- packaging\n- protective films\n- foam\n- plastic bags\n- boxes\n- backgrounds\n- tables\n- shelves\n- walls\n- floors\n- reflections of surrounding objects\n- dust\n- dirt\n- fingerprints\n- stains\n- scratches caused by photography\n- watermarks\n- camera equipment\n- props\n- any unrelated objects\n\nDo not allow removed objects to influence the product shape.\n\nDo not fill removed areas with fabricated product geometry.\n\nOnly reconstruct regions that are directly supported by the visible reference image.\n\nNever infer invisible structures.\n\nCommercial product retouching only.\n\n{argument name=\"background\"\ndefault=\"Pure solid #FFFFFF background. Perfectly isolated product. No cast shadows. No floor shadows. No reflections. No props. Clean cutout with crisp edges. Maintain subtle natural edge separation so white products remain clearly distinguishable from the white background without artificial outlines.\"}\n\n{argument name=\"lighting\"\ndefault=\"Neutral professional commercial studio lighting. Soft and even illumination. Accurate material appearance. Preserve true colors. High dynamic range. Clean highlights without overexposure. Maintain natural contrast between the product and the white background.\"}\n\n{argument name=\"quality\"\ndefault=\"Ultra high-end e-commerce product retouching. Catalog-quality white background product image. Maximum reference fidelity. Pixel-accurate reconstruction from the uploaded image. Extremely sharp details. Professional commercial retouching. No artistic interpretation.\"}\n\nPriority Rules:\n1. Preserve the real product exactly as photographed.\n2. Remove only non-product objects.\n3. Never alter the product in order to improve aesthetics.\n4. If there is any conflict between visual accuracy and visual beauty, always choose visual accuracy.\n5. Every visible product detail has higher priority than background cleanup."
+    },
+    {
+      "id": "image_b4e911887fd578_1783585152704",
+      "type": "image",
+      "x": 62.13141708786543,
+      "y": 1956.5955992380168,
+      "url": "",
+      "name": "上传节点",
+      "primaryReference": false,
+      "mediaKind": "image",
+      "_naturalSizeLoading": false,
+      "natural_w": 6000,
+      "natural_h": 4000
+    },
+    {
+      "id": "generator_a0d7e2499a0408_1783585152704",
+      "type": "generator",
+      "x": 444.3120613301391,
+      "y": 2002.407034278971,
+      "apiProvider": "custom-api",
+      "model": "gpt-image-2",
+      "ratio": "square",
+      "resolution": "1k",
+      "customRatio": "",
+      "customSize": "",
+      "customRatioWidth": "",
+      "customRatioHeight": "",
+      "customWidth": "",
+      "customHeight": "",
+      "quality": "auto",
+      "temperature": 0,
+      "inputs": [
+        "group_f8d3da2c61bc48_1783585152704:prompts"
+      ],
+      "_apiResolutionUserSet": false,
+      "generatedOutputs": [
+        "/assets/output/online_d1171db672.png"
+      ]
+    },
+    {
+      "id": "output_e82f41ac836e3_1783585152704",
+      "type": "output",
+      "x": 925.2450722516903,
+      "y": 2013.2553317899951,
+      "images": [],
+      "w": 430,
+      "h": 433,
+      "_pending": [],
+      "imageComparisons": {}
+    },
+    {
+      "id": "group_40284cf5132078_1783585155130",
+      "type": "group",
+      "x": 1639.2254562178487,
+      "y": 155.98569901650444,
+      "w": 358,
+      "h": 738,
+      "items": [
+        "prompt_f10ebf5ce7d9c_1783585155130",
+        "image_3680e768e5363_1783585155130"
+      ]
+    },
+    {
+      "id": "prompt_f10ebf5ce7d9c_1783585155130",
+      "type": "prompt",
+      "x": 1663.2254562178487,
+      "y": 623.9856990165044,
+      "text": "{argument name=\"subject\" default=\"product\"}\n\nStrictly use the uploaded real product image as the ONLY source of truth.\n\nThis is an image-to-image commercial product retouching task, NOT a redesign or recreation.\n\nReference fidelity has absolute priority over aesthetics.\n\nPreserve exactly:\n- geometry\n- proportions\n- viewpoint\n- camera angle\n- orientation\n- position\n- scale\n- materials\n- textures\n- finishes\n- colors\n- logos\n- labels\n- typography\n- engravings\n- surface details\n- edges\n- contours\n- openings\n- buttons\n- ports\n- screws\n- seams\n- all visible structures\n- every visible manufacturing detail\n\nNever:\n- redesign\n- reconstruct\n- hallucinate\n- invent unseen geometry\n- generate hidden structures\n- rotate\n- change viewpoint\n- change perspective\n- change proportions\n- beautify the design\n- simplify details\n- replace components\n- add accessories\n- create a different product model\n- modify any visible product features\n\nOnly remove objects that are NOT part of the actual product.\n\nRemove all external objects, including but not limited to:\n- hands\n- fingers\n- people\n- arms\n- gloves\n- supports\n- holders\n- display stands\n- mounting fixtures\n- clips\n- wires\n- cables\n- strings\n- hooks\n- tape\n- labels not attached to the product\n- packaging\n- protective films\n- foam\n- plastic bags\n- boxes\n- backgrounds\n- tables\n- shelves\n- walls\n- floors\n- reflections of surrounding objects\n- dust\n- dirt\n- fingerprints\n- stains\n- scratches caused by photography\n- watermarks\n- camera equipment\n- props\n- any unrelated objects\n\nDo not allow removed objects to influence the product shape.\n\nDo not fill removed areas with fabricated product geometry.\n\nOnly reconstruct regions that are directly supported by the visible reference image.\n\nNever infer invisible structures.\n\nCommercial product retouching only.\n\n{argument name=\"background\"\ndefault=\"Pure solid #FFFFFF background. Perfectly isolated product. No cast shadows. No floor shadows. No reflections. No props. Clean cutout with crisp edges. Maintain subtle natural edge separation so white products remain clearly distinguishable from the white background without artificial outlines.\"}\n\n{argument name=\"lighting\"\ndefault=\"Neutral professional commercial studio lighting. Soft and even illumination. Accurate material appearance. Preserve true colors. High dynamic range. Clean highlights without overexposure. Maintain natural contrast between the product and the white background.\"}\n\n{argument name=\"quality\"\ndefault=\"Ultra high-end e-commerce product retouching. Catalog-quality white background product image. Maximum reference fidelity. Pixel-accurate reconstruction from the uploaded image. Extremely sharp details. Professional commercial retouching. No artistic interpretation.\"}\n\nPriority Rules:\n1. Preserve the real product exactly as photographed.\n2. Remove only non-product objects.\n3. Never alter the product in order to improve aesthetics.\n4. If there is any conflict between visual accuracy and visual beauty, always choose visual accuracy.\n5. Every visible product detail has higher priority than background cleanup."
+    },
+    {
+      "id": "image_3680e768e5363_1783585155130",
+      "type": "image",
+      "x": 1683.3855466510574,
+      "y": 253.9532101586003,
+      "url": "",
+      "name": "上传节点",
+      "primaryReference": false,
+      "mediaKind": "image",
+      "_naturalSizeLoading": false,
+      "natural_w": 6000,
+      "natural_h": 4000
+    },
+    {
+      "id": "generator_f3fdfa5552c7e_1783585155130",
+      "type": "generator",
+      "x": 2065.566190893331,
+      "y": 299.76464519955425,
+      "apiProvider": "custom-api",
+      "model": "gpt-image-2",
+      "ratio": "square",
+      "resolution": "1k",
+      "customRatio": "",
+      "customSize": "",
+      "customRatioWidth": "",
+      "customRatioHeight": "",
+      "customWidth": "",
+      "customHeight": "",
+      "quality": "auto",
+      "temperature": 0,
+      "inputs": [
+        "group_40284cf5132078_1783585155130:prompts"
+      ],
+      "_apiResolutionUserSet": false,
+      "generatedOutputs": [
+        "/assets/output/online_6e98a20840.png"
+      ]
+    },
+    {
+      "id": "output_f0ee8636c43b1_1783585155130",
+      "type": "output",
+      "x": 2546.4992018148823,
+      "y": 310.61294271057886,
+      "images": [],
+      "w": 430,
+      "h": 433,
+      "_pending": [],
+      "imageComparisons": {}
+    },
+    {
+      "id": "group_2ee496506fd9f_1783585157950",
+      "type": "group",
+      "x": 1678.2918207856364,
+      "y": 992.6570068432923,
+      "w": 358,
+      "h": 738,
+      "items": [
+        "prompt_e18cc7697c5668_1783585157950",
+        "image_cad033423655f8_1783585157950"
+      ]
+    },
+    {
+      "id": "prompt_e18cc7697c5668_1783585157950",
+      "type": "prompt",
+      "x": 1702.2918207856364,
+      "y": 1460.6570068432925,
+      "text": "{argument name=\"subject\" default=\"product\"}\n\nStrictly use the uploaded real product image as the ONLY source of truth.\n\nThis is an image-to-image commercial product retouching task, NOT a redesign or recreation.\n\nReference fidelity has absolute priority over aesthetics.\n\nPreserve exactly:\n- geometry\n- proportions\n- viewpoint\n- camera angle\n- orientation\n- position\n- scale\n- materials\n- textures\n- finishes\n- colors\n- logos\n- labels\n- typography\n- engravings\n- surface details\n- edges\n- contours\n- openings\n- buttons\n- ports\n- screws\n- seams\n- all visible structures\n- every visible manufacturing detail\n\nNever:\n- redesign\n- reconstruct\n- hallucinate\n- invent unseen geometry\n- generate hidden structures\n- rotate\n- change viewpoint\n- change perspective\n- change proportions\n- beautify the design\n- simplify details\n- replace components\n- add accessories\n- create a different product model\n- modify any visible product features\n\nOnly remove objects that are NOT part of the actual product.\n\nRemove all external objects, including but not limited to:\n- hands\n- fingers\n- people\n- arms\n- gloves\n- supports\n- holders\n- display stands\n- mounting fixtures\n- clips\n- wires\n- cables\n- strings\n- hooks\n- tape\n- labels not attached to the product\n- packaging\n- protective films\n- foam\n- plastic bags\n- boxes\n- backgrounds\n- tables\n- shelves\n- walls\n- floors\n- reflections of surrounding objects\n- dust\n- dirt\n- fingerprints\n- stains\n- scratches caused by photography\n- watermarks\n- camera equipment\n- props\n- any unrelated objects\n\nDo not allow removed objects to influence the product shape.\n\nDo not fill removed areas with fabricated product geometry.\n\nOnly reconstruct regions that are directly supported by the visible reference image.\n\nNever infer invisible structures.\n\nCommercial product retouching only.\n\n{argument name=\"background\"\ndefault=\"Pure solid #FFFFFF background. Perfectly isolated product. No cast shadows. No floor shadows. No reflections. No props. Clean cutout with crisp edges. Maintain subtle natural edge separation so white products remain clearly distinguishable from the white background without artificial outlines.\"}\n\n{argument name=\"lighting\"\ndefault=\"Neutral professional commercial studio lighting. Soft and even illumination. Accurate material appearance. Preserve true colors. High dynamic range. Clean highlights without overexposure. Maintain natural contrast between the product and the white background.\"}\n\n{argument name=\"quality\"\ndefault=\"Ultra high-end e-commerce product retouching. Catalog-quality white background product image. Maximum reference fidelity. Pixel-accurate reconstruction from the uploaded image. Extremely sharp details. Professional commercial retouching. No artistic interpretation.\"}\n\nPriority Rules:\n1. Preserve the real product exactly as photographed.\n2. Remove only non-product objects.\n3. Never alter the product in order to improve aesthetics.\n4. If there is any conflict between visual accuracy and visual beauty, always choose visual accuracy.\n5. Every visible product detail has higher priority than background cleanup."
+    },
+    {
+      "id": "image_cad033423655f8_1783585157950",
+      "type": "image",
+      "x": 1722.4519112188452,
+      "y": 1090.6245179853881,
+      "url": "",
+      "name": "上传节点",
+      "primaryReference": false,
+      "mediaKind": "image",
+      "_naturalSizeLoading": false,
+      "natural_w": 6000,
+      "natural_h": 4000
+    },
+    {
+      "id": "generator_3a8148546a19f8_1783585157950",
+      "type": "generator",
+      "x": 2104.632555461119,
+      "y": 1136.4359530263423,
+      "apiProvider": "custom-api",
+      "model": "gpt-image-2",
+      "ratio": "square",
+      "resolution": "1k",
+      "customRatio": "",
+      "customSize": "",
+      "customRatioWidth": "",
+      "customRatioHeight": "",
+      "customWidth": "",
+      "customHeight": "",
+      "quality": "auto",
+      "temperature": 0,
+      "inputs": [
+        "group_2ee496506fd9f_1783585157950:prompts"
+      ],
+      "_apiResolutionUserSet": false,
+      "generatedOutputs": [
+        "/assets/output/online_c6168512a4.png"
+      ]
+    },
+    {
+      "id": "output_cc9a17364d3518_1783585157950",
+      "type": "output",
+      "x": 2585.5655663826706,
+      "y": 1147.2842505373667,
+      "images": [],
+      "w": 430,
+      "h": 433,
+      "_pending": [],
+      "imageComparisons": {}
+    },
+    {
+      "id": "group_85590a91633218_1783585160658",
+      "type": "group",
+      "x": 1710.8471245921262,
+      "y": 1842.3504361926762,
+      "w": 358,
+      "h": 738,
+      "items": [
+        "prompt_a8ba3c781d4dc8_1783585160658",
+        "image_ec1af9cd540068_1783585160658"
+      ]
+    },
+    {
+      "id": "prompt_a8ba3c781d4dc8_1783585160658",
+      "type": "prompt",
+      "x": 1734.8471245921262,
+      "y": 2310.350436192676,
+      "text": "{argument name=\"subject\" default=\"product\"}\n\nStrictly use the uploaded real product image as the ONLY source of truth.\n\nThis is an image-to-image commercial product retouching task, NOT a redesign or recreation.\n\nReference fidelity has absolute priority over aesthetics.\n\nPreserve exactly:\n- geometry\n- proportions\n- viewpoint\n- camera angle\n- orientation\n- position\n- scale\n- materials\n- textures\n- finishes\n- colors\n- logos\n- labels\n- typography\n- engravings\n- surface details\n- edges\n- contours\n- openings\n- buttons\n- ports\n- screws\n- seams\n- all visible structures\n- every visible manufacturing detail\n\nNever:\n- redesign\n- reconstruct\n- hallucinate\n- invent unseen geometry\n- generate hidden structures\n- rotate\n- change viewpoint\n- change perspective\n- change proportions\n- beautify the design\n- simplify details\n- replace components\n- add accessories\n- create a different product model\n- modify any visible product features\n\nOnly remove objects that are NOT part of the actual product.\n\nRemove all external objects, including but not limited to:\n- hands\n- fingers\n- people\n- arms\n- gloves\n- supports\n- holders\n- display stands\n- mounting fixtures\n- clips\n- wires\n- cables\n- strings\n- hooks\n- tape\n- labels not attached to the product\n- packaging\n- protective films\n- foam\n- plastic bags\n- boxes\n- backgrounds\n- tables\n- shelves\n- walls\n- floors\n- reflections of surrounding objects\n- dust\n- dirt\n- fingerprints\n- stains\n- scratches caused by photography\n- watermarks\n- camera equipment\n- props\n- any unrelated objects\n\nDo not allow removed objects to influence the product shape.\n\nDo not fill removed areas with fabricated product geometry.\n\nOnly reconstruct regions that are directly supported by the visible reference image.\n\nNever infer invisible structures.\n\nCommercial product retouching only.\n\n{argument name=\"background\"\ndefault=\"Pure solid #FFFFFF background. Perfectly isolated product. No cast shadows. No floor shadows. No reflections. No props. Clean cutout with crisp edges. Maintain subtle natural edge separation so white products remain clearly distinguishable from the white background without artificial outlines.\"}\n\n{argument name=\"lighting\"\ndefault=\"Neutral professional commercial studio lighting. Soft and even illumination. Accurate material appearance. Preserve true colors. High dynamic range. Clean highlights without overexposure. Maintain natural contrast between the product and the white background.\"}\n\n{argument name=\"quality\"\ndefault=\"Ultra high-end e-commerce product retouching. Catalog-quality white background product image. Maximum reference fidelity. Pixel-accurate reconstruction from the uploaded image. Extremely sharp details. Professional commercial retouching. No artistic interpretation.\"}\n\nPriority Rules:\n1. Preserve the real product exactly as photographed.\n2. Remove only non-product objects.\n3. Never alter the product in order to improve aesthetics.\n4. If there is any conflict between visual accuracy and visual beauty, always choose visual accuracy.\n5. Every visible product detail has higher priority than background cleanup."
+    },
+    {
+      "id": "image_ec1af9cd540068_1783585160658",
+      "type": "image",
+      "x": 1755.007215025335,
+      "y": 1940.317947334772,
+      "url": "",
+      "name": "上传节点",
+      "primaryReference": false,
+      "mediaKind": "image",
+      "_naturalSizeLoading": false,
+      "natural_w": 6000,
+      "natural_h": 4000
+    },
+    {
+      "id": "generator_5f93df329c45f_1783585160658",
+      "type": "generator",
+      "x": 2137.1878592676085,
+      "y": 1986.129382375726,
+      "apiProvider": "custom-api",
+      "model": "gpt-image-2",
+      "ratio": "square",
+      "resolution": "1k",
+      "customRatio": "",
+      "customSize": "",
+      "customRatioWidth": "",
+      "customRatioHeight": "",
+      "customWidth": "",
+      "customHeight": "",
+      "quality": "auto",
+      "temperature": 0,
+      "inputs": [
+        "group_85590a91633218_1783585160658:prompts"
+      ],
+      "_apiResolutionUserSet": false,
+      "generatedOutputs": [
+        "/assets/output/online_5958479f4f.png"
+      ]
+    },
+    {
+      "id": "output_59d6e40e488ec_1783585160658",
+      "type": "output",
+      "x": 2618.12087018916,
+      "y": 1996.9776798867506,
+      "images": [],
+      "w": 430,
+      "h": 433,
+      "_pending": [],
+      "imageComparisons": {}
+    },
+    {
+      "id": "group_9cc31a07cf39a_1783585163619",
+      "type": "group",
+      "x": 17.971326654656707,
+      "y": 2721.3436389679005,
+      "w": 358,
+      "h": 738,
+      "items": [
+        "prompt_fbf48d67823af8_1783585163619",
+        "image_5368f48f412888_1783585163619"
+      ]
+    },
+    {
+      "id": "prompt_fbf48d67823af8_1783585163619",
+      "type": "prompt",
+      "x": 41.97132665465671,
+      "y": 3189.3436389679005,
+      "text": "{argument name=\"subject\" default=\"product\"}\n\nStrictly use the uploaded real product image as the ONLY source of truth.\n\nThis is an image-to-image commercial product retouching task, NOT a redesign or recreation.\n\nReference fidelity has absolute priority over aesthetics.\n\nPreserve exactly:\n- geometry\n- proportions\n- viewpoint\n- camera angle\n- orientation\n- position\n- scale\n- materials\n- textures\n- finishes\n- colors\n- logos\n- labels\n- typography\n- engravings\n- surface details\n- edges\n- contours\n- openings\n- buttons\n- ports\n- screws\n- seams\n- all visible structures\n- every visible manufacturing detail\n\nNever:\n- redesign\n- reconstruct\n- hallucinate\n- invent unseen geometry\n- generate hidden structures\n- rotate\n- change viewpoint\n- change perspective\n- change proportions\n- beautify the design\n- simplify details\n- replace components\n- add accessories\n- create a different product model\n- modify any visible product features\n\nOnly remove objects that are NOT part of the actual product.\n\nRemove all external objects, including but not limited to:\n- hands\n- fingers\n- people\n- arms\n- gloves\n- supports\n- holders\n- display stands\n- mounting fixtures\n- clips\n- wires\n- cables\n- strings\n- hooks\n- tape\n- labels not attached to the product\n- packaging\n- protective films\n- foam\n- plastic bags\n- boxes\n- backgrounds\n- tables\n- shelves\n- walls\n- floors\n- reflections of surrounding objects\n- dust\n- dirt\n- fingerprints\n- stains\n- scratches caused by photography\n- watermarks\n- camera equipment\n- props\n- any unrelated objects\n\nDo not allow removed objects to influence the product shape.\n\nDo not fill removed areas with fabricated product geometry.\n\nOnly reconstruct regions that are directly supported by the visible reference image.\n\nNever infer invisible structures.\n\nCommercial product retouching only.\n\n{argument name=\"background\"\ndefault=\"Pure solid #FFFFFF background. Perfectly isolated product. No cast shadows. No floor shadows. No reflections. No props. Clean cutout with crisp edges. Maintain subtle natural edge separation so white products remain clearly distinguishable from the white background without artificial outlines.\"}\n\n{argument name=\"lighting\"\ndefault=\"Neutral professional commercial studio lighting. Soft and even illumination. Accurate material appearance. Preserve true colors. High dynamic range. Clean highlights without overexposure. Maintain natural contrast between the product and the white background.\"}\n\n{argument name=\"quality\"\ndefault=\"Ultra high-end e-commerce product retouching. Catalog-quality white background product image. Maximum reference fidelity. Pixel-accurate reconstruction from the uploaded image. Extremely sharp details. Professional commercial retouching. No artistic interpretation.\"}\n\nPriority Rules:\n1. Preserve the real product exactly as photographed.\n2. Remove only non-product objects.\n3. Never alter the product in order to improve aesthetics.\n4. If there is any conflict between visual accuracy and visual beauty, always choose visual accuracy.\n5. Every visible product detail has higher priority than background cleanup."
+    },
+    {
+      "id": "image_5368f48f412888_1783585163619",
+      "type": "image",
+      "x": 62.131417087865486,
+      "y": 2819.3111501099966,
+      "url": "",
+      "name": "上传节点",
+      "primaryReference": false,
+      "mediaKind": "image",
+      "_naturalSizeLoading": false,
+      "natural_w": 6000,
+      "natural_h": 4000
+    },
+    {
+      "id": "generator_0b215ca06bb5b8_1783585163619",
+      "type": "generator",
+      "x": 444.31206133013916,
+      "y": 2884.6557674348446,
+      "apiProvider": "custom-api",
+      "model": "gpt-image-2",
+      "ratio": "square",
+      "resolution": "1k",
+      "customRatio": "",
+      "customSize": "",
+      "customRatioWidth": "",
+      "customRatioHeight": "",
+      "customWidth": "",
+      "customHeight": "",
+      "quality": "auto",
+      "temperature": 0,
+      "inputs": [
+        "group_9cc31a07cf39a_1783585163619:prompts"
+      ],
+      "_apiResolutionUserSet": false,
+      "generatedOutputs": [
+        "/assets/output/online_6ab68bc91f.png"
+      ]
+    },
+    {
+      "id": "output_8e58f4b1f40628_1783585163619",
+      "type": "output",
+      "x": 925.2450722516905,
+      "y": 2895.504064945869,
+      "images": [],
+      "w": 430,
+      "h": 433,
+      "_pending": [],
+      "imageComparisons": {}
+    },
+    {
+      "id": "group_621f7b48255a18_1783585167518",
+      "type": "group",
+      "x": 1710.8471245921262,
+      "y": 2692.04386554206,
+      "w": 358,
+      "h": 738,
+      "items": [
+        "prompt_e4eac5fc4582_1783585167518",
+        "image_a6dec88690d3f_1783585167518"
+      ]
+    },
+    {
+      "id": "prompt_e4eac5fc4582_1783585167518",
+      "type": "prompt",
+      "x": 1734.8471245921262,
+      "y": 3160.04386554206,
+      "text": "{argument name=\"subject\" default=\"product\"}\n\nStrictly use the uploaded real product image as the ONLY source of truth.\n\nThis is an image-to-image commercial product retouching task, NOT a redesign or recreation.\n\nReference fidelity has absolute priority over aesthetics.\n\nPreserve exactly:\n- geometry\n- proportions\n- viewpoint\n- camera angle\n- orientation\n- position\n- scale\n- materials\n- textures\n- finishes\n- colors\n- logos\n- labels\n- typography\n- engravings\n- surface details\n- edges\n- contours\n- openings\n- buttons\n- ports\n- screws\n- seams\n- all visible structures\n- every visible manufacturing detail\n\nNever:\n- redesign\n- reconstruct\n- hallucinate\n- invent unseen geometry\n- generate hidden structures\n- rotate\n- change viewpoint\n- change perspective\n- change proportions\n- beautify the design\n- simplify details\n- replace components\n- add accessories\n- create a different product model\n- modify any visible product features\n\nOnly remove objects that are NOT part of the actual product.\n\nRemove all external objects, including but not limited to:\n- hands\n- fingers\n- people\n- arms\n- gloves\n- supports\n- holders\n- display stands\n- mounting fixtures\n- clips\n- wires\n- cables\n- strings\n- hooks\n- tape\n- labels not attached to the product\n- packaging\n- protective films\n- foam\n- plastic bags\n- boxes\n- backgrounds\n- tables\n- shelves\n- walls\n- floors\n- reflections of surrounding objects\n- dust\n- dirt\n- fingerprints\n- stains\n- scratches caused by photography\n- watermarks\n- camera equipment\n- props\n- any unrelated objects\n\nDo not allow removed objects to influence the product shape.\n\nDo not fill removed areas with fabricated product geometry.\n\nOnly reconstruct regions that are directly supported by the visible reference image.\n\nNever infer invisible structures.\n\nCommercial product retouching only.\n\n{argument name=\"background\"\ndefault=\"Pure solid #FFFFFF background. Perfectly isolated product. No cast shadows. No floor shadows. No reflections. No props. Clean cutout with crisp edges. Maintain subtle natural edge separation so white products remain clearly distinguishable from the white background without artificial outlines.\"}\n\n{argument name=\"lighting\"\ndefault=\"Neutral professional commercial studio lighting. Soft and even illumination. Accurate material appearance. Preserve true colors. High dynamic range. Clean highlights without overexposure. Maintain natural contrast between the product and the white background.\"}\n\n{argument name=\"quality\"\ndefault=\"Ultra high-end e-commerce product retouching. Catalog-quality white background product image. Maximum reference fidelity. Pixel-accurate reconstruction from the uploaded image. Extremely sharp details. Professional commercial retouching. No artistic interpretation.\"}\n\nPriority Rules:\n1. Preserve the real product exactly as photographed.\n2. Remove only non-product objects.\n3. Never alter the product in order to improve aesthetics.\n4. If there is any conflict between visual accuracy and visual beauty, always choose visual accuracy.\n5. Every visible product detail has higher priority than background cleanup."
+    },
+    {
+      "id": "image_a6dec88690d3f_1783585167518",
+      "type": "image",
+      "x": 1755.007215025335,
+      "y": 2790.011376684156,
+      "url": "",
+      "name": "上传节点",
+      "primaryReference": false,
+      "mediaKind": "image",
+      "_naturalSizeLoading": false,
+      "natural_w": 6000,
+      "natural_h": 4000
+    },
+    {
+      "id": "generator_98174b25bb36a8_1783585167518",
+      "type": "generator",
+      "x": 2137.1878592676085,
+      "y": 2835.8228117251097,
+      "apiProvider": "custom-api",
+      "model": "gpt-image-2",
+      "ratio": "square",
+      "resolution": "1k",
+      "customRatio": "",
+      "customSize": "",
+      "customRatioWidth": "",
+      "customRatioHeight": "",
+      "customWidth": "",
+      "customHeight": "",
+      "quality": "auto",
+      "temperature": 0,
+      "inputs": [
+        "group_621f7b48255a18_1783585167518:prompts"
+      ],
+      "_apiResolutionUserSet": false,
+      "generatedOutputs": [
+        "/assets/output/online_40061cd9f1.png"
+      ]
+    },
+    {
+      "id": "output_2dc0f50c12b9d8_1783585167518",
+      "type": "output",
+      "x": 2618.12087018916,
+      "y": 2846.6711092361343,
+      "images": [],
+      "w": 430,
+      "h": 433,
+      "_pending": [],
+      "imageComparisons": {}
+    }
+  ],
+  "connections": [
+    {
+      "id": "c_41965611c8b4b8_1783583946955",
+      "from": "grp_8e28af4cf927b_1783583946954",
+      "to": "gen_b41dd9ee646178_1783583936687"
+    },
+    {
+      "id": "c_e4d9465748d6f8_1783583950368",
+      "from": "gen_b41dd9ee646178_1783583936687",
+      "to": "out_4a354bd49cdac_1783583948216"
+    },
+    {
+      "id": "c_93280f5281bf1_1783585150161",
+      "from": "group_4e206bb4405028_1783585150161",
+      "to": "generator_36f81237f405b8_1783585150161"
+    },
+    {
+      "id": "c_f2c2d2a4b9b0e8_1783585150161",
+      "from": "generator_36f81237f405b8_1783585150161",
+      "to": "output_1e06790c3ceb7_1783585150161"
+    },
+    {
+      "id": "c_126a4ffcd3db08_1783585152704",
+      "from": "group_f8d3da2c61bc48_1783585152704",
+      "to": "generator_a0d7e2499a0408_1783585152704"
+    },
+    {
+      "id": "c_4f00f8000f7be8_1783585152704",
+      "from": "generator_a0d7e2499a0408_1783585152704",
+      "to": "output_e82f41ac836e3_1783585152704"
+    },
+    {
+      "id": "c_e6a9e89a0a732_1783585155130",
+      "from": "group_40284cf5132078_1783585155130",
+      "to": "generator_f3fdfa5552c7e_1783585155130"
+    },
+    {
+      "id": "c_e89d850593e688_1783585155130",
+      "from": "generator_f3fdfa5552c7e_1783585155130",
+      "to": "output_f0ee8636c43b1_1783585155130"
+    },
+    {
+      "id": "c_4bcb9aa51f609_1783585157950",
+      "from": "group_2ee496506fd9f_1783585157950",
+      "to": "generator_3a8148546a19f8_1783585157950"
+    },
+    {
+      "id": "c_a493c49011efa8_1783585157950",
+      "from": "generator_3a8148546a19f8_1783585157950",
+      "to": "output_cc9a17364d3518_1783585157950"
+    },
+    {
+      "id": "c_95912c142c6df8_1783585160658",
+      "from": "group_85590a91633218_1783585160658",
+      "to": "generator_5f93df329c45f_1783585160658"
+    },
+    {
+      "id": "c_44b5c92935aa68_1783585160658",
+      "from": "generator_5f93df329c45f_1783585160658",
+      "to": "output_59d6e40e488ec_1783585160658"
+    },
+    {
+      "id": "c_53840eccea301_1783585163619",
+      "from": "group_9cc31a07cf39a_1783585163619",
+      "to": "generator_0b215ca06bb5b8_1783585163619"
+    },
+    {
+      "id": "c_0c293ad9e87228_1783585163619",
+      "from": "generator_0b215ca06bb5b8_1783585163619",
+      "to": "output_8e58f4b1f40628_1783585163619"
+    },
+    {
+      "id": "c_e8cbc42ae5073_1783585167518",
+      "from": "group_621f7b48255a18_1783585167518",
+      "to": "generator_98174b25bb36a8_1783585167518"
+    },
+    {
+      "id": "c_45199a8043ecf8_1783585167518",
+      "from": "generator_98174b25bb36a8_1783585167518",
+      "to": "output_2dc0f50c12b9d8_1783585167518"
+    }
+  ],
+  "viewport": {
+    "x": 0,
+    "y": 0,
+    "scale": 1
+  },
+  "board_x": 204.0,
+  "board_y": -276.0,
+  "logs": [
+    {
+      "id": "log_ce968196db6ee8_1783591262916",
+      "createdAt": 1783591262916,
+      "status": "success",
+      "platform": "自用生图",
+      "nodeType": "generator",
+      "model": "gpt-image-2",
+      "request": {
+        "task_id": "",
+        "request_id": "chatcmpl-1783591262024",
+        "provider_id": "custom-api",
+        "backend": "",
+        "prompt_id": "",
+        "workflow_json": "",
+        "seed": ""
+      },
+      "prompt": "{argument name=\"subject\" default=\"product\"}\n\nStrictly use the uploaded real product image as the ONLY source of truth.\n\nThis is an image-to-image commercial product retouching task, NOT a redesign or recreation.\n\nReference fidelity has absolute priority over aesthetics.\n\nPreserve exactly:\n- geometry\n- proportions\n- viewpoint\n- camera angle\n- orientation\n- position\n- scale\n- materials\n- textures\n- finishes\n- colors\n- logos\n- labels\n- typography\n- engravings\n- surface details\n- edges\n- contours\n- openings\n- buttons\n- ports\n- screws\n- seams\n- all visible structures\n- every visible manufacturing detail\n\nNever:\n- redesign\n- reconstruct\n- hallucinate\n- invent unseen geometry\n- generate hidden structures\n- rotate\n- change viewpoint\n- change perspective\n- change proportions\n- beautify the design\n- simplify details\n- replace components\n- add accessories\n- create a different product model\n- modify any visible product features\n\nOnly remove objects that are NOT part of the actual product.\n\nRemove all external objects, including but not limited to:\n- hands\n- fingers\n- people\n- arms\n- gloves\n- supports\n- holders\n- display stands\n- mounting fixtures\n- clips\n- wires\n- cables\n- strings\n- hooks\n- tape\n- labels not attached to the product\n- packaging\n- protective films\n- foam\n- plastic bags\n- boxes\n- backgrounds\n- tables\n- shelves\n- walls\n- floors\n- reflections of surrounding objects\n- dust\n- dirt\n- fingerprints\n- stains\n- scratches caused by photography\n- watermarks\n- camera equipment\n- props\n- any unrelated objects\n\nDo not allow removed objects to influence the product shape.\n\nDo not fill removed areas with fabricated product geometry.\n\nOnly reconstruct regions that are directly supported by the visible reference image.\n\nNever infer invisible structures.\n\nCommercial product retouching only.\n\n{argument name=\"background\"\ndefault=\"Pure solid #FFFFFF background. Perfectly isolated product. No cast shadows. No floor shadows. No reflections. No props. Clean cutout with crisp edges. Maintain subtle natural edge separation so white products remain clearly distinguishable from the white background without artificial outlines.\"}\n\n{argument name=\"lighting\"\ndefault=\"Neutral professional commercial studio lighting. Soft and even illumination. Accurate material appearance. Preserve true colors. High dynamic range. Clean highlights without overexposure. Maintain natural contrast between the product and the white background.\"}\n\n{argument name=\"quality\"\ndefault=\"Ultra high-end e-commerce product retouching. Catalog-quality white background product image. Maximum reference fidelity. Pixel-accurate reconstruction from the uploaded image. Extremely sharp details. Professional commercial retouching. No artistic interpretation.\"}\n\nPriority Rules:\n1. Preserve the real product exactly as photographed.\n2. Remove only non-product objects.\n3. Never alter the product in order to improve aesthetics.\n4. If there is any conflict between visual accuracy and visual beauty, always choose visual accuracy.\n5. Every visible product detail has higher priority than background cleanup.",
+      "outputs": [
+        "/assets/output/online_934bf2133b.png"
+      ],
+      "refs": [
+        {
+          "url": "/assets/input/ai_ref_02487b75b122.jpg",
+          "name": "ae53ff7b7c6dc99ed88a189071a76a1d.jpg"
+        }
+      ],
+      "runMs": 69538,
+      "error": ""
+    },
+    {
+      "id": "log_3ce4bfadd47a98_1783591240651",
+      "createdAt": 1783591240651,
+      "status": "success",
+      "platform": "自用生图",
+      "nodeType": "generator",
+      "model": "gpt-image-2",
+      "request": {
+        "task_id": "",
+        "request_id": "chatcmpl-1783591238172",
+        "provider_id": "custom-api",
+        "backend": "",
+        "prompt_id": "",
+        "workflow_json": "",
+        "seed": ""
+      },
+      "prompt": "{argument name=\"subject\" default=\"product\"}\n\nStrictly use the uploaded real product image as the ONLY source of truth.\n\nThis is an image-to-image commercial product retouching task, NOT a redesign or recreation.\n\nReference fidelity has absolute priority over aesthetics.\n\nPreserve exactly:\n- geometry\n- proportions\n- viewpoint\n- camera angle\n- orientation\n- position\n- scale\n- materials\n- textures\n- finishes\n- colors\n- logos\n- labels\n- typography\n- engravings\n- surface details\n- edges\n- contours\n- openings\n- buttons\n- ports\n- screws\n- seams\n- all visible structures\n- every visible manufacturing detail\n\nNever:\n- redesign\n- reconstruct\n- hallucinate\n- invent unseen geometry\n- generate hidden structures\n- rotate\n- change viewpoint\n- change perspective\n- change proportions\n- beautify the design\n- simplify details\n- replace components\n- add accessories\n- create a different product model\n- modify any visible product features\n\nOnly remove objects that are NOT part of the actual product.\n\nRemove all external objects, including but not limited to:\n- hands\n- fingers\n- people\n- arms\n- gloves\n- supports\n- holders\n- display stands\n- mounting fixtures\n- clips\n- wires\n- cables\n- strings\n- hooks\n- tape\n- labels not attached to the product\n- packaging\n- protective films\n- foam\n- plastic bags\n- boxes\n- backgrounds\n- tables\n- shelves\n- walls\n- floors\n- reflections of surrounding objects\n- dust\n- dirt\n- fingerprints\n- stains\n- scratches caused by photography\n- watermarks\n- camera equipment\n- props\n- any unrelated objects\n\nDo not allow removed objects to influence the product shape.\n\nDo not fill removed areas with fabricated product geometry.\n\nOnly reconstruct regions that are directly supported by the visible reference image.\n\nNever infer invisible structures.\n\nCommercial product retouching only.\n\n{argument name=\"background\"\ndefault=\"Pure solid #FFFFFF background. Perfectly isolated product. No cast shadows. No floor shadows. No reflections. No props. Clean cutout with crisp edges. Maintain subtle natural edge separation so white products remain clearly distinguishable from the white background without artificial outlines.\"}\n\n{argument name=\"lighting\"\ndefault=\"Neutral professional commercial studio lighting. Soft and even illumination. Accurate material appearance. Preserve true colors. High dynamic range. Clean highlights without overexposure. Maintain natural contrast between the product and the white background.\"}\n\n{argument name=\"quality\"\ndefault=\"Ultra high-end e-commerce product retouching. Catalog-quality white background product image. Maximum reference fidelity. Pixel-accurate reconstruction from the uploaded image. Extremely sharp details. Professional commercial retouching. No artistic interpretation.\"}\n\nPriority Rules:\n1. Preserve the real product exactly as photographed.\n2. Remove only non-product objects.\n3. Never alter the product in order to improve aesthetics.\n4. If there is any conflict between visual accuracy and visual beauty, always choose visual accuracy.\n5. Every visible product detail has higher priority than background cleanup.",
+      "outputs": [
+        "/assets/output/online_48a05d88d0.png"
+      ],
+      "refs": [
+        {
+          "url": "/assets/input/ai_ref_53c3ab8f8a0b.jpg",
+          "name": "ae53ff7b7c6dc99ed88a189071a76a1d.jpg"
+        }
+      ],
+      "runMs": 46344,
+      "error": ""
+    },
+    {
+      "id": "log_516301b6166cb8_1783590943180",
+      "createdAt": 1783590943180,
+      "status": "success",
+      "platform": "自用生图",
+      "nodeType": "generator",
+      "model": "gpt-image-2",
+      "request": {
+        "task_id": "",
+        "request_id": "chatcmpl-1783590940820",
+        "provider_id": "custom-api",
+        "backend": "",
+        "prompt_id": "",
+        "workflow_json": "",
+        "seed": ""
+      },
+      "prompt": "{argument name=\"subject\" default=\"product\"}\n\nStrictly use the uploaded real product image as the ONLY source of truth.\n\nThis is an image-to-image commercial product retouching task, NOT a redesign or recreation.\n\nReference fidelity has absolute priority over aesthetics.\n\nPreserve exactly:\n- geometry\n- proportions\n- viewpoint\n- camera angle\n- orientation\n- position\n- scale\n- materials\n- textures\n- finishes\n- colors\n- logos\n- labels\n- typography\n- engravings\n- surface details\n- edges\n- contours\n- openings\n- buttons\n- ports\n- screws\n- seams\n- all visible structures\n- every visible manufacturing detail\n\nNever:\n- redesign\n- reconstruct\n- hallucinate\n- invent unseen geometry\n- generate hidden structures\n- rotate\n- change viewpoint\n- change perspective\n- change proportions\n- beautify the design\n- simplify details\n- replace components\n- add accessories\n- create a different product model\n- modify any visible product features\n\nOnly remove objects that are NOT part of the actual product.\n\nRemove all external objects, including but not limited to:\n- hands\n- fingers\n- people\n- arms\n- gloves\n- supports\n- holders\n- display stands\n- mounting fixtures\n- clips\n- wires\n- cables\n- strings\n- hooks\n- tape\n- labels not attached to the product\n- packaging\n- protective films\n- foam\n- plastic bags\n- boxes\n- backgrounds\n- tables\n- shelves\n- walls\n- floors\n- reflections of surrounding objects\n- dust\n- dirt\n- fingerprints\n- stains\n- scratches caused by photography\n- watermarks\n- camera equipment\n- props\n- any unrelated objects\n\nDo not allow removed objects to influence the product shape.\n\nDo not fill removed areas with fabricated product geometry.\n\nOnly reconstruct regions that are directly supported by the visible reference image.\n\nNever infer invisible structures.\n\nCommercial product retouching only.\n\n{argument name=\"background\"\ndefault=\"Pure solid #FFFFFF background. Perfectly isolated product. No cast shadows. No floor shadows. No reflections. No props. Clean cutout with crisp edges. Maintain subtle natural edge separation so white products remain clearly distinguishable from the white background without artificial outlines.\"}\n\n{argument name=\"lighting\"\ndefault=\"Neutral professional commercial studio lighting. Soft and even illumination. Accurate material appearance. Preserve true colors. High dynamic range. Clean highlights without overexposure. Maintain natural contrast between the product and the white background.\"}\n\n{argument name=\"quality\"\ndefault=\"Ultra high-end e-commerce product retouching. Catalog-quality white background product image. Maximum reference fidelity. Pixel-accurate reconstruction from the uploaded image. Extremely sharp details. Professional commercial retouching. No artistic interpretation.\"}\n\nPriority Rules:\n1. Preserve the real product exactly as photographed.\n2. Remove only non-product objects.\n3. Never alter the product in order to improve aesthetics.\n4. If there is any conflict between visual accuracy and visual beauty, always choose visual accuracy.\n5. Every visible product detail has higher priority than background cleanup.",
+      "outputs": [
+        "/assets/output/online_5f46ff369f.png"
+      ],
+      "refs": [
+        {
+          "url": "/assets/input/ai_ref_49307bac3595.jpg",
+          "name": "DSC08607.JPG"
+        }
+      ],
+      "runMs": 42185,
+      "error": ""
+    },
+    {
+      "id": "log_5f3ea287f2ae98_1783590924359",
+      "createdAt": 1783590924359,
+      "status": "success",
+      "platform": "自用生图",
+      "nodeType": "generator",
+      "model": "gpt-image-2",
+      "request": {
+        "task_id": "",
+        "request_id": "chatcmpl-1783590922150",
+        "provider_id": "custom-api",
+        "backend": "",
+        "prompt_id": "",
+        "workflow_json": "",
+        "seed": ""
+      },
+      "prompt": "{argument name=\"subject\" default=\"product\"}\n\nStrictly use the uploaded real product image as the ONLY source of truth.\n\nThis is an image-to-image commercial product retouching task, NOT a redesign or recreation.\n\nReference fidelity has absolute priority over aesthetics.\n\nPreserve exactly:\n- geometry\n- proportions\n- viewpoint\n- camera angle\n- orientation\n- position\n- scale\n- materials\n- textures\n- finishes\n- colors\n- logos\n- labels\n- typography\n- engravings\n- surface details\n- edges\n- contours\n- openings\n- buttons\n- ports\n- screws\n- seams\n- all visible structures\n- every visible manufacturing detail\n\nNever:\n- redesign\n- reconstruct\n- hallucinate\n- invent unseen geometry\n- generate hidden structures\n- rotate\n- change viewpoint\n- change perspective\n- change proportions\n- beautify the design\n- simplify details\n- replace components\n- add accessories\n- create a different product model\n- modify any visible product features\n\nOnly remove objects that are NOT part of the actual product.\n\nRemove all external objects, including but not limited to:\n- hands\n- fingers\n- people\n- arms\n- gloves\n- supports\n- holders\n- display stands\n- mounting fixtures\n- clips\n- wires\n- cables\n- strings\n- hooks\n- tape\n- labels not attached to the product\n- packaging\n- protective films\n- foam\n- plastic bags\n- boxes\n- backgrounds\n- tables\n- shelves\n- walls\n- floors\n- reflections of surrounding objects\n- dust\n- dirt\n- fingerprints\n- stains\n- scratches caused by photography\n- watermarks\n- camera equipment\n- props\n- any unrelated objects\n\nDo not allow removed objects to influence the product shape.\n\nDo not fill removed areas with fabricated product geometry.\n\nOnly reconstruct regions that are directly supported by the visible reference image.\n\nNever infer invisible structures.\n\nCommercial product retouching only.\n\n{argument name=\"background\"\ndefault=\"Pure solid #FFFFFF background. Perfectly isolated product. No cast shadows. No floor shadows. No reflections. No props. Clean cutout with crisp edges. Maintain subtle natural edge separation so white products remain clearly distinguishable from the white background without artificial outlines.\"}\n\n{argument name=\"lighting\"\ndefault=\"Neutral professional commercial studio lighting. Soft and even illumination. Accurate material appearance. Preserve true colors. High dynamic range. Clean highlights without overexposure. Maintain natural contrast between the product and the white background.\"}\n\n{argument name=\"quality\"\ndefault=\"Ultra high-end e-commerce product retouching. Catalog-quality white background product image. Maximum reference fidelity. Pixel-accurate reconstruction from the uploaded image. Extremely sharp details. Professional commercial retouching. No artistic interpretation.\"}\n\nPriority Rules:\n1. Preserve the real product exactly as photographed.\n2. Remove only non-product objects.\n3. Never alter the product in order to improve aesthetics.\n4. If there is any conflict between visual accuracy and visual beauty, always choose visual accuracy.\n5. Every visible product detail has higher priority than background cleanup.",
+      "outputs": [
+        "/assets/output/online_bdf52016bc.png"
+      ],
+      "refs": [
+        {
+          "url": "/assets/input/ai_ref_b5ad343128d4.jpg",
+          "name": "DSC08607.JPG"
+        }
+      ],
+      "runMs": 42318,
+      "error": ""
+    },
+    {
+      "id": "log_b5196ed4daaed_1783590345373",
+      "createdAt": 1783590345373,
+      "status": "success",
+      "platform": "自用生图",
+      "nodeType": "generator",
+      "model": "gpt-image-2",
+      "request": {
+        "task_id": "",
+        "request_id": "chatcmpl-1783590337304",
+        "provider_id": "custom-api",
+        "backend": "",
+        "prompt_id": "",
+        "workflow_json": "",
+        "seed": ""
+      },
+      "prompt": "{argument name=\"subject\" default=\"product\"}\n\nStrictly use the uploaded real product image as the ONLY source of truth.\n\nThis is an image-to-image commercial product retouching task, NOT a redesign or recreation.\n\nReference fidelity has absolute priority over aesthetics.\n\nPreserve exactly:\n- geometry\n- proportions\n- viewpoint\n- camera angle\n- orientation\n- position\n- scale\n- materials\n- textures\n- finishes\n- colors\n- logos\n- labels\n- typography\n- engravings\n- surface details\n- edges\n- contours\n- openings\n- buttons\n- ports\n- screws\n- seams\n- all visible structures\n- every visible manufacturing detail\n\nNever:\n- redesign\n- reconstruct\n- hallucinate\n- invent unseen geometry\n- generate hidden structures\n- rotate\n- change viewpoint\n- change perspective\n- change proportions\n- beautify the design\n- simplify details\n- replace components\n- add accessories\n- create a different product model\n- modify any visible product features\n\nOnly remove objects that are NOT part of the actual product.\n\nRemove all external objects, including but not limited to:\n- hands\n- fingers\n- people\n- arms\n- gloves\n- supports\n- holders\n- display stands\n- mounting fixtures\n- clips\n- wires\n- cables\n- strings\n- hooks\n- tape\n- labels not attached to the product\n- packaging\n- protective films\n- foam\n- plastic bags\n- boxes\n- backgrounds\n- tables\n- shelves\n- walls\n- floors\n- reflections of surrounding objects\n- dust\n- dirt\n- fingerprints\n- stains\n- scratches caused by photography\n- watermarks\n- camera equipment\n- props\n- any unrelated objects\n\nDo not allow removed objects to influence the product shape.\n\nDo not fill removed areas with fabricated product geometry.\n\nOnly reconstruct regions that are directly supported by the visible reference image.\n\nNever infer invisible structures.\n\nCommercial product retouching only.\n\n{argument name=\"background\"\ndefault=\"Pure solid #FFFFFF background. Perfectly isolated product. No cast shadows. No floor shadows. No reflections. No props. Clean cutout with crisp edges. Maintain subtle natural edge separation so white products remain clearly distinguishable from the white background without artificial outlines.\"}\n\n{argument name=\"lighting\"\ndefault=\"Neutral professional commercial studio lighting. Soft and even illumination. Accurate material appearance. Preserve true colors. High dynamic range. Clean highlights without overexposure. Maintain natural contrast between the product and the white background.\"}\n\n{argument name=\"quality\"\ndefault=\"Ultra high-end e-commerce product retouching. Catalog-quality white background product image. Maximum reference fidelity. Pixel-accurate reconstruction from the uploaded image. Extremely sharp details. Professional commercial retouching. No artistic interpretation.\"}\n\nPriority Rules:\n1. Preserve the real product exactly as photographed.\n2. Remove only non-product objects.\n3. Never alter the product in order to improve aesthetics.\n4. If there is any conflict between visual accuracy and visual beauty, always choose visual accuracy.\n5. Every visible product detail has higher priority than background cleanup.",
+      "outputs": [
+        "/assets/output/online_d9ef0e5282.png"
+      ],
+      "refs": [
+        {
+          "url": "/assets/input/ai_ref_0f5cd68e65c6.jpg",
+          "name": "DSC08587.JPG"
+        }
+      ],
+      "runMs": 43981,
+      "error": ""
+    },
+    {
+      "id": "log_15581ea0ed8768_1783585865007",
+      "createdAt": 1783585865007,
+      "status": "success",
+      "platform": "自用生图",
+      "nodeType": "generator",
+      "model": "gpt-image-2",
+      "request": {
+        "task_id": "",
+        "request_id": "chatcmpl-1783585861514",
+        "provider_id": "custom-api",
+        "backend": "",
+        "prompt_id": "",
+        "workflow_json": "",
+        "seed": ""
+      },
+      "prompt": "{argument name=\"subject\" default=\"product\"}\n\nStrictly use the uploaded real product image as the ONLY source of truth.\n\nThis is an image-to-image commercial product retouching task, NOT a redesign or recreation.\n\nReference fidelity has absolute priority over aesthetics.\n\nPreserve exactly:\n- geometry\n- proportions\n- viewpoint\n- camera angle\n- orientation\n- position\n- scale\n- materials\n- textures\n- finishes\n- colors\n- logos\n- labels\n- typography\n- engravings\n- surface details\n- edges\n- contours\n- openings\n- buttons\n- ports\n- screws\n- seams\n- all visible structures\n- every visible manufacturing detail\n\nNever:\n- redesign\n- reconstruct\n- hallucinate\n- invent unseen geometry\n- generate hidden structures\n- rotate\n- change viewpoint\n- change perspective\n- change proportions\n- beautify the design\n- simplify details\n- replace components\n- add accessories\n- create a different product model\n- modify any visible product features\n\nOnly remove objects that are NOT part of the actual product.\n\nRemove all external objects, including but not limited to:\n- hands\n- fingers\n- people\n- arms\n- gloves\n- supports\n- holders\n- display stands\n- mounting fixtures\n- clips\n- wires\n- cables\n- strings\n- hooks\n- tape\n- labels not attached to the product\n- packaging\n- protective films\n- foam\n- plastic bags\n- boxes\n- backgrounds\n- tables\n- shelves\n- walls\n- floors\n- reflections of surrounding objects\n- dust\n- dirt\n- fingerprints\n- stains\n- scratches caused by photography\n- watermarks\n- camera equipment\n- props\n- any unrelated objects\n\nDo not allow removed objects to influence the product shape.\n\nDo not fill removed areas with fabricated product geometry.\n\nOnly reconstruct regions that are directly supported by the visible reference image.\n\nNever infer invisible structures.\n\nCommercial product retouching only.\n\n{argument name=\"background\"\ndefault=\"Pure solid #FFFFFF background. Perfectly isolated product. No cast shadows. No floor shadows. No reflections. No props. Clean cutout with crisp edges. Maintain subtle natural edge separation so white products remain clearly distinguishable from the white background without artificial outlines.\"}\n\n{argument name=\"lighting\"\ndefault=\"Neutral professional commercial studio lighting. Soft and even illumination. Accurate material appearance. Preserve true colors. High dynamic range. Clean highlights without overexposure. Maintain natural contrast between the product and the white background.\"}\n\n{argument name=\"quality\"\ndefault=\"Ultra high-end e-commerce product retouching. Catalog-quality white background product image. Maximum reference fidelity. Pixel-accurate reconstruction from the uploaded image. Extremely sharp details. Professional commercial retouching. No artistic interpretation.\"}\n\nPriority Rules:\n1. Preserve the real product exactly as photographed.\n2. Remove only non-product objects.\n3. Never alter the product in order to improve aesthetics.\n4. If there is any conflict between visual accuracy and visual beauty, always choose visual accuracy.\n5. Every visible product detail has higher priority than background cleanup.",
+      "outputs": [
+        "/assets/output/online_c6168512a4.png"
+      ],
+      "refs": [
+        {
+          "url": "/assets/input/ai_ref_c145889ce3f8.jpg",
+          "name": "DSC08610.JPG"
+        }
+      ],
+      "runMs": 203734,
+      "error": ""
+    },
+    {
+      "id": "log_e82a02d830d6d8_1783585745171",
+      "createdAt": 1783585745171,
+      "status": "success",
+      "platform": "自用生图",
+      "nodeType": "generator",
+      "model": "gpt-image-2",
+      "request": {
+        "task_id": "",
+        "request_id": "chatcmpl-1783585743200",
+        "provider_id": "custom-api",
+        "backend": "",
+        "prompt_id": "",
+        "workflow_json": "",
+        "seed": ""
+      },
+      "prompt": "{argument name=\"subject\" default=\"product\"}\n\nStrictly use the uploaded real product image as the ONLY source of truth.\n\nThis is an image-to-image commercial product retouching task, NOT a redesign or recreation.\n\nReference fidelity has absolute priority over aesthetics.\n\nPreserve exactly:\n- geometry\n- proportions\n- viewpoint\n- camera angle\n- orientation\n- position\n- scale\n- materials\n- textures\n- finishes\n- colors\n- logos\n- labels\n- typography\n- engravings\n- surface details\n- edges\n- contours\n- openings\n- buttons\n- ports\n- screws\n- seams\n- all visible structures\n- every visible manufacturing detail\n\nNever:\n- redesign\n- reconstruct\n- hallucinate\n- invent unseen geometry\n- generate hidden structures\n- rotate\n- change viewpoint\n- change perspective\n- change proportions\n- beautify the design\n- simplify details\n- replace components\n- add accessories\n- create a different product model\n- modify any visible product features\n\nOnly remove objects that are NOT part of the actual product.\n\nRemove all external objects, including but not limited to:\n- hands\n- fingers\n- people\n- arms\n- gloves\n- supports\n- holders\n- display stands\n- mounting fixtures\n- clips\n- wires\n- cables\n- strings\n- hooks\n- tape\n- labels not attached to the product\n- packaging\n- protective films\n- foam\n- plastic bags\n- boxes\n- backgrounds\n- tables\n- shelves\n- walls\n- floors\n- reflections of surrounding objects\n- dust\n- dirt\n- fingerprints\n- stains\n- scratches caused by photography\n- watermarks\n- camera equipment\n- props\n- any unrelated objects\n\nDo not allow removed objects to influence the product shape.\n\nDo not fill removed areas with fabricated product geometry.\n\nOnly reconstruct regions that are directly supported by the visible reference image.\n\nNever infer invisible structures.\n\nCommercial product retouching only.\n\n{argument name=\"background\"\ndefault=\"Pure solid #FFFFFF background. Perfectly isolated product. No cast shadows. No floor shadows. No reflections. No props. Clean cutout with crisp edges. Maintain subtle natural edge separation so white products remain clearly distinguishable from the white background without artificial outlines.\"}\n\n{argument name=\"lighting\"\ndefault=\"Neutral professional commercial studio lighting. Soft and even illumination. Accurate material appearance. Preserve true colors. High dynamic range. Clean highlights without overexposure. Maintain natural contrast between the product and the white background.\"}\n\n{argument name=\"quality\"\ndefault=\"Ultra high-end e-commerce product retouching. Catalog-quality white background product image. Maximum reference fidelity. Pixel-accurate reconstruction from the uploaded image. Extremely sharp details. Professional commercial retouching. No artistic interpretation.\"}\n\nPriority Rules:\n1. Preserve the real product exactly as photographed.\n2. Remove only non-product objects.\n3. Never alter the product in order to improve aesthetics.\n4. If there is any conflict between visual accuracy and visual beauty, always choose visual accuracy.\n5. Every visible product detail has higher priority than background cleanup.",
+      "outputs": [
+        "/assets/output/online_d1171db672.png"
+      ],
+      "refs": [
+        {
+          "url": "/assets/input/ai_ref_f08bd72ffb77.jpg",
+          "name": "DSC08611.JPG"
+        }
+      ],
+      "runMs": 80163,
+      "error": ""
+    },
+    {
+      "id": "log_47b616f546b5c8_1783585705911",
+      "createdAt": 1783585705911,
+      "status": "success",
+      "platform": "自用生图",
+      "nodeType": "generator",
+      "model": "gpt-image-2",
+      "request": {
+        "task_id": "",
+        "request_id": "chatcmpl-1783585703640",
+        "provider_id": "custom-api",
+        "backend": "",
+        "prompt_id": "",
+        "workflow_json": "",
+        "seed": ""
+      },
+      "prompt": "{argument name=\"subject\" default=\"product\"}\n\nStrictly use the uploaded real product image as the ONLY source of truth.\n\nThis is an image-to-image commercial product retouching task, NOT a redesign or recreation.\n\nReference fidelity has absolute priority over aesthetics.\n\nPreserve exactly:\n- geometry\n- proportions\n- viewpoint\n- camera angle\n- orientation\n- position\n- scale\n- materials\n- textures\n- finishes\n- colors\n- logos\n- labels\n- typography\n- engravings\n- surface details\n- edges\n- contours\n- openings\n- buttons\n- ports\n- screws\n- seams\n- all visible structures\n- every visible manufacturing detail\n\nNever:\n- redesign\n- reconstruct\n- hallucinate\n- invent unseen geometry\n- generate hidden structures\n- rotate\n- change viewpoint\n- change perspective\n- change proportions\n- beautify the design\n- simplify details\n- replace components\n- add accessories\n- create a different product model\n- modify any visible product features\n\nOnly remove objects that are NOT part of the actual product.\n\nRemove all external objects, including but not limited to:\n- hands\n- fingers\n- people\n- arms\n- gloves\n- supports\n- holders\n- display stands\n- mounting fixtures\n- clips\n- wires\n- cables\n- strings\n- hooks\n- tape\n- labels not attached to the product\n- packaging\n- protective films\n- foam\n- plastic bags\n- boxes\n- backgrounds\n- tables\n- shelves\n- walls\n- floors\n- reflections of surrounding objects\n- dust\n- dirt\n- fingerprints\n- stains\n- scratches caused by photography\n- watermarks\n- camera equipment\n- props\n- any unrelated objects\n\nDo not allow removed objects to influence the product shape.\n\nDo not fill removed areas with fabricated product geometry.\n\nOnly reconstruct regions that are directly supported by the visible reference image.\n\nNever infer invisible structures.\n\nCommercial product retouching only.\n\n{argument name=\"background\"\ndefault=\"Pure solid #FFFFFF background. Perfectly isolated product. No cast shadows. No floor shadows. No reflections. No props. Clean cutout with crisp edges. Maintain subtle natural edge separation so white products remain clearly distinguishable from the white background without artificial outlines.\"}\n\n{argument name=\"lighting\"\ndefault=\"Neutral professional commercial studio lighting. Soft and even illumination. Accurate material appearance. Preserve true colors. High dynamic range. Clean highlights without overexposure. Maintain natural contrast between the product and the white background.\"}\n\n{argument name=\"quality\"\ndefault=\"Ultra high-end e-commerce product retouching. Catalog-quality white background product image. Maximum reference fidelity. Pixel-accurate reconstruction from the uploaded image. Extremely sharp details. Professional commercial retouching. No artistic interpretation.\"}\n\nPriority Rules:\n1. Preserve the real product exactly as photographed.\n2. Remove only non-product objects.\n3. Never alter the product in order to improve aesthetics.\n4. If there is any conflict between visual accuracy and visual beauty, always choose visual accuracy.\n5. Every visible product detail has higher priority than background cleanup.",
+      "outputs": [
+        "/assets/output/online_1a5c5d4d96.png"
+      ],
+      "refs": [
+        {
+          "url": "/assets/input/ai_ref_0b539a40fab1.jpg",
+          "name": "DSC08603.JPG"
+        }
+      ],
+      "runMs": 47985,
+      "error": ""
+    },
+    {
+      "id": "log_f9757fab4d66e_1783585704553",
+      "createdAt": 1783585704553,
+      "status": "success",
+      "platform": "自用生图",
+      "nodeType": "generator",
+      "model": "gpt-image-2",
+      "request": {
+        "task_id": "",
+        "request_id": "chatcmpl-1783585701805",
+        "provider_id": "custom-api",
+        "backend": "",
+        "prompt_id": "",
+        "workflow_json": "",
+        "seed": ""
+      },
+      "prompt": "{argument name=\"subject\" default=\"product\"}\n\nStrictly use the uploaded real product image as the ONLY source of truth.\n\nThis is an image-to-image commercial product retouching task, NOT a redesign or recreation.\n\nReference fidelity has absolute priority over aesthetics.\n\nPreserve exactly:\n- geometry\n- proportions\n- viewpoint\n- camera angle\n- orientation\n- position\n- scale\n- materials\n- textures\n- finishes\n- colors\n- logos\n- labels\n- typography\n- engravings\n- surface details\n- edges\n- contours\n- openings\n- buttons\n- ports\n- screws\n- seams\n- all visible structures\n- every visible manufacturing detail\n\nNever:\n- redesign\n- reconstruct\n- hallucinate\n- invent unseen geometry\n- generate hidden structures\n- rotate\n- change viewpoint\n- change perspective\n- change proportions\n- beautify the design\n- simplify details\n- replace components\n- add accessories\n- create a different product model\n- modify any visible product features\n\nOnly remove objects that are NOT part of the actual product.\n\nRemove all external objects, including but not limited to:\n- hands\n- fingers\n- people\n- arms\n- gloves\n- supports\n- holders\n- display stands\n- mounting fixtures\n- clips\n- wires\n- cables\n- strings\n- hooks\n- tape\n- labels not attached to the product\n- packaging\n- protective films\n- foam\n- plastic bags\n- boxes\n- backgrounds\n- tables\n- shelves\n- walls\n- floors\n- reflections of surrounding objects\n- dust\n- dirt\n- fingerprints\n- stains\n- scratches caused by photography\n- watermarks\n- camera equipment\n- props\n- any unrelated objects\n\nDo not allow removed objects to influence the product shape.\n\nDo not fill removed areas with fabricated product geometry.\n\nOnly reconstruct regions that are directly supported by the visible reference image.\n\nNever infer invisible structures.\n\nCommercial product retouching only.\n\n{argument name=\"background\"\ndefault=\"Pure solid #FFFFFF background. Perfectly isolated product. No cast shadows. No floor shadows. No reflections. No props. Clean cutout with crisp edges. Maintain subtle natural edge separation so white products remain clearly distinguishable from the white background without artificial outlines.\"}\n\n{argument name=\"lighting\"\ndefault=\"Neutral professional commercial studio lighting. Soft and even illumination. Accurate material appearance. Preserve true colors. High dynamic range. Clean highlights without overexposure. Maintain natural contrast between the product and the white background.\"}\n\n{argument name=\"quality\"\ndefault=\"Ultra high-end e-commerce product retouching. Catalog-quality white background product image. Maximum reference fidelity. Pixel-accurate reconstruction from the uploaded image. Extremely sharp details. Professional commercial retouching. No artistic interpretation.\"}\n\nPriority Rules:\n1. Preserve the real product exactly as photographed.\n2. Remove only non-product objects.\n3. Never alter the product in order to improve aesthetics.\n4. If there is any conflict between visual accuracy and visual beauty, always choose visual accuracy.\n5. Every visible product detail has higher priority than background cleanup.",
+      "outputs": [
+        "/assets/output/online_e43f4466a0.png"
+      ],
+      "refs": [
+        {
+          "url": "/assets/input/ai_ref_980171d45531.jpg",
+          "name": "DSC08609.JPG"
+        }
+      ],
+      "runMs": 41963,
+      "error": ""
+    },
+    {
+      "id": "log_9b7c200381bf6_1783585696846",
+      "createdAt": 1783585696846,
+      "status": "success",
+      "platform": "自用生图",
+      "nodeType": "generator",
+      "model": "gpt-image-2",
+      "request": {
+        "task_id": "",
+        "request_id": "chatcmpl-1783585694501",
+        "provider_id": "custom-api",
+        "backend": "",
+        "prompt_id": "",
+        "workflow_json": "",
+        "seed": ""
+      },
+      "prompt": "{argument name=\"subject\" default=\"product\"}\n\nStrictly use the uploaded real product image as the ONLY source of truth.\n\nThis is an image-to-image commercial product retouching task, NOT a redesign or recreation.\n\nReference fidelity has absolute priority over aesthetics.\n\nPreserve exactly:\n- geometry\n- proportions\n- viewpoint\n- camera angle\n- orientation\n- position\n- scale\n- materials\n- textures\n- finishes\n- colors\n- logos\n- labels\n- typography\n- engravings\n- surface details\n- edges\n- contours\n- openings\n- buttons\n- ports\n- screws\n- seams\n- all visible structures\n- every visible manufacturing detail\n\nNever:\n- redesign\n- reconstruct\n- hallucinate\n- invent unseen geometry\n- generate hidden structures\n- rotate\n- change viewpoint\n- change perspective\n- change proportions\n- beautify the design\n- simplify details\n- replace components\n- add accessories\n- create a different product model\n- modify any visible product features\n\nOnly remove objects that are NOT part of the actual product.\n\nRemove all external objects, including but not limited to:\n- hands\n- fingers\n- people\n- arms\n- gloves\n- supports\n- holders\n- display stands\n- mounting fixtures\n- clips\n- wires\n- cables\n- strings\n- hooks\n- tape\n- labels not attached to the product\n- packaging\n- protective films\n- foam\n- plastic bags\n- boxes\n- backgrounds\n- tables\n- shelves\n- walls\n- floors\n- reflections of surrounding objects\n- dust\n- dirt\n- fingerprints\n- stains\n- scratches caused by photography\n- watermarks\n- camera equipment\n- props\n- any unrelated objects\n\nDo not allow removed objects to influence the product shape.\n\nDo not fill removed areas with fabricated product geometry.\n\nOnly reconstruct regions that are directly supported by the visible reference image.\n\nNever infer invisible structures.\n\nCommercial product retouching only.\n\n{argument name=\"background\"\ndefault=\"Pure solid #FFFFFF background. Perfectly isolated product. No cast shadows. No floor shadows. No reflections. No props. Clean cutout with crisp edges. Maintain subtle natural edge separation so white products remain clearly distinguishable from the white background without artificial outlines.\"}\n\n{argument name=\"lighting\"\ndefault=\"Neutral professional commercial studio lighting. Soft and even illumination. Accurate material appearance. Preserve true colors. High dynamic range. Clean highlights without overexposure. Maintain natural contrast between the product and the white background.\"}\n\n{argument name=\"quality\"\ndefault=\"Ultra high-end e-commerce product retouching. Catalog-quality white background product image. Maximum reference fidelity. Pixel-accurate reconstruction from the uploaded image. Extremely sharp details. Professional commercial retouching. No artistic interpretation.\"}\n\nPriority Rules:\n1. Preserve the real product exactly as photographed.\n2. Remove only non-product objects.\n3. Never alter the product in order to improve aesthetics.\n4. If there is any conflict between visual accuracy and visual beauty, always choose visual accuracy.\n5. Every visible product detail has higher priority than background cleanup.",
+      "outputs": [
+        "/assets/output/online_6e98a20840.png"
+      ],
+      "refs": [
+        {
+          "url": "/assets/input/ai_ref_a14b8102ef2a.jpg",
+          "name": "DSC08608.JPG"
+        }
+      ],
+      "runMs": 36766,
+      "error": ""
+    },
+    {
+      "id": "log_57d1e2d000f7d_1783585282540",
+      "createdAt": 1783585282540,
+      "status": "success",
+      "platform": "自用生图",
+      "nodeType": "generator",
+      "model": "gpt-image-2",
+      "request": {
+        "task_id": "",
+        "request_id": "chatcmpl-1783585280202",
+        "provider_id": "custom-api",
+        "backend": "",
+        "prompt_id": "",
+        "workflow_json": "",
+        "seed": ""
+      },
+      "prompt": "{argument name=\"subject\" default=\"product\"}\n\nStrictly use the uploaded real product image as the ONLY source of truth.\n\nReference fidelity has absolute priority over aesthetics.\n\nPreserve exactly:\n- geometry\n- proportions\n- viewpoint\n- camera angle\n- orientation\n- materials\n- textures\n- colors\n- logos\n- labels\n- all visible structures\n\nNever:\n- redesign\n- reconstruct\n- hallucinate\n- invent unseen geometry\n- rotate\n- change viewpoint\n- beautify\n- simplify\n- generate another product model\n\nCommercial product retouching only.\n\n{argument name=\"background\"\ndefault=\"pure #FFFFFF background, perfectly isolated subject, no shadows, no reflections, crisp edges, natural edge separation\"}\n\n{argument name=\"lighting\"\ndefault=\"neutral commercial studio lighting, evenly illuminated, preserve true colors and material appearance\"}\n\n{argument name=\"quality\"\ndefault=\"ultra high-end e-commerce product retouching, catalog quality, maximum detail fidelity, pixel-accurate reconstruction from the reference image\"}",
+      "outputs": [
+        "/assets/output/online_6ab68bc91f.png"
+      ],
+      "refs": [
+        {
+          "url": "/assets/input/ai_ref_7fb059df6414.jpg",
+          "name": "DSC08601.JPG"
+        }
+      ],
+      "runMs": 66404,
+      "error": ""
+    },
+    {
+      "id": "log_26e59fa62377f_1783585258947",
+      "createdAt": 1783585258947,
+      "status": "success",
+      "platform": "自用生图",
+      "nodeType": "generator",
+      "model": "gpt-image-2",
+      "request": {
+        "task_id": "",
+        "request_id": "chatcmpl-1783585256624",
+        "provider_id": "custom-api",
+        "backend": "",
+        "prompt_id": "",
+        "workflow_json": "",
+        "seed": ""
+      },
+      "prompt": "{argument name=\"subject\" default=\"product\"}\n\nStrictly use the uploaded real product image as the ONLY source of truth.\n\nReference fidelity has absolute priority over aesthetics.\n\nPreserve exactly:\n- geometry\n- proportions\n- viewpoint\n- camera angle\n- orientation\n- materials\n- textures\n- colors\n- logos\n- labels\n- all visible structures\n\nNever:\n- redesign\n- reconstruct\n- hallucinate\n- invent unseen geometry\n- rotate\n- change viewpoint\n- beautify\n- simplify\n- generate another product model\n\nCommercial product retouching only.\n\n{argument name=\"background\"\ndefault=\"pure #FFFFFF background, perfectly isolated subject, no shadows, no reflections, crisp edges, natural edge separation\"}\n\n{argument name=\"lighting\"\ndefault=\"neutral commercial studio lighting, evenly illuminated, preserve true colors and material appearance\"}\n\n{argument name=\"quality\"\ndefault=\"ultra high-end e-commerce product retouching, catalog quality, maximum detail fidelity, pixel-accurate reconstruction from the reference image\"}",
+      "outputs": [
+        "/assets/output/online_5958479f4f.png"
+      ],
+      "refs": [
+        {
+          "url": "/assets/input/ai_ref_dab50aed3ced.jpg",
+          "name": "DSC08599.JPG"
+        }
+      ],
+      "runMs": 44646,
+      "error": ""
+    },
+    {
+      "id": "log_a33e8f6815b9b8_1783585255779",
+      "createdAt": 1783585255779,
+      "status": "success",
+      "platform": "自用生图",
+      "nodeType": "generator",
+      "model": "gpt-image-2",
+      "request": {
+        "task_id": "",
+        "request_id": "chatcmpl-1783585254199",
+        "provider_id": "custom-api",
+        "backend": "",
+        "prompt_id": "",
+        "workflow_json": "",
+        "seed": ""
+      },
+      "prompt": "{argument name=\"subject\" default=\"product\"}\n\nStrictly use the uploaded real product image as the ONLY source of truth.\n\nReference fidelity has absolute priority over aesthetics.\n\nPreserve exactly:\n- geometry\n- proportions\n- viewpoint\n- camera angle\n- orientation\n- materials\n- textures\n- colors\n- logos\n- labels\n- all visible structures\n\nNever:\n- redesign\n- reconstruct\n- hallucinate\n- invent unseen geometry\n- rotate\n- change viewpoint\n- beautify\n- simplify\n- generate another product model\n\nCommercial product retouching only.\n\n{argument name=\"background\"\ndefault=\"pure #FFFFFF background, perfectly isolated subject, no shadows, no reflections, crisp edges, natural edge separation\"}\n\n{argument name=\"lighting\"\ndefault=\"neutral commercial studio lighting, evenly illuminated, preserve true colors and material appearance\"}\n\n{argument name=\"quality\"\ndefault=\"ultra high-end e-commerce product retouching, catalog quality, maximum detail fidelity, pixel-accurate reconstruction from the reference image\"}",
+      "outputs": [
+        "/assets/output/online_40061cd9f1.png"
+      ],
+      "refs": [
+        {
+          "url": "/assets/input/ai_ref_cd76ec12a7c2.jpg",
+          "name": "DSC08602.JPG"
+        }
+      ],
+      "runMs": 40793,
+      "error": ""
+    },
+    {
+      "id": "log_c9c4f677289438_1783585253431",
+      "createdAt": 1783585253431,
+      "status": "success",
+      "platform": "自用生图",
+      "nodeType": "generator",
+      "model": "gpt-image-2",
+      "request": {
+        "task_id": "",
+        "request_id": "chatcmpl-1783585252204",
+        "provider_id": "custom-api",
+        "backend": "",
+        "prompt_id": "",
+        "workflow_json": "",
+        "seed": ""
+      },
+      "prompt": "{argument name=\"subject\" default=\"product\"}\n\nStrictly use the uploaded real product image as the ONLY source of truth.\n\nReference fidelity has absolute priority over aesthetics.\n\nPreserve exactly:\n- geometry\n- proportions\n- viewpoint\n- camera angle\n- orientation\n- materials\n- textures\n- colors\n- logos\n- labels\n- all visible structures\n\nNever:\n- redesign\n- reconstruct\n- hallucinate\n- invent unseen geometry\n- rotate\n- change viewpoint\n- beautify\n- simplify\n- generate another product model\n\nCommercial product retouching only.\n\n{argument name=\"background\"\ndefault=\"pure #FFFFFF background, perfectly isolated subject, no shadows, no reflections, crisp edges, natural edge separation\"}\n\n{argument name=\"lighting\"\ndefault=\"neutral commercial studio lighting, evenly illuminated, preserve true colors and material appearance\"}\n\n{argument name=\"quality\"\ndefault=\"ultra high-end e-commerce product retouching, catalog quality, maximum detail fidelity, pixel-accurate reconstruction from the reference image\"}",
+      "outputs": [
+        "/assets/output/online_41d258edc0.png"
+      ],
+      "refs": [
+        {
+          "url": "/assets/input/ai_ref_5db2fd1e1414.jpg",
+          "name": "DSC08596.JPG"
+        }
+      ],
+      "runMs": 41648,
+      "error": ""
+    },
+    {
+      "id": "log_960412e109719_1783585252029",
+      "createdAt": 1783585252029,
+      "status": "success",
+      "platform": "自用生图",
+      "nodeType": "generator",
+      "model": "gpt-image-2",
+      "request": {
+        "task_id": "",
+        "request_id": "chatcmpl-1783585250602",
+        "provider_id": "custom-api",
+        "backend": "",
+        "prompt_id": "",
+        "workflow_json": "",
+        "seed": ""
+      },
+      "prompt": "{argument name=\"subject\" default=\"product\"}\n\nStrictly use the uploaded real product image as the ONLY source of truth.\n\nReference fidelity has absolute priority over aesthetics.\n\nPreserve exactly:\n- geometry\n- proportions\n- viewpoint\n- camera angle\n- orientation\n- materials\n- textures\n- colors\n- logos\n- labels\n- all visible structures\n\nNever:\n- redesign\n- reconstruct\n- hallucinate\n- invent unseen geometry\n- rotate\n- change viewpoint\n- beautify\n- simplify\n- generate another product model\n\nCommercial product retouching only.\n\n{argument name=\"background\"\ndefault=\"pure #FFFFFF background, perfectly isolated subject, no shadows, no reflections, crisp edges, natural edge separation\"}\n\n{argument name=\"lighting\"\ndefault=\"neutral commercial studio lighting, evenly illuminated, preserve true colors and material appearance\"}\n\n{argument name=\"quality\"\ndefault=\"ultra high-end e-commerce product retouching, catalog quality, maximum detail fidelity, pixel-accurate reconstruction from the reference image\"}",
+      "outputs": [
+        "/assets/output/online_7070d2c01f.png"
+      ],
+      "refs": [
+        {
+          "url": "/assets/input/ai_ref_750d215c1d9a.jpg",
+          "name": "DSC08595.JPG"
+        }
+      ],
+      "runMs": 39552,
+      "error": ""
+    },
+    {
+      "id": "log_40d05eef2d98e8_1783585251860",
+      "createdAt": 1783585251860,
+      "status": "success",
+      "platform": "自用生图",
+      "nodeType": "generator",
+      "model": "gpt-image-2",
+      "request": {
+        "task_id": "",
+        "request_id": "chatcmpl-1783585249775",
+        "provider_id": "custom-api",
+        "backend": "",
+        "prompt_id": "",
+        "workflow_json": "",
+        "seed": ""
+      },
+      "prompt": "{argument name=\"subject\" default=\"product\"}\n\nStrictly use the uploaded real product image as the ONLY source of truth.\n\nReference fidelity has absolute priority over aesthetics.\n\nPreserve exactly:\n- geometry\n- proportions\n- viewpoint\n- camera angle\n- orientation\n- materials\n- textures\n- colors\n- logos\n- labels\n- all visible structures\n\nNever:\n- redesign\n- reconstruct\n- hallucinate\n- invent unseen geometry\n- rotate\n- change viewpoint\n- beautify\n- simplify\n- generate another product model\n\nCommercial product retouching only.\n\n{argument name=\"background\"\ndefault=\"pure #FFFFFF background, perfectly isolated subject, no shadows, no reflections, crisp edges, natural edge separation\"}\n\n{argument name=\"lighting\"\ndefault=\"neutral commercial studio lighting, evenly illuminated, preserve true colors and material appearance\"}\n\n{argument name=\"quality\"\ndefault=\"ultra high-end e-commerce product retouching, catalog quality, maximum detail fidelity, pixel-accurate reconstruction from the reference image\"}",
+      "outputs": [
+        "/assets/output/online_91e2d411c2.png"
+      ],
+      "refs": [
+        {
+          "url": "/assets/input/ai_ref_ed7584f22d96.jpg",
+          "name": "DSC08594.JPG"
+        }
+      ],
+      "runMs": 41241,
+      "error": ""
+    },
+    {
+      "id": "log_d27e5e4f9b86f8_1783585251613",
+      "createdAt": 1783585251613,
+      "status": "success",
+      "platform": "自用生图",
+      "nodeType": "generator",
+      "model": "gpt-image-2",
+      "request": {
+        "task_id": "",
+        "request_id": "chatcmpl-1783585248817",
+        "provider_id": "custom-api",
+        "backend": "",
+        "prompt_id": "",
+        "workflow_json": "",
+        "seed": ""
+      },
+      "prompt": "{argument name=\"subject\" default=\"product\"}\n\nStrictly use the uploaded real product image as the ONLY source of truth.\n\nReference fidelity has absolute priority over aesthetics.\n\nPreserve exactly:\n- geometry\n- proportions\n- viewpoint\n- camera angle\n- orientation\n- materials\n- textures\n- colors\n- logos\n- labels\n- all visible structures\n\nNever:\n- redesign\n- reconstruct\n- hallucinate\n- invent unseen geometry\n- rotate\n- change viewpoint\n- beautify\n- simplify\n- generate another product model\n\nCommercial product retouching only.\n\n{argument name=\"background\"\ndefault=\"pure #FFFFFF background, perfectly isolated subject, no shadows, no reflections, crisp edges, natural edge separation\"}\n\n{argument name=\"lighting\"\ndefault=\"neutral commercial studio lighting, evenly illuminated, preserve true colors and material appearance\"}\n\n{argument name=\"quality\"\ndefault=\"ultra high-end e-commerce product retouching, catalog quality, maximum detail fidelity, pixel-accurate reconstruction from the reference image\"}",
+      "outputs": [
+        "/assets/output/online_b040798e39.png"
+      ],
+      "refs": [
+        {
+          "url": "/assets/input/ai_ref_ae55886b240a.jpg",
+          "name": "DSC08598.JPG"
+        }
+      ],
+      "runMs": 37976,
+      "error": ""
+    },
+    {
+      "id": "log_334cd18acb4098_1783585247895",
+      "createdAt": 1783585247895,
+      "status": "success",
+      "platform": "自用生图",
+      "nodeType": "generator",
+      "model": "gpt-image-2",
+      "request": {
+        "task_id": "",
+        "request_id": "chatcmpl-1783585246052",
+        "provider_id": "custom-api",
+        "backend": "",
+        "prompt_id": "",
+        "workflow_json": "",
+        "seed": ""
+      },
+      "prompt": "{argument name=\"subject\" default=\"product\"}\n\nStrictly use the uploaded real product image as the ONLY source of truth.\n\nReference fidelity has absolute priority over aesthetics.\n\nPreserve exactly:\n- geometry\n- proportions\n- viewpoint\n- camera angle\n- orientation\n- materials\n- textures\n- colors\n- logos\n- labels\n- all visible structures\n\nNever:\n- redesign\n- reconstruct\n- hallucinate\n- invent unseen geometry\n- rotate\n- change viewpoint\n- beautify\n- simplify\n- generate another product model\n\nCommercial product retouching only.\n\n{argument name=\"background\"\ndefault=\"pure #FFFFFF background, perfectly isolated subject, no shadows, no reflections, crisp edges, natural edge separation\"}\n\n{argument name=\"lighting\"\ndefault=\"neutral commercial studio lighting, evenly illuminated, preserve true colors and material appearance\"}\n\n{argument name=\"quality\"\ndefault=\"ultra high-end e-commerce product retouching, catalog quality, maximum detail fidelity, pixel-accurate reconstruction from the reference image\"}",
+      "outputs": [
+        "/assets/output/online_a7f81996d3.png"
+      ],
+      "refs": [
+        {
+          "url": "/assets/input/ai_ref_0fe326d5a04d.jpg",
+          "name": "DSC08593.JPG"
+        }
+      ],
+      "runMs": 40466,
+      "error": ""
+    },
+    {
+      "id": "log_9d5fe8b7319248_1783585117727",
+      "createdAt": 1783585117727,
+      "status": "success",
+      "platform": "自用生图",
+      "nodeType": "generator",
+      "model": "gpt-image-2",
+      "request": {
+        "task_id": "",
+        "request_id": "chatcmpl-1783585115919",
+        "provider_id": "custom-api",
+        "backend": "",
+        "prompt_id": "",
+        "workflow_json": "",
+        "seed": ""
+      },
+      "prompt": "{argument name=\"subject\" default=\"product\"}\n\nStrictly use the uploaded real product image as the ONLY source of truth.\n\nReference fidelity has absolute priority over aesthetics.\n\nPreserve exactly:\n- geometry\n- proportions\n- viewpoint\n- camera angle\n- orientation\n- materials\n- textures\n- colors\n- logos\n- labels\n- all visible structures\n\nNever:\n- redesign\n- reconstruct\n- hallucinate\n- invent unseen geometry\n- rotate\n- change viewpoint\n- beautify\n- simplify\n- generate another product model\n\nCommercial product retouching only.\n\n{argument name=\"background\"\ndefault=\"pure #FFFFFF background, perfectly isolated subject, no shadows, no reflections, crisp edges, natural edge separation\"}\n\n{argument name=\"lighting\"\ndefault=\"neutral commercial studio lighting, evenly illuminated, preserve true colors and material appearance\"}\n\n{argument name=\"quality\"\ndefault=\"ultra high-end e-commerce product retouching, catalog quality, maximum detail fidelity, pixel-accurate reconstruction from the reference image\"}",
+      "outputs": [
+        "/assets/output/online_49e2a61c48.png"
+      ],
+      "refs": [
+        {
+          "url": "/assets/input/ai_ref_6637a0a8697d.jpg",
+          "name": "DSC08589.JPG"
+        }
+      ],
+      "runMs": 216162,
+      "error": ""
+    },
+    {
+      "id": "log_90d0540c959dd8_1783584204636",
+      "createdAt": 1783584204636,
+      "status": "success",
+      "platform": "自用生图",
+      "nodeType": "generator",
+      "model": "gpt-image-2",
+      "request": {
+        "task_id": "",
+        "request_id": "chatcmpl-1783584201417",
+        "provider_id": "custom-api",
+        "backend": "",
+        "prompt_id": "",
+        "workflow_json": "",
+        "seed": ""
+      },
+      "prompt": "{argument name=\"subject\" default=\"product\"}, {argument name=\"composition\" default=\"perfectly centered, 3/4 top-down angle\"}, {argument name=\"atmosphere\" default=\"professional studio product photography, high-end retouching, optimized surface details, soft diffused lighting, sharp and flawless edges, pure solid white background, subtle natural ground shadow beneath the product, clean and high-quality presentation\"}\n\n将图片抠出即可，这是一个物体的顶部俯视图，视角为俯视",
+      "outputs": [
+        "/assets/output/online_b99807c09f.png"
+      ],
+      "refs": [
+        {
+          "url": "/assets/input/ai_ref_372ac3b9d984.jpg",
+          "name": "DSC08587.JPG"
+        }
+      ],
+      "runMs": 42061,
+      "error": ""
+    },
+    {
+      "id": "log_7e269763f95498_1783584096421",
+      "createdAt": 1783584096421,
+      "status": "success",
+      "platform": "自用生图",
+      "nodeType": "generator",
+      "model": "gpt-image-2",
+      "request": {
+        "task_id": "",
+        "request_id": "chatcmpl-1783584094442",
+        "provider_id": "custom-api",
+        "backend": "",
+        "prompt_id": "",
+        "workflow_json": "",
+        "seed": ""
+      },
+      "prompt": "{argument name=\"subject\" default=\"product\"}, {argument name=\"composition\" default=\"perfectly centered, 3/4 top-down angle\"}, {argument name=\"atmosphere\" default=\"professional studio product photography, high-end retouching, optimized surface details, soft diffused lighting, sharp and flawless edges, pure solid white background, subtle natural ground shadow beneath the product, clean and high-quality presentation\"}",
+      "outputs": [
+        "/assets/output/online_7881bf1c15.png"
+      ],
+      "refs": [
+        {
+          "url": "/assets/input/ai_ref_372ac3b9d984.jpg",
+          "name": "DSC08587.JPG"
+        }
+      ],
+      "runMs": 35335,
+      "error": ""
+    }
+  ],
+  "settings": {}
+}

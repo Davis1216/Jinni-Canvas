@@ -1,0 +1,21 @@
+__pycache__/
+*.py[cod]
+data/chat_runs/
+
+# Local secrets and runtime state
+API/.env
+.env
+.env.*
+!.env.example
+
+# Logs and generated history
+*.log
+server.err.log
+server.out.log
+history.json
+
+# Local tooling/cache directories
+.playwright-mcp/
+output/
+python/Lib/
+python/Scripts/

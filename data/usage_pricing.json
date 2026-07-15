@@ -1,0 +1,21 @@
+{
+  "currency": "CNY",
+  "provider_defaults": {},
+  "model_overrides": {
+    "custom-api::gpt-image-2": {
+      "input_per_1m": 0.0,
+      "output_per_1m": 0.0,
+      "image_each": 0.04,
+      "video_second": 0.0,
+      "request_each": 0.0
+    },
+    "custom-api-2::gpt-5.5": {
+      "input_per_1m": 5.0,
+      "output_per_1m": 30.0,
+      "image_each": 0.0,
+      "video_second": 0.0,
+      "request_each": 0.0
+    }
+  },
+  "updated_at": 1784018007
+}

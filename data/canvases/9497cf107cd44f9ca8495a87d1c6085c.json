@@ -1,0 +1,369 @@
+{
+  "id": "9497cf107cd44f9ca8495a87d1c6085c",
+  "title": "知识产品卖点",
+  "icon": "🧩",
+  "kind": "classic",
+  "owner": "",
+  "color": "",
+  "pinned": false,
+  "project": "ff06ee18985d4fbfafa5bb8558d023b3",
+  "created_at": 1784037226034,
+  "updated_at": 1784038610524,
+  "nodes": [
+    {
+      "id": "img_3c4583a423663_1784037239927",
+      "type": "image",
+      "x": 249,
+      "y": 251,
+      "url": "/assets/input/ai_ref_f1535fb34aae.png",
+      "name": "B款主图-弯曲1.png",
+      "primaryReference": false,
+      "mediaKind": "image",
+      "_naturalSizeLoading": false,
+      "natural_w": 1254,
+      "natural_h": 1254
+    },
+    {
+      "id": "llm_d4df51f5c83e3_1784037338087",
+      "type": "llm",
+      "x": 739,
+      "y": -43,
+      "llmProvider": "custom-api-2",
+      "model": "gemini-3.1-pro-preview",
+      "mode": "node",
+      "systemPrompt": "You are a helpful assistant. Rewrite the input into a concise image prompt.",
+      "chatInput": "",
+      "messages": [],
+      "outputText": "# 一、商品图像识别总结\n- **品类**：园艺植物攀爬支架 / 可弯曲椰棕柱\n- **材质/工艺**：天然椰丝包裹表面，内置可弯曲金属丝，底部尖头插杆\n- **款式规格**：长条柱状，支持自由弯曲（S型/螺旋），附带绿魔术贴与麻绳\n- **适用人群 & 场景**：室内盆栽爱好者，适用于龟背竹、绿萝等藤蔓植物\n- **整体风格**：原生态、自然、实用主义\n\n# 二、产品分层卖点\n1. **核心竞争卖点**：内置铝丝可随意弯曲造型，天然椰棕保水透气，促进气生根生长。\n2. **体验舒适卖点**：即插即用，附赠固定绑带，轻松理藤，免去繁琐维护。\n3. **视觉颜值卖点**：植物原生色调融合度高，轻松打造个性化室内绿植微景观。\n\n# 三、4 套 AI 绘图提示词方案\n\n### 方案 1：白底商品主图（上架首图）\n- **正向提示词**：Bendable coir pole, with green velcro tie and jute twine, pure white background, centered, product photography, 8k, soft studio lighting, clean.\n- **反向提示词**：杂乱背景，水印，文字，阴影过重，主体变形，植物遮挡，模糊失焦\n- **适用比例 & 参数**：1:1，写实电商渲染模型，采样步数20，CFG权重7，分辨率1024*1024\n\n### 方案 2：实景种草场景图（短视频 / 小红书封面）\n- **正向提示词**：Sunny indoor balcony, bendable coir pole supporting lush Monstera plant, S-shape styling, Nordic cement pot, natural light, cozy home vibe, photorealistic.\n- **反向提示词**：杂乱环境，枯叶，塑料质感，水印文字，色彩失真，多余杂物\n- **适用比例 & 参数**：3:4，采样步数25，CFG权重8，分辨率1280*1707\n\n### 方案 3：材质细节特写详情图\n- **正向提示词**：Close-up of coir pole surface, natural coconut fiber texture and wrapping thread, macro photography, rim light, clear material details, 8k.\n- **反向提示词**：模糊失焦，噪点，色彩偏差，过度曝光，背景杂乱，油污\n- **适用比例 & 参数**：2:3，采样步数22，CFG权重7，分辨率1024*1536\n\n### 方案 4：人物搭配 / 使用效果图\n- **正向提示词**：Young woman in bright living room, fixing Monstera plant to a bent coir pole using green ties, casual wear, plant care lifestyle, soft natural light.\n- **反向提示词**：畸形人物，多指，动作生硬，脏乱环境，水印文字，产品破损\n- **适用比例 & 参数**：16:9，采样步数24，CFG权重7.5，分辨率1920*1080\n\n# 四、落地使用优化方案\n- **绘图参数统一推荐**：推荐 Midjourney v6 或 SDXL 写实大模型，辅以真实植物类 LoRA 增强叶片质感，基础分辨率设定 1024px 以上。\n- **卖点强化微调技巧**：在成品图加上“双向弯曲箭头”标识突出可塑性；利用右下角标签放大展示“买即送绑带/麻绳”；可拼图对比“直立”与“S型”效果。\n- **各平台图文修改细则**：\n  - **淘宝/拼多多/传统电商**：主图放大弯曲特性，加粗红字标注“随意造型 不伤根系”，凸显性价比与赠品。\n  - **抖音/快手/视频号**：封面使用“植物改造前(倒伏) vs 改造后(艺术造型)”对比图，搭配治愈系纯音乐。\n  - **小红书/得物/内容电商**：套用日系奶油风滤镜，文案主打“拯救张牙舞爪的龟背竹”、“家居绿植造型神器”。\n- **高频画面瑕疵规避要点**：严格规避植物叶片生成错乱（如龟背竹裂口不自然）、绑带穿模、以及椰棕表面生成类似动物毛发的错误质感。",
+      "llmInputHeight": 110,
+      "llmOutputHeight": 150,
+      "showSystem": false,
+      "userInput": "# Role: 电商商品 AI 视觉方案与落地运营专家\n\n## Profile\n- **Description**: 你是一位精通电商视觉设计、AI 绘图技术以及多平台商品运营的资深专家。你能够对输入的“商品图像识别总结”进行深度剖析，提取出多维度的核心卖点，并转化为精准的 Midjourney/Stable Diffusion 绘图提示词方案，同时输出跨平台的运营落地指南。\n\n## Task Checklist & Workflow\n当你接收到关于某一商品的“图像识别总结/产品基础信息”时，你需要严格按照以下四个步骤进行分析并生成对应文档：\n\n1. **商品视觉与特征归纳**：精炼商品的品类、材质工艺、款式规格、适用人群场景与整体风格。\n2. **产品多层卖点拆解**：从“核心竞争（痛点/性价比）”、“体验舒适（易用性/痛点解决）”、“视觉颜值（场景匹配）”三个维度提炼分层卖点。\n3. **4 套 AI 绘图提示词方案制定**：针对电商核心链路，输出四套兼具正向、反向提示词及技术参数的方案：\n   - 方案 1：白底商品主图（上架首图）\n   - 方案 2：实景种草场景图（短视频/种草平台封面）\n   - 方案 3：材质细节特写详情图\n   - 方案 4：人物搭配/使用效果图\n4. **多平台落地使用优化方案**：提供模型参数推荐、卖点强化微调技巧、针对主流电商与内容平台的图文修改细则，以及画面瑕疵规避要点。\n\n---\n\n## Output Format Block\n\n必须严格按照以下 Markdown 格式进行内容输出，确保条理清晰：\n\n# 一、商品图像识别总结\n- **品类**：[明确品牌与具体产品品类]\n- **材质/工艺**：[提取外观材质、触感及核心制造工艺]\n- **款式规格**：[描述颜色、开门/控制方式、尺寸、核心设计语言]\n- **适用人群 & 场景**：[精准圈定目标受众与典型使用空间]\n- **整体风格**：[定义视觉基调，如极简、复古、奢华等]\n\n# 二、产品分层卖点\n1. **核心竞争卖点**：[侧重正品保障、核心参数、耐用度与基本性价比]\n2. **体验舒适卖点**：[侧重日常使用便利性、免维护度、即用性等用户痛点]\n3. **视觉颜值卖点**：[侧重外观美学、空间搭配适应性、氛围感营造]\n\n# 三、4 套 AI 绘图提示词方案\n*(提示词需转换为高质量的电商绘图语言，描述需具体、画面需干净)*\n\n### 方案 1：白底商品主图（上架首图）\n- **正向提示词**：[品牌/商品名称，纯白背景，居中摆放，完整展示外观与核心面板，专业电商产品摄影，8K高清，柔和无影布光，无多余杂物]\n- **反向提示词**：杂乱背景，水印，文字，污渍，产品变形，色差，多余配件，模糊失焦\n- **适用比例 & 参数**：1:1，写实电商渲染模型，采样步数20，CFG权重7，分辨率1024*1024\n\n### 方案 2：实景种草场景图（短视频 / 小红书封面）\n- **正向提示词**：[商品放置在具体的搭配台面/环境，搭配相关生活化道具，柔和自然光线，温馨居家/高档氛围，种草风，高清氛围感摄影，特定色调]\n- **反向提示词**：杂乱环境，污渍破损，水印文字，畸形产品，色彩失真，多余杂物\n- **适用比例 & 参数**：3:4，采样步数25，CFG权重8，分辨率1280*1707\n\n### 方案 3：材质细节特写详情图\n- **正向提示词**：[商品核心控制区/材质特写、核心工艺细节，微距高清摄影，柔和侧光，清晰展示材质肌理与质感，专业电商详情页画质，8K]\n- **反向提示词**：模糊失焦，水印文字，油污污渍，产品变形，色彩偏差，多余杂物\n- **适用比例 & 参数**：2:3，采样步数22，CFG权重7，分辨率1024*1536\n\n### 方案 4：人物搭配 / 使用效果图\n- **正向提示词**：[特定画像的人物日常居家/办公穿搭，在对应场景使用该商品，柔和自然光，温馨治愈/专业高效氛围，写实家电种草风格，8K高清]\n- **反向提示词**：畸形人物，杂乱背景，水印文字，产品破损，色彩失真，模糊失焦\n- **适用比例 & 参数**：16:9，采样步数24，CFG权重7.5，分辨率1920*1080\n\n# 四、落地使用优化方案\n- **绘图参数统一推荐**：[推荐适合该品类的 AI 绘图模型大类及分辨率调整建议]\n- **卖点强化微调技巧**：[指导如何在生成的图上通过后期、便签、标识贴纸或价格标注来强化前文提到的卖点]\n- **各平台图文修改细则**：\n  - **淘宝/拼多多/传统电商**：[主图视觉后期的文案、Logo与标签重点]\n  - **抖音/快手/视频号**：[短视频封面大字报、视觉冲击力与BGM适配方向]\n  - **小红书/得物/内容电商**：[氛围感滤镜、话题标签与种草文案的侧重点]\n- **高频画面瑕疵规避要点**：[基于该品类，列出必须严格规避的 AI 跑图常见错误（如比例失调、杂乱、多指、文字污染等）]\n\n---\n\n## Constraints\n- 评估输入文本时必须保持客观，不要去奉承、迎合原作者的表达方式，有缺点直接指出或在优化方案中予以修正。\n- 提示词方案必须切实可用，正向提示词要画面感强，避免堆砌无意义的虚词。\n- 最终输出必须严格遵循上述 Markdown 结构，条目清晰。"
+    },
+    {
+      "id": "gen_074cb503e2641_1784037362156",
+      "type": "generator",
+      "x": 1339,
+      "y": -43,
+      "apiProvider": "custom-api",
+      "model": "gpt-image-2",
+      "ratio": "square",
+      "resolution": "1k",
+      "customRatio": "",
+      "customSize": "",
+      "customRatioWidth": "",
+      "customRatioHeight": "",
+      "customWidth": "",
+      "customHeight": "",
+      "quality": "auto",
+      "temperature": 0.7,
+      "inputs": [
+        "img_3c4583a423663_1784037239927",
+        "prompt_7b1fef8111762_1784037598866",
+        "llm_d4df51f5c83e3_1784037338087"
+      ],
+      "_apiResolutionUserSet": false,
+      "generatedOutputs": [
+        "/assets/output/online_b9f2027aa0.png"
+      ]
+    },
+    {
+      "id": "out_2c2b0ec69b5d78_1784037506258",
+      "type": "output",
+      "x": 1883.5894633023752,
+      "y": 79.00008218952904,
+      "images": [
+        {
+          "url": "/assets/output/online_b9f2027aa0.png",
+          "viewed": true,
+          "runMs": 140656,
+          "run": {
+            "nodeType": "generator",
+            "node": {
+              "id": "gen_074cb503e2641_1784037362156",
+              "type": "generator",
+              "x": 1235.000246568587,
+              "y": 392.8894961781869,
+              "apiProvider": "custom-api",
+              "model": "gpt-image-2",
+              "ratio": "square",
+              "resolution": "1k",
+              "customRatio": "",
+              "customSize": "",
+              "customRatioWidth": "",
+              "customRatioHeight": "",
+              "customWidth": "",
+              "customHeight": "",
+              "quality": "auto",
+              "temperature": 0.7,
+              "_apiResolutionUserSet": false,
+              "generatedOutputs": [
+                "/assets/output/online_0e3d8f39ee.png"
+              ]
+            },
+            "prompt": "生成电商主图\n\n# 一、商品图像识别总结\n- **品类**：园艺植物攀爬支架 / 可弯曲椰棕柱\n- **材质/工艺**：天然椰丝包裹表面，内置可弯曲金属丝，底部尖头插杆\n- **款式规格**：长条柱状，支持自由弯曲（S型/螺旋），附带绿魔术贴与麻绳\n- **适用人群 & 场景**：室内盆栽爱好者，适用于龟背竹、绿萝等藤蔓植物\n- **整体风格**：原生态、自然、实用主义\n\n# 二、产品分层卖点\n1. **核心竞争卖点**：内置铝丝可随意弯曲造型，天然椰棕保水透气，促进气生根生长。\n2. **体验舒适卖点**：即插即用，附赠固定绑带，轻松理藤，免去繁琐维护。\n3. **视觉颜值卖点**：植物原生色调融合度高，轻松打造个性化室内绿植微景观。\n\n# 三、4 套 AI 绘图提示词方案\n\n### 方案 1：白底商品主图（上架首图）\n- **正向提示词**：Bendable coir pole, with green velcro tie and jute twine, pure white background, centered, product photography, 8k, soft studio lighting, clean.\n- **反向提示词**：杂乱背景，水印，文字，阴影过重，主体变形，植物遮挡，模糊失焦\n- **适用比例 & 参数**：1:1，写实电商渲染模型，采样步数20，CFG权重7，分辨率1024*1024\n\n### 方案 2：实景种草场景图（短视频 / 小红书封面）\n- **正向提示词**：Sunny indoor balcony, bendable coir pole supporting lush Monstera plant, S-shape styling, Nordic cement pot, natural light, cozy home vibe, photorealistic.\n- **反向提示词**：杂乱环境，枯叶，塑料质感，水印文字，色彩失真，多余杂物\n- **适用比例 & 参数**：3:4，采样步数25，CFG权重8，分辨率1280*1707\n\n### 方案 3：材质细节特写详情图\n- **正向提示词**：Close-up of coir pole surface, natural coconut fiber texture and wrapping thread, macro photography, rim light, clear material details, 8k.\n- **反向提示词**：模糊失焦，噪点，色彩偏差，过度曝光，背景杂乱，油污\n- **适用比例 & 参数**：2:3，采样步数22，CFG权重7，分辨率1024*1536\n\n### 方案 4：人物搭配 / 使用效果图\n- **正向提示词**：Young woman in bright living room, fixing Monstera plant to a bent coir pole using green ties, casual wear, plant care lifestyle, soft natural light.\n- **反向提示词**：畸形人物，多指，动作生硬，脏乱环境，水印文字，产品破损\n- **适用比例 & 参数**：16:9，采样步数24，CFG权重7.5，分辨率1920*1080\n\n# 四、落地使用优化方案\n- **绘图参数统一推荐**：推荐 Midjourney v6 或 SDXL 写实大模型，辅以真实植物类 LoRA 增强叶片质感，基础分辨率设定 1024px 以上。\n- **卖点强化微调技巧**：在成品图加上“双向弯曲箭头”标识突出可塑性；利用右下角标签放大展示“买即送绑带/麻绳”；可拼图对比“直立”与“S型”效果。\n- **各平台图文修改细则**：\n  - **淘宝/拼多多/传统电商**：主图放大弯曲特性，加粗红字标注“随意造型 不伤根系”，凸显性价比与赠品。\n  - **抖音/快手/视频号**：封面使用“植物改造前(倒伏) vs 改造后(艺术造型)”对比图，搭配治愈系纯音乐。\n  - **小红书/得物/内容电商**：套用日系奶油风滤镜，文案主打“拯救张牙舞爪的龟背竹”、“家居绿植造型神器”。\n- **高频画面瑕疵规避要点**：严格规避植物叶片生成错乱（如龟背竹裂口不自然）、绑带穿模、以及椰棕表面生成类似动物毛发的错误质感。",
+            "refs": [
+              {
+                "url": "/assets/input/ai_ref_f1535fb34aae.png",
+                "name": "B款主图-弯曲1.png"
+              }
+            ],
+            "request": {
+              "task_id": "",
+              "request_id": "chatcmpl-721fe89c6cfb4194888978c7",
+              "provider_id": "custom-api",
+              "backend": "",
+              "prompt_id": "",
+              "workflow_json": "",
+              "seed": ""
+            }
+          }
+        }
+      ],
+      "_pending": [],
+      "imageComparisons": {
+        "/assets/output/online_b9f2027aa0.png": {
+          "url": "/assets/input/ai_ref_f1535fb34aae.png",
+          "name": "B款主图-弯曲1.png"
+        }
+      }
+    },
+    {
+      "id": "prompt_7b1fef8111762_1784037598866",
+      "type": "prompt",
+      "x": 249,
+      "y": -43,
+      "text": "从以下内容总结后生成电商主图："
+    },
+    {
+      "id": "gen_43d89bc1341be_1784037854074",
+      "type": "generator",
+      "x": 1373.0945572664477,
+      "y": 641.9844572453641,
+      "apiProvider": "custom-api",
+      "model": "gpt-image-2",
+      "ratio": "square",
+      "resolution": "1k",
+      "customRatio": "",
+      "customSize": "",
+      "customRatioWidth": "",
+      "customRatioHeight": "",
+      "customWidth": "",
+      "customHeight": "",
+      "quality": "auto",
+      "temperature": 0.7,
+      "inputs": [
+        "prompt_c9901b6621f2f_1784037859162",
+        "out_2c2b0ec69b5d78_1784037506258"
+      ],
+      "_apiResolutionUserSet": false,
+      "generatedOutputs": [
+        "/assets/output/online_f7f2cda277.png"
+      ]
+    },
+    {
+      "id": "prompt_c9901b6621f2f_1784037859162",
+      "type": "prompt",
+      "x": 794.8644194381808,
+      "y": 756.3351063639708,
+      "text": "生成亚马逊跨境电商平台的适用版本"
+    },
+    {
+      "id": "out_f48f7e8cbcae_1784037905481",
+      "type": "output",
+      "x": 1891.21908154988,
+      "y": 770.7406080595764,
+      "images": [
+        {
+          "url": "/assets/output/online_f7f2cda277.png",
+          "viewed": true,
+          "runMs": 265687,
+          "run": {
+            "nodeType": "generator",
+            "node": {
+              "id": "gen_43d89bc1341be_1784037854074",
+              "type": "generator",
+              "x": 1494.5362866770772,
+              "y": 671.297978137585,
+              "apiProvider": "custom-api",
+              "model": "gpt-image-2",
+              "ratio": "square",
+              "resolution": "1k",
+              "customRatio": "",
+              "customSize": "",
+              "customRatioWidth": "",
+              "customRatioHeight": "",
+              "customWidth": "",
+              "customHeight": "",
+              "quality": "auto",
+              "temperature": 0.7,
+              "_apiResolutionUserSet": false
+            },
+            "prompt": "生成亚马逊跨境电商平台的适用版本",
+            "refs": [
+              {
+                "url": "/assets/output/online_b9f2027aa0.png",
+                "name": "output.png"
+              }
+            ],
+            "request": {
+              "task_id": "",
+              "request_id": "chatcmpl-14e1b24ae92c474da29c15d3",
+              "provider_id": "custom-api",
+              "backend": "",
+              "prompt_id": "",
+              "workflow_json": "",
+              "seed": ""
+            }
+          }
+        }
+      ],
+      "_pending": [],
+      "imageComparisons": {
+        "/assets/output/online_f7f2cda277.png": {
+          "url": "/assets/output/online_b9f2027aa0.png",
+          "name": "output.png"
+        }
+      }
+    }
+  ],
+  "connections": [
+    {
+      "id": "c_a756f555adf6e_1784037347521",
+      "from": "img_3c4583a423663_1784037239927",
+      "to": "llm_d4df51f5c83e3_1784037338087"
+    },
+    {
+      "id": "c_cfd05666baf81_1784037434910",
+      "from": "img_3c4583a423663_1784037239927",
+      "to": "gen_074cb503e2641_1784037362156"
+    },
+    {
+      "id": "c_1a3cd9fadb5eb8_1784037506258",
+      "from": "gen_074cb503e2641_1784037362156",
+      "to": "out_2c2b0ec69b5d78_1784037506258"
+    },
+    {
+      "id": "c_b9ded363021f78_1784037606880",
+      "from": "prompt_7b1fef8111762_1784037598866",
+      "to": "gen_074cb503e2641_1784037362156"
+    },
+    {
+      "id": "c_ff37fac00d947_1784037612321",
+      "from": "llm_d4df51f5c83e3_1784037338087",
+      "to": "gen_074cb503e2641_1784037362156"
+    },
+    {
+      "id": "c_d619380e22fd9_1784037882521",
+      "from": "prompt_c9901b6621f2f_1784037859162",
+      "to": "gen_43d89bc1341be_1784037854074"
+    },
+    {
+      "id": "c_c5961e48c3c34_1784037884364",
+      "from": "out_2c2b0ec69b5d78_1784037506258",
+      "to": "gen_43d89bc1341be_1784037854074"
+    },
+    {
+      "id": "c_0bd7687173b778_1784037905481",
+      "from": "gen_43d89bc1341be_1784037854074",
+      "to": "out_f48f7e8cbcae_1784037905481"
+    }
+  ],
+  "viewport": {
+    "x": 0,
+    "y": 0,
+    "scale": 1
+  },
+  "board_x": -493.0,
+  "board_y": -720.0,
+  "logs": [
+    {
+      "id": "log_e2eb19faf96dd8_1784038171202",
+      "createdAt": 1784038171202,
+      "status": "success",
+      "platform": "自用生图",
+      "nodeType": "generator",
+      "model": "gpt-image-2",
+      "request": {
+        "task_id": "",
+        "request_id": "chatcmpl-14e1b24ae92c474da29c15d3",
+        "provider_id": "custom-api",
+        "backend": "",
+        "prompt_id": "",
+        "workflow_json": "",
+        "seed": ""
+      },
+      "prompt": "生成亚马逊跨境电商平台的适用版本",
+      "outputs": [
+        "/assets/output/online_f7f2cda277.png"
+      ],
+      "refs": [
+        {
+          "url": "/assets/output/online_b9f2027aa0.png",
+          "name": "output.png"
+        }
+      ],
+      "runMs": 265687,
+      "error": ""
+    },
+    {
+      "id": "log_821e94587906e8_1784037754774",
+      "createdAt": 1784037754774,
+      "status": "success",
+      "platform": "自用生图",
+      "nodeType": "generator",
+      "model": "gpt-image-2",
+      "request": {
+        "task_id": "",
+        "request_id": "chatcmpl-721fe89c6cfb4194888978c7",
+        "provider_id": "custom-api",
+        "backend": "",
+        "prompt_id": "",
+        "workflow_json": "",
+        "seed": ""
+      },
+      "prompt": "生成电商主图\n\n# 一、商品图像识别总结\n- **品类**：园艺植物攀爬支架 / 可弯曲椰棕柱\n- **材质/工艺**：天然椰丝包裹表面，内置可弯曲金属丝，底部尖头插杆\n- **款式规格**：长条柱状，支持自由弯曲（S型/螺旋），附带绿魔术贴与麻绳\n- **适用人群 & 场景**：室内盆栽爱好者，适用于龟背竹、绿萝等藤蔓植物\n- **整体风格**：原生态、自然、实用主义\n\n# 二、产品分层卖点\n1. **核心竞争卖点**：内置铝丝可随意弯曲造型，天然椰棕保水透气，促进气生根生长。\n2. **体验舒适卖点**：即插即用，附赠固定绑带，轻松理藤，免去繁琐维护。\n3. **视觉颜值卖点**：植物原生色调融合度高，轻松打造个性化室内绿植微景观。\n\n# 三、4 套 AI 绘图提示词方案\n\n### 方案 1：白底商品主图（上架首图）\n- **正向提示词**：Bendable coir pole, with green velcro tie and jute twine, pure white background, centered, product photography, 8k, soft studio lighting, clean.\n- **反向提示词**：杂乱背景，水印，文字，阴影过重，主体变形，植物遮挡，模糊失焦\n- **适用比例 & 参数**：1:1，写实电商渲染模型，采样步数20，CFG权重7，分辨率1024*1024\n\n### 方案 2：实景种草场景图（短视频 / 小红书封面）\n- **正向提示词**：Sunny indoor balcony, bendable coir pole supporting lush Monstera plant, S-shape styling, Nordic cement pot, natural light, cozy home vibe, photorealistic.\n- **反向提示词**：杂乱环境，枯叶，塑料质感，水印文字，色彩失真，多余杂物\n- **适用比例 & 参数**：3:4，采样步数25，CFG权重8，分辨率1280*1707\n\n### 方案 3：材质细节特写详情图\n- **正向提示词**：Close-up of coir pole surface, natural coconut fiber texture and wrapping thread, macro photography, rim light, clear material details, 8k.\n- **反向提示词**：模糊失焦，噪点，色彩偏差，过度曝光，背景杂乱，油污\n- **适用比例 & 参数**：2:3，采样步数22，CFG权重7，分辨率1024*1536\n\n### 方案 4：人物搭配 / 使用效果图\n- **正向提示词**：Young woman in bright living room, fixing Monstera plant to a bent coir pole using green ties, casual wear, plant care lifestyle, soft natural light.\n- **反向提示词**：畸形人物，多指，动作生硬，脏乱环境，水印文字，产品破损\n- **适用比例 & 参数**：16:9，采样步数24，CFG权重7.5，分辨率1920*1080\n\n# 四、落地使用优化方案\n- **绘图参数统一推荐**：推荐 Midjourney v6 或 SDXL 写实大模型，辅以真实植物类 LoRA 增强叶片质感，基础分辨率设定 1024px 以上。\n- **卖点强化微调技巧**：在成品图加上“双向弯曲箭头”标识突出可塑性；利用右下角标签放大展示“买即送绑带/麻绳”；可拼图对比“直立”与“S型”效果。\n- **各平台图文修改细则**：\n  - **淘宝/拼多多/传统电商**：主图放大弯曲特性，加粗红字标注“随意造型 不伤根系”，凸显性价比与赠品。\n  - **抖音/快手/视频号**：封面使用“植物改造前(倒伏) vs 改造后(艺术造型)”对比图，搭配治愈系纯音乐。\n  - **小红书/得物/内容电商**：套用日系奶油风滤镜，文案主打“拯救张牙舞爪的龟背竹”、“家居绿植造型神器”。\n- **高频画面瑕疵规避要点**：严格规避植物叶片生成错乱（如龟背竹裂口不自然）、绑带穿模、以及椰棕表面生成类似动物毛发的错误质感。",
+      "outputs": [
+        "/assets/output/online_b9f2027aa0.png"
+      ],
+      "refs": [
+        {
+          "url": "/assets/input/ai_ref_f1535fb34aae.png",
+          "name": "B款主图-弯曲1.png"
+        }
+      ],
+      "runMs": 140656,
+      "error": ""
+    },
+    {
+      "id": "log_40cd8f093f0508_1784037553664",
+      "createdAt": 1784037553664,
+      "status": "success",
+      "platform": "自用生图",
+      "nodeType": "generator",
+      "model": "gpt-image-2",
+      "request": {
+        "task_id": "",
+        "request_id": "chatcmpl-1784037551491",
+        "provider_id": "custom-api",
+        "backend": "",
+        "prompt_id": "",
+        "workflow_json": "",
+        "seed": ""
+      },
+      "prompt": "# 一、商品图像识别总结\n- **品类**：园艺植物攀爬支架 / 可弯曲椰棕柱\n- **材质/工艺**：天然椰丝包裹表面，内置可弯曲金属丝，底部尖头插杆\n- **款式规格**：长条柱状，支持自由弯曲（S型/螺旋），附带绿魔术贴与麻绳\n- **适用人群 & 场景**：室内盆栽爱好者，适用于龟背竹、绿萝等藤蔓植物\n- **整体风格**：原生态、自然、实用主义\n\n# 二、产品分层卖点\n1. **核心竞争卖点**：内置铝丝可随意弯曲造型，天然椰棕保水透气，促进气生根生长。\n2. **体验舒适卖点**：即插即用，附赠固定绑带，轻松理藤，免去繁琐维护。\n3. **视觉颜值卖点**：植物原生色调融合度高，轻松打造个性化室内绿植微景观。\n\n# 三、4 套 AI 绘图提示词方案\n\n### 方案 1：白底商品主图（上架首图）\n- **正向提示词**：Bendable coir pole, with green velcro tie and jute twine, pure white background, centered, product photography, 8k, soft studio lighting, clean.\n- **反向提示词**：杂乱背景，水印，文字，阴影过重，主体变形，植物遮挡，模糊失焦\n- **适用比例 & 参数**：1:1，写实电商渲染模型，采样步数20，CFG权重7，分辨率1024*1024\n\n### 方案 2：实景种草场景图（短视频 / 小红书封面）\n- **正向提示词**：Sunny indoor balcony, bendable coir pole supporting lush Monstera plant, S-shape styling, Nordic cement pot, natural light, cozy home vibe, photorealistic.\n- **反向提示词**：杂乱环境，枯叶，塑料质感，水印文字，色彩失真，多余杂物\n- **适用比例 & 参数**：3:4，采样步数25，CFG权重8，分辨率1280*1707\n\n### 方案 3：材质细节特写详情图\n- **正向提示词**：Close-up of coir pole surface, natural coconut fiber texture and wrapping thread, macro photography, rim light, clear material details, 8k.\n- **反向提示词**：模糊失焦，噪点，色彩偏差，过度曝光，背景杂乱，油污\n- **适用比例 & 参数**：2:3，采样步数22，CFG权重7，分辨率1024*1536\n\n### 方案 4：人物搭配 / 使用效果图\n- **正向提示词**：Young woman in bright living room, fixing Monstera plant to a bent coir pole using green ties, casual wear, plant care lifestyle, soft natural light.\n- **反向提示词**：畸形人物，多指，动作生硬，脏乱环境，水印文字，产品破损\n- **适用比例 & 参数**：16:9，采样步数24，CFG权重7.5，分辨率1920*1080\n\n# 四、落地使用优化方案\n- **绘图参数统一推荐**：推荐 Midjourney v6 或 SDXL 写实大模型，辅以真实植物类 LoRA 增强叶片质感，基础分辨率设定 1024px 以上。\n- **卖点强化微调技巧**：在成品图加上“双向弯曲箭头”标识突出可塑性；利用右下角标签放大展示“买即送绑带/麻绳”；可拼图对比“直立”与“S型”效果。\n- **各平台图文修改细则**：\n  - **淘宝/拼多多/传统电商**：主图放大弯曲特性，加粗红字标注“随意造型 不伤根系”，凸显性价比与赠品。\n  - **抖音/快手/视频号**：封面使用“植物改造前(倒伏) vs 改造后(艺术造型)”对比图，搭配治愈系纯音乐。\n  - **小红书/得物/内容电商**：套用日系奶油风滤镜，文案主打“拯救张牙舞爪的龟背竹”、“家居绿植造型神器”。\n- **高频画面瑕疵规避要点**：严格规避植物叶片生成错乱（如龟背竹裂口不自然）、绑带穿模、以及椰棕表面生成类似动物毛发的错误质感。",
+      "outputs": [
+        "/assets/output/online_0e3d8f39ee.png"
+      ],
+      "refs": [
+        {
+          "url": "/assets/input/ai_ref_f1535fb34aae.png",
+          "name": "B款主图-弯曲1.png"
+        }
+      ],
+      "runMs": 47359,
+      "error": ""
+    }
+  ],
+  "settings": {}
+}
