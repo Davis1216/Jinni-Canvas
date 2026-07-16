@@ -1,6 +1,7 @@
 __pycache__/
 *.py[cod]
 data/chat_runs/
+data/knowledge_base/
 
 # Local secrets and runtime state
 API/.env
