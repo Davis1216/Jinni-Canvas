@@ -855,6 +855,17 @@ function normalizedImageQuality(value){
     const quality = String(value || 'auto').trim().toLowerCase();
     return ['low','medium','high'].includes(quality) ? quality : '';
 }
+function imageQualitySupported(node){
+    const provider = providerById(node?.apiProvider || '');
+    const model = resolveImageModel(node?.model || '');
+    const support = provider?.image_quality_support;
+    if(support && Object.prototype.hasOwnProperty.call(support, model)) return support[model] === true;
+    const id = String(provider?.id || '').trim().toLowerCase();
+    const protocol = String(provider?.model_protocols?.[model] || provider?.protocol || 'openai').trim().toLowerCase();
+    const mode = String(provider?.image_request_mode || 'openai').trim().toLowerCase();
+    if(id === 'modelscope' || ['codex','gemini','gemini-cli','jimeng','runninghub','volcengine','apimart'].includes(protocol)) return false;
+    return !['openai-video-proxy','openai-chat','openai-json'].includes(mode);
+}
 function normalizedImageTemperature(value){
     const number = Number(value);
     if(!Number.isFinite(number)) return 0.7;
@@ -2748,7 +2759,7 @@ function renderMsGenBody(node){
     const ordered = orderedSources(node, inputSources);
     const refOrdered = orderReferenceSourcesForMain(ordered);
     const mediaInputs = refOrdered.filter(src => src.refs?.some(ref => ['image','video','audio'].includes(mediaKindForRef(ref))));
-    const promptInputs = ordered.filter(src => src.prompt && !src.refs?.length);
+    const promptInputs = ordered.filter(src => src.prompt);
     const referenceImages = refOrdered.flatMap(src => src.refs || []);
     const isCustomMs = modelKey === 'custom';
     const msUsesImages = Boolean(msModel.supportsImage || msModel.acceptsImage);
@@ -6173,7 +6184,9 @@ function renderNode(node){
     const el = document.createElement('div');
     const size = defaultNodeSize(node.type);
     const hasFixedSize = Boolean(node.h || size.h);
-    el.className = `node ${node.type}-node ${node.url ? 'has-image' : ''} ${hasFixedSize ? 'sized' : ''} ${selected.has(node.id) ? 'selected' : ''}`;
+    const nodeRunState = ['queued','running','done','failed'].includes(node.runStatus) ? node.runStatus : (node.running ? 'running' : '');
+    const nodeRunClass = nodeRunState ? `node-run-${nodeRunState}` : '';
+    el.className = `node ${node.type}-node ${node.url ? 'has-image' : ''} ${hasFixedSize ? 'sized' : ''} ${selected.has(node.id) ? 'selected' : ''} ${nodeRunClass}`;
     el.style.left = `${node.x}px`;
     el.style.top = `${node.y}px`;
     el.style.width = `${node.w || size.w}px`;
@@ -6332,7 +6345,7 @@ function renderNode(node){
             node.text = e.target.value;
             refreshPromptCounter(body, node.text);
             scheduleSave();
-            scheduleGeneratorInputSync();
+            scheduleGeneratorInputSync([node.id]);
         };
     }
     if(node.type === 'loop') body.appendChild(renderLoopBody(node));
@@ -6476,6 +6489,7 @@ function bindOutputWrap(wrap, node){
                 const url = img?.dataset.url || video?.dataset.url || audio?.dataset.url || wrap.dataset.outputUrl || wrap.dataset.missingUrl || '';
                 node.images = (node.images || []).filter(item => outputUrlValue(item) !== url);
                 if(node.imageComparisons) delete node.imageComparisons[url];
+                notifyCanvasInputConsumers([node.id], {refreshRelays:false});
                 scheduleSave();
             }
             refreshNodes([node.id]);
@@ -8321,6 +8335,7 @@ function llmInputImages(node){
     const urls = [];
     connections.filter(c => c.to === node.id).map(c => nodes.find(n => n.id === c.from)).filter(Boolean).forEach(n => {
         if(n.type === 'image' && n.url && mediaKindForNode(n) === 'image') urls.push(n.url);
+        if(CANVAS_MEDIA_OUTPUT_TYPES.includes(n.type)) generatedImageRefs(n).filter(ref => ref.kind === 'image').forEach(ref => urls.push(ref.url));
         if(n.type === 'output' && (n.images||[]).length){
             const last = [...n.images].reverse().map(outputUrlValue).find(url => url && !isVideoUrl(url) && !isAudioUrl(url));
             if(last) urls.push(last);
@@ -8335,6 +8350,7 @@ function llmInputVideos(node){
     const urls = [];
     connections.filter(c => c.to === node.id).map(c => nodes.find(n => n.id === c.from)).filter(Boolean).forEach(n => {
         if(n.type === 'image' && n.url && mediaKindForNode(n) === 'video') urls.push(n.url);
+        if(CANVAS_MEDIA_OUTPUT_TYPES.includes(n.type)) generatedImageRefs(n).filter(ref => ref.kind === 'video').forEach(ref => urls.push(ref.url));
         if(n.type === 'output' && (n.images||[]).length){
             const last = [...n.images].reverse().map(outputUrlValue).find(url => url && isVideoUrl(url));
             if(last) urls.push(last);
@@ -8352,7 +8368,7 @@ function renderGeneratorBody(node){
     const ordered = orderedSources(node, inputSources);
     const refOrdered = orderReferenceSourcesForMain(ordered);
     const mediaInputs = refOrdered.filter(src => src.refs?.some(ref => ['image','video','audio'].includes(mediaKindForRef(ref))));
-    const promptInputs = ordered.filter(src => src.prompt && !src.refs?.length);
+    const promptInputs = ordered.filter(src => src.prompt);
     sanitizeImageNodeProviderModel(node);
     normalizeApiNodeSizeChoice(node);
     wrap.innerHTML = `
@@ -8479,9 +8495,15 @@ function renderGeneratorBody(node){
     const fitSizeBtn = wrap.querySelector('.fit-size-btn');
     const referenceImages = refOrdered.flatMap(src => src.refs || []);
     const syncQualityControls = () => {
-        qualitySelect.disabled = false;
         if(!['auto','low','medium','high'].includes(String(node.quality || 'auto'))) node.quality = 'auto';
-        qualitySelect.value = node.quality || 'auto';
+        const supported = imageQualitySupported(node);
+        qualitySelect.disabled = !supported;
+        qualitySelect.title = supported
+            ? (langIsEn() ? 'Upstream image quality hint' : '上游图片质量档位')
+            : (langIsEn() ? 'This provider/model ignores the quality parameter' : '当前平台或模型不会接收质量参数');
+        qualitySelect.value = supported ? (node.quality || 'auto') : 'auto';
+        const autoOption = qualitySelect.querySelector('option[value="auto"]');
+        if(autoOption) autoOption.textContent = supported ? 'Q auto' : 'Q N/A';
     };
     const syncTemperatureControls = () => {
         node.temperature = normalizedImageTemperature(node.temperature);
@@ -8703,7 +8725,7 @@ function renderVideoBody(node){
     const inputSources = generatorSources(node);
     const ordered = orderedSources(node, inputSources);
     const mediaInputs = ordered.filter(src => src.refs?.some(ref => ['image','video','audio'].includes(mediaKindForRef(ref))));
-    const promptInputs = ordered.filter(src => src.prompt && !src.refs?.length);
+    const promptInputs = ordered.filter(src => src.prompt);
     sanitizeVideoNodeProviderModel(node);
     node.model = node.model || 'veo3-fast';
     wrap.innerHTML = `
@@ -8836,7 +8858,7 @@ function renderVideoBody(node){
 }
 function renderPromptPreview(container, promptInputs){
     if(!container) return;
-    container.innerHTML = promptInputs.length ? `<div class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Prompts</div>${promptInputs.map(src => `<div class="text-[11px] text-slate-500 bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 line-clamp-2">${escapeHtml(src.label)}</div>`).join('')}` : '';
+    container.innerHTML = promptInputs.length ? `<div class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Prompts</div>${promptInputs.map(src => `<div class="text-[11px] text-slate-500 bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 line-clamp-2">${escapeHtml(src.prompt || src.label)}</div>`).join('')}` : '';
 }
 function renderImageInputList(list, node, imageInputs, emptyText=null){
     if(!list) return;
@@ -9016,7 +9038,7 @@ function renderComfyBody(node){
     const imageInputs = mediaInputs
         .map(src => ({...src, refs:imageRefsOnly(src.refs || [])}))
         .filter(src => src.refs?.length);
-    const promptInputs = ordered.filter(src => src.prompt && !src.refs?.length);
+    const promptInputs = ordered.filter(src => src.prompt);
     const mode = node.mode || 'text';
     const imageFieldCount = mode === 'custom' ? comfyFields(node, 'image').length : 0;
     const videoFieldCount = mode === 'custom' ? comfyFields(node, 'video').length : 0;
@@ -10360,18 +10382,76 @@ function syncGeneratorInputs(){
         if(gen.type === 'ltxDirector') ltxSyncConnectedImagesToTimeline(gen);
     });
 }
-// 提示词节点每敲一个字都全量重建所有生成器节点的输入/预览 DOM 会卡顿。节点的 text 已即时写入
-// （运行时实时读取，不受影响），生成器里的预览只需稍后同步一次即可，这里做防抖。
+function associatedCanvasInputSourceIds(sourceIds=[]){
+    const expanded = new Set((sourceIds || []).filter(Boolean));
+    let changed = true;
+    while(changed){
+        changed = false;
+        nodes.filter(isCanvasGroupNode).forEach(group => {
+            if(expanded.has(group.id) || !(group.items || []).some(id => expanded.has(id))) return;
+            expanded.add(group.id);
+            changed = true;
+        });
+    }
+    return expanded;
+}
+function canvasInputPropagationTargets(sourceIds=[]){
+    const sourceSet = associatedCanvasInputSourceIds(sourceIds);
+    const queue = [...sourceSet];
+    const visited = new Set();
+    const generators = new Set();
+    const liveNodes = new Set();
+    const relayOutputs = new Set();
+    while(queue.length){
+        const sourceId = queue.shift();
+        if(!sourceId || visited.has(sourceId)) continue;
+        visited.add(sourceId);
+        connections.filter(c => c.from === sourceId).forEach(connection => {
+            const target = nodes.find(n => n.id === connection.to);
+            if(!target) return;
+            if(CANVAS_GENERATOR_TYPES.includes(target.type)) generators.add(target.id);
+            else if(target.type === 'llm') liveNodes.add(target.id);
+            else if(target.type === 'loop') {
+                liveNodes.add(target.id);
+                queue.push(target.id);
+            } else if(target.type === 'output') {
+                relayOutputs.add(target.id);
+                queue.push(target.id);
+            }
+        });
+    }
+    return {generators, liveNodes, relayOutputs};
+}
+function notifyCanvasInputConsumers(sourceIds=[], options={}){
+    const targets = canvasInputPropagationTargets(sourceIds);
+    if(targets.generators.size){
+        syncGeneratorInputs();
+        refreshGeneratorInputViews([...targets.generators]);
+    }
+    const refreshIds = [...targets.liveNodes];
+    if(options.refreshRelays !== false) refreshIds.push(...targets.relayOutputs);
+    if(refreshIds.length) refreshNodes(refreshIds);
+    return targets;
+}
+// 连续输入时合并短时间内的通知，数据本身仍即时写入，所有下游消费者统一失效并刷新。
 let generatorInputSyncTimer = 0;
-function scheduleGeneratorInputSync(){
+const pendingCanvasInputSourceIds = new Set();
+function scheduleGeneratorInputSync(sourceIds=[]){
+    (sourceIds || []).filter(Boolean).forEach(id => pendingCanvasInputSourceIds.add(id));
     clearTimeout(generatorInputSyncTimer);
     generatorInputSyncTimer = setTimeout(() => {
-        syncGeneratorInputs();
-        refreshGeneratorInputViews();
-    }, 160);
+        const changedIds = [...pendingCanvasInputSourceIds];
+        pendingCanvasInputSourceIds.clear();
+        if(changedIds.length) notifyCanvasInputConsumers(changedIds, {refreshRelays:false});
+        else {
+            syncGeneratorInputs();
+            refreshGeneratorInputViews();
+        }
+    }, 80);
 }
-function refreshGeneratorInputViews(){
-    nodes.filter(n => CANVAS_GENERATOR_TYPES.includes(n.type)).forEach(gen => {
+function refreshGeneratorInputViews(generatorIds=null){
+    const only = generatorIds ? new Set(generatorIds) : null;
+    nodes.filter(n => CANVAS_GENERATOR_TYPES.includes(n.type) && (!only || only.has(n.id))).forEach(gen => {
         const el = nodesEl.querySelector(`.node[data-id="${gen.id}"]`);
         if(!el) return;
         const sources = orderedSources(gen, generatorSources(gen));
@@ -10379,7 +10459,7 @@ function refreshGeneratorInputViews(){
         const imageInputs = refSources
             .map(src => ({...src, refs:imageRefsOnly(src.refs || [])}))
             .filter(src => src.refs?.length);
-        renderPromptPreview(el.querySelector('.prompt-list'), sources.filter(src => src.prompt && !src.refs?.length));
+        renderPromptPreview(el.querySelector('.prompt-list'), sources.filter(src => src.prompt));
         if(gen.type === 'generator') renderImageInputList(el.querySelector('.input-list'), gen, imageInputs);
         if(gen.type === 'msgen') renderImageInputList(el.querySelector('.ms-img-list'), gen, imageInputs);
         if(gen.type === 'comfy') renderComfyImages(el.querySelector('.input-list'), gen, imageInputs);
@@ -10417,7 +10497,7 @@ async function runGenerator(genId, opts={}){
         temperature:normalizedImageTemperature(gen.temperature),
         reference_images:refs.slice(0, CANVAS_REFERENCE_IMAGE_MAX)
     };
-    const quality = normalizedImageQuality(gen.quality);
+    const quality = imageQualitySupported(gen) ? normalizedImageQuality(gen.quality) : '';
     if(quality) payload.quality = quality;
     let pendingIds = [];
     const startedAt = nowMs();
@@ -10516,7 +10596,7 @@ async function runGeneratorLegacy(genId, opts={}){
             temperature:normalizedImageTemperature(gen.temperature),
             reference_images:refs.slice(0, CANVAS_REFERENCE_IMAGE_MAX)
         };
-        const quality = normalizedImageQuality(gen.quality);
+        const quality = imageQualitySupported(gen) ? normalizedImageQuality(gen.quality) : '';
         if(quality) payload.quality = quality;
         const results = await Promise.all(Array.from({length:count}, () => fetch('/api/online-image', {
             method:'POST',
@@ -11122,7 +11202,7 @@ function renderLTXDirectorBody(node){
     const wrap = document.createElement('div');
     wrap.className = 'ltx-director-body';
     const sources = orderedSources(node, generatorSources(node));
-    const promptInputs = sources.filter(src => src.prompt && !src.refs?.length);
+    const promptInputs = sources.filter(src => src.prompt);
     const imageInputs = sources
         .map(src => ({...src, refs:imageRefsOnly(src.refs || [])}))
         .filter(src => src.refs?.length);
@@ -11473,6 +11553,7 @@ async function runLLMNode(nodeId, opts={}){
         if(!opts.cascade) node.running = false;
         node.runStatus = 'done'; node.runError = '';
         refreshNodes([node.id, ...textOutputs.map(out => out.id)]);
+        notifyCanvasInputConsumers([node.id]);
         scheduleSave();
     } catch(err) {
         if(!opts.cascade) node.running = false;
@@ -11907,6 +11988,7 @@ async function runLLMChat(nodeId){
         const textOutputs = syncLLMTextOutputs(node, text, 'chat');
         node.running = false;
         refreshNodes([node.id, ...textOutputs.map(out => out.id)]);
+        notifyCanvasInputConsumers([node.id]);
         scheduleSave();
     } catch(err) {
         node.running = false;
@@ -11946,6 +12028,7 @@ function clearNodeContentBeforeDelete(id){
         node._pending = [];
         node.imageComparisons = {};
         refreshNodes([node.id]);
+        notifyCanvasInputConsumers([node.id], {refreshRelays:false});
         scheduleSave();
         return true;
     }
@@ -12222,6 +12305,7 @@ function mergeGeneratedOutputs(node, outputs, append=false){
     if(!append){
         node.generatedOutputs = clean;
         syncConnectedOutputsFromGenerated(node, clean);
+        notifyCanvasInputConsumers([node.id]);
         return;
     }
     const seen = new Set((node.generatedOutputs || []).map(outputUrlValue).filter(Boolean));
@@ -12231,6 +12315,7 @@ function mergeGeneratedOutputs(node, outputs, append=false){
     });
     node.generatedOutputs = [...(node.generatedOutputs || []), ...added];
     syncConnectedOutputsFromGenerated(node, added);
+    notifyCanvasInputConsumers([node.id]);
 }
 function pendingById(out, id){
     return (out?._pending || []).find(p => p.id === id) || null;
@@ -12638,7 +12723,11 @@ function bindOutputTextControls(container, node){
             }
             if(action === 'prev' && index > 0) node.activeTextVersions = {...(node.activeTextVersions || {}), [sourceKey]:group.items[index - 1].id};
             if(action === 'next' && index < group.items.length - 1) node.activeTextVersions = {...(node.activeTextVersions || {}), [sourceKey]:group.items[index + 1].id};
-            if(action !== 'copy' && action !== 'download') { refreshNodes([node.id]); scheduleSave(); }
+            if(action !== 'copy' && action !== 'download') {
+                refreshNodes([node.id]);
+                if(['delete','prev','next'].includes(action)) notifyCanvasInputConsumers([node.id], {refreshRelays:false});
+                scheduleSave();
+            }
         };
     });
 }
@@ -14241,6 +14330,12 @@ function canConnect(fromId, toId){
     if(!from || !to) return false;
     if(CANVAS_GENERATOR_TYPES.includes(from.type)){
         if(to.type === 'output') return true;
+        if(CANVAS_IMAGE_OUTPUT_TYPES.includes(from.type) && to.type === 'loop' && to.imageInput){
+            return !wouldCreateGeneratorCycle(fromId, toId);
+        }
+        if(CANVAS_MEDIA_OUTPUT_TYPES.includes(from.type) && to.type === 'llm'){
+            return !wouldCreateGeneratorCycle(fromId, toId);
+        }
         if(CANVAS_MEDIA_OUTPUT_TYPES.includes(from.type) && CANVAS_GENERATOR_TYPES.includes(to.type)){
             return !wouldCreateGeneratorCycle(fromId, toId);
         }
@@ -14493,6 +14588,23 @@ function canResolvePort(id){
     // 只跳过“真正的孤儿连线”（端点节点已不存在）；节点存在但暂时没 DOM 的，portPoint 会用几何坐标兜底。
     return Boolean(nodes.find(x => x.id === id));
 }
+function connectionRunState(connection, nodeById=null, pendingNodeIds=null){
+    const lookup = nodeById || new Map(nodes.map(node => [node.id, node]));
+    const pending = pendingNodeIds || new Set(
+        nodes
+            .filter(node => node.type === 'output')
+            .flatMap(node => (node._pending || []).map(item => item?.run?.node?.id).filter(Boolean))
+    );
+    const from = lookup.get(connection?.from);
+    const to = lookup.get(connection?.to);
+    const fromStatus = String(from?.runStatus || '');
+    const toStatus = String(to?.runStatus || '');
+    if(fromStatus === 'failed' || toStatus === 'failed') return 'failed';
+    if(fromStatus === 'running' || toStatus === 'running' || from?.running || to?.running || pending.has(from?.id) || pending.has(to?.id)) return 'running';
+    if(fromStatus === 'done' || toStatus === 'done') return 'success';
+    if(fromStatus === 'queued' || toStatus === 'queued') return 'queued';
+    return '';
+}
 function renderLinks(){
     linksEl.innerHTML = '';
     linkControlsEl.innerHTML = '';
@@ -14506,9 +14618,29 @@ function renderLinks(){
         if(!canResolvePort(c.from) || !canResolvePort(c.to)) return;
         segments.push({c, a:portPoint(c.from, 'out'), b:portPoint(c.to, 'in')});
     });
+    const nodeById = new Map(nodes.map(node => [node.id, node]));
+    const pendingNodeIds = new Set(
+        nodes
+            .filter(node => node.type === 'output')
+            .flatMap(node => (node._pending || []).map(item => item?.run?.node?.id).filter(Boolean))
+    );
+    const motionReduced = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches === true;
+    const maxRunningLinkPulses = motionReduced ? 0 : Math.max(4, Math.min(12, Number(navigator.hardwareConcurrency || 8)));
+    let runningLinkPulseCount = 0;
     segments.forEach(({c, a, b}) => {
         const relClass = isConnectionSelected(c) ? ' link-active' : '';
         linksEl.appendChild(pathEl(a.x, a.y, b.x, b.y, `link${relClass}`));
+        const runState = connectionRunState(c, nodeById, pendingNodeIds);
+        if(runState){
+            const feedback = pathEl(a.x, a.y, b.x, b.y, `link link-feedback link-${runState}`);
+            feedback.dataset.connectionId = c.id;
+            feedback.dataset.runState = runState;
+            linksEl.appendChild(feedback);
+            if(runState === 'running' && runningLinkPulseCount < maxRunningLinkPulses){
+                linksEl.appendChild(linkPulseEl(a.x, a.y, b.x, b.y, c.id, runningLinkPulseCount));
+                runningLinkPulseCount += 1;
+            }
+        }
         linkControlsEl.appendChild(linkDeleteButton(c, a, b));
         linksEl.appendChild(linkHitEl(a.x, a.y, b.x, b.y, c.id));
     });
@@ -14602,10 +14734,26 @@ function refreshSelectionVisuals(){
 }
 function pathEl(x1,y1,x2,y2,cls){
     const p = document.createElementNS('http://www.w3.org/2000/svg','path');
-    const dx = Math.max(80, Math.abs(x2 - x1) * .45);
-    p.setAttribute('d', `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`);
+    p.setAttribute('d', linkPathData(x1, y1, x2, y2));
     p.setAttribute('class', cls);
     return p;
+}
+function linkPathData(x1,y1,x2,y2){
+    const dx = Math.max(80, Math.abs(x2 - x1) * .45);
+    return `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`;
+}
+function linkPulseEl(x1,y1,x2,y2,connectionId,index=0){
+    const circle = document.createElementNS('http://www.w3.org/2000/svg','circle');
+    circle.setAttribute('class', 'link-pulse');
+    circle.setAttribute('r', '4');
+    circle.dataset.connectionId = connectionId;
+    const motion = document.createElementNS('http://www.w3.org/2000/svg','animateMotion');
+    motion.setAttribute('path', linkPathData(x1, y1, x2, y2));
+    motion.setAttribute('dur', '1.05s');
+    motion.setAttribute('begin', `${-(index % 6) * .14}s`);
+    motion.setAttribute('repeatCount', 'indefinite');
+    circle.appendChild(motion);
+    return circle;
 }
 function pointSegmentDistance(p, a, b){
     const dx = b.x - a.x, dy = b.y - a.y;

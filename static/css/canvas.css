@@ -200,6 +200,14 @@ body.canvas-board-pan * { cursor:grabbing !important; user-select:none !importan
 .link { stroke:var(--faint); stroke-width:2.5; fill:none; opacity:.82; pointer-events:none; }
 .link.link-active { stroke:var(--strong); opacity:1; }
 .link.temp { stroke:var(--strong); stroke-dasharray:6 6; }
+.link-feedback { vector-effect:non-scaling-stroke; stroke-linecap:round; opacity:.96; }
+.link-feedback.link-queued { stroke:#f59e0b; stroke-width:2.7; stroke-dasharray:3 8; opacity:.72; }
+.link-feedback.link-running { stroke:#38bdf8; stroke-width:2.8; opacity:.72; }
+.link-pulse { fill:#7dd3fc; stroke:#e0f2fe; stroke-width:1.4; pointer-events:none; }
+.link-feedback.link-success { stroke:#22c55e; stroke-width:3.1; animation:canvasLinkSuccess .7s ease-out 1; }
+.link-feedback.link-failed { stroke:#ef4444; stroke-width:3.3; stroke-dasharray:8 4; animation:canvasLinkFailed .72s ease-out 2; }
+@keyframes canvasLinkSuccess { 0% { opacity:.25; stroke-width:5.2; } 100% { opacity:.96; stroke-width:3.1; } }
+@keyframes canvasLinkFailed { 0%,100% { opacity:.92; } 50% { opacity:.4; stroke-width:5; } }
 .link.knife-trail { stroke:#ef4444; stroke-width:2.4; stroke-dasharray:7 6; opacity:.88; filter:drop-shadow(0 0 6px rgba(239,68,68,.35)); }
 .link-hit { stroke:transparent; stroke-width:18; fill:none; pointer-events:stroke; }
 .link-controls { position:absolute; inset:0; width:6000px; height:4000px; pointer-events:none; z-index:3; }
@@ -207,6 +215,16 @@ body.canvas-board-pan * { cursor:grabbing !important; user-select:none !importan
 .link-delete.visible,.link-delete.hover { opacity:1; pointer-events:auto; }
 .link-delete.hover { color:#dc2626; border-color:#fecaca; background:#fff5f5; }
 .node { position:absolute; min-width:220px; min-height:96px; border:1px solid var(--line); border-radius:22px; background:var(--card); box-shadow:0 16px 42px var(--shadow); overflow:visible; user-select:none; z-index:2; }
+.node.node-run-queued .port::after { border-color:#f59e0b; box-shadow:0 0 0 2px rgba(245,158,11,.14); }
+.node.node-run-running .port::after { border-color:#bae6fd; background:#0ea5e9; box-shadow:0 0 0 4px rgba(56,189,248,.14); animation:canvasPortPulse 1.15s ease-in-out infinite; }
+.node.node-run-done .port::after { border-color:#bbf7d0; background:#16a34a; box-shadow:0 0 0 3px rgba(34,197,94,.12); }
+.node.node-run-failed .port::after { border-color:#fecaca; background:#dc2626; box-shadow:0 0 0 3px rgba(239,68,68,.14); }
+@keyframes canvasPortPulse { 50% { box-shadow:0 0 0 7px rgba(56,189,248,.05); } }
+@media (prefers-reduced-motion: reduce) {
+    .link-feedback,
+    .node.node-run-running .port::after { animation:none !important; }
+    .link-pulse { display:none; }
+}
 .node::before { content:""; position:absolute; inset:0; border-radius:inherit; background:var(--card); pointer-events:none; z-index:-1; overflow:hidden; }
 .node.sized { display:flex; flex-direction:column; }
 .node.selected { outline:2px solid var(--strong); outline-offset:2px; }

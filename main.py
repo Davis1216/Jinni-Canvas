@@ -61,6 +61,7 @@ except ImportError:
 
 QUIET_ACCESS_PATHS = {
     "/api/queue_status",
+    "/api/config",
     "/api/canvases",
     "/api/canvases/trash",
     "/api/chat/runs",
@@ -73,15 +74,28 @@ class QuietAccessLogFilter(logging.Filter):
     def filter(self, record):
         args = record.args if isinstance(record.args, tuple) else ()
         if len(args) >= 3:
+            method = str(args[1]).upper()
             path = str(args[2]).split("?", 1)[0]
             status = int(args[4]) if len(args) >= 5 and str(args[4]).isdigit() else 0
-            quiet_dynamic = any(path.startswith(prefix) and path.endswith("/meta") for prefix in QUIET_ACCESS_PREFIXES) or path.startswith("/api/chat/runs/")
+            quiet_dynamic = (
+                any(path.startswith(prefix) and path.endswith("/meta") for prefix in QUIET_ACCESS_PREFIXES)
+                or path.startswith("/api/chat/runs/")
+                or path.startswith("/api/canvas-image-tasks/")
+                or path.startswith("/api/canvas-comfy-tasks/")
+                or (method == "PUT" and path.startswith("/api/canvases/"))
+            )
             if (path in QUIET_ACCESS_PATHS or quiet_dynamic) and status < 400:
                 return False
         message = record.getMessage()
         if any(f'"GET {path}' in message and '" 200' in message for path in QUIET_ACCESS_PATHS):
             return False
         if 'GET /api/canvases/' in message and '/meta' in message and '" 200' in message:
+            return False
+        if any(token in message and '" 200' in message for token in (
+            'GET /api/canvas-image-tasks/',
+            'GET /api/canvas-comfy-tasks/',
+            'PUT /api/canvases/',
+        )):
             return False
         return True
 
@@ -1253,6 +1267,11 @@ def public_provider(provider):
         "has_key": bool(key),
         "key_preview": mask_secret(key),
         "key_env": provider_key_env(provider["id"]),
+    }
+    item["image_quality_support"] = {
+        str(model): image_quality_parameter_supported(provider, model)
+        for model in (provider.get("image_models") or [])
+        if str(model or "").strip()
     }
     if provider.get("id") == "runninghub":
         wallet_key = runninghub_wallet_key_value()
@@ -5533,6 +5552,17 @@ def effective_image_request_mode(provider, model=""):
     if detected:
         return detected
     return normalize_image_request_mode((provider or {}).get("image_request_mode"))
+
+def image_quality_parameter_supported(provider, model=""):
+    """Whether the selected image transport actually forwards low/medium/high upstream."""
+    provider_id = str((provider or {}).get("id") or "").strip().lower()
+    protocol = provider_protocol(provider)
+    if provider_id == "modelscope" or protocol in {"codex", "gemini-cli", "jimeng", "runninghub", "volcengine", "apimart"}:
+        return False
+    if effective_protocol(provider, model) == "gemini":
+        return False
+    request_mode = effective_image_request_mode(provider, model)
+    return request_mode not in {"openai-video-proxy", "openai-chat", "openai-json"}
 
 def is_gemini_provider(provider):
     return provider_protocol(provider) == "gemini"
