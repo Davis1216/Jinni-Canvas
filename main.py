@@ -2433,6 +2433,7 @@ class AIReference(BaseModel):
     role: str = ""
     kind: str = ""
     mime: str = ""
+    source_id: str = ""
 
 class JinniCreateRequest(BaseModel):
     name: str = Field(min_length=1, max_length=80)
@@ -2472,6 +2473,7 @@ class JinniUpdateRequest(BaseModel):
 
 class OnlineImageRequest(BaseModel):
     prompt: str = Field(min_length=1, max_length=ONLINE_IMAGE_PROMPT_MAX_LENGTH)
+    display_prompt: str = Field(default="", max_length=ONLINE_IMAGE_PROMPT_MAX_LENGTH)
     provider_id: str = "comfly"
     model: str = ""
     size: str = "1024x1024"
@@ -14184,8 +14186,10 @@ async def build_online_image_result(payload: OnlineImageRequest):
         provider_name = provider.get("name") or provider["id"]
         raw_text = json.dumps(raw, ensure_ascii=False)[:800] if isinstance(raw, (dict, list)) else str(raw)[:800]
         raise HTTPException(status_code=502, detail=f"{provider_name} 没有返回图片：{raw_text}")
+    display_prompt = str(payload.display_prompt or "").strip() or payload.prompt
     result = {
-        "prompt": payload.prompt,
+        "prompt": display_prompt,
+        "model_prompt": payload.prompt,
         "images": local_urls,
         "image_items": local_items,
         "timestamp": time.time(),
@@ -14199,7 +14203,7 @@ async def build_online_image_result(payload: OnlineImageRequest):
         "provider_name": provider.get("name") or provider["id"],
         "task_id": extract_task_id(raw) if isinstance(raw, dict) else None,
         "request_id": raw.get("id") if isinstance(raw, dict) else None,
-        "params": {"provider_id": provider["id"], "model": model, "size": payload.size, "quality": payload.quality, "temperature": normalize_image_temperature(payload.temperature), "n": count, "reference_images": refs},
+        "params": {"provider_id": provider["id"], "model": model, "size": payload.size, "quality": payload.quality, "temperature": normalize_image_temperature(payload.temperature), "n": count, "reference_images": refs, "display_prompt": display_prompt},
         "raw_usage": raw_usage or (raw.get("usage") if isinstance(raw, dict) else None),
     }
     save_to_history(result)

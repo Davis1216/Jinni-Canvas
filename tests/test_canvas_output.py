@@ -8,6 +8,8 @@ CANVAS_HTML = (ROOT / "static" / "canvas.html").read_text(encoding="utf-8")
 CANVAS_LIST_JS = (ROOT / "static" / "js" / "canvas-list.js").read_text(encoding="utf-8")
 CANVAS_LIST_HTML = (ROOT / "static" / "canvas-list.html").read_text(encoding="utf-8")
 INDEX_HTML = (ROOT / "static" / "index.html").read_text(encoding="utf-8")
+IMAGE_MENTIONS_JS = (ROOT / "static" / "js" / "image-mentions.js").read_text(encoding="utf-8")
+IMAGE_MENTIONS_CSS = (ROOT / "static" / "css" / "image-mentions.css").read_text(encoding="utf-8")
 ASSET_MANAGER_JS = (ROOT / "static" / "js" / "asset-manager.js").read_text(encoding="utf-8")
 SMART_CANVAS_JS = (ROOT / "static" / "js" / "smart-canvas.js").read_text(encoding="utf-8")
 SMART_CANVAS_HTML = (ROOT / "static" / "smart-canvas.html").read_text(encoding="utf-8")
@@ -85,6 +87,90 @@ def test_canvas_input_changes_refresh_every_connected_consumer():
     assert "generatedImageRefs(n).filter(ref => ref.kind === 'image')" in CANVAS_JS
 
 
+def test_reference_mentions_are_scoped_to_prompt_or_shared_generation_flow():
+    assert "function promptReferenceCandidates(" in CANVAS_JS
+    assert "connection.to === promptNode.id" in CANVAS_JS
+    assert "canvasInputPropagationTargets([promptNode.id]).generators" in CANVAS_JS
+    assert "relatedGeneratorIds.has(connection.to)" in CANVAS_JS
+    assert "promptReferenceCandidates(n, gen)" in CANVAS_JS
+    assert "if(!targetGenerator?.id) promptNode.referenceOrder = orderedKeys" in CANVAS_JS
+    assert "['image','group','output'].includes(source.type)" in CANVAS_JS
+    assert "if(to.type === 'prompt') return ['image','group','output'].includes(from.type)" in CANVAS_JS
+    assert "CANVAS_MENTION_TARGET_TYPES = ['generator','msgen','comfy','rh']" in CANVAS_JS
+    assert "function generationMentionContext(" in CANVAS_JS
+    assert "参考图映射" in CANVAS_JS
+    assert "`${source.id}:output:${ref?.outputIndex ?? index}`" in CANVAS_JS
+
+
+def test_related_prompt_refreshes_when_a_shared_flow_image_changes():
+    assert "if(peerNode?.type === 'prompt') liveNodes.add(peerNode.id)" in CANVAS_JS
+    assert "source && ['image','group','output'].includes(source.type)" in CANVAS_JS
+
+
+def test_generator_image_preview_matches_deduplicated_request_references():
+    assert "function actualReferenceInputSources(" in CANVAS_JS
+    assert "generationMentionContext(node, sources).refs" in CANVAS_JS
+    assert "sources.filter(source => !source.promptNodeId)" in CANVAS_JS
+    assert "type:'promptReference'" in CANVAS_JS
+    assert "reorderable:false" in CANVAS_JS
+    assert "actualReferenceInputSources(node, ordered, ['image'])" in CANVAS_JS
+
+
+def test_prompt_previews_render_structured_mentions_as_thumbnail_chips():
+    assert "function promptPreviewHtml(" in CANVAS_JS
+    assert "parts?.some(part => part?.type === 'image')" in CANVAS_JS
+    assert 'class="prompt-preview-mention ${invalid ? \'invalid\' : \'\'}"' in CANVAS_JS
+    assert "mentionCandidatesScoped" in CANVAS_JS
+    assert ".prompt-preview-mention img" in CANVAS_CSS
+
+
+def test_only_editable_prompt_mentions_have_clickable_remove_controls():
+    assert "remove.className = 'image-mention-remove'" in IMAGE_MENTIONS_JS
+    assert "removeToken(token);" in IMAGE_MENTIONS_JS
+    assert "editor.dispatchEvent(new Event('input', {bubbles:true}))" in IMAGE_MENTIONS_JS
+    assert ".image-mention-remove" in IMAGE_MENTIONS_CSS
+    assert "image-mention-remove" not in CANVAS_JS
+
+
+def test_canvas_cursor_semantics_match_each_interaction():
+    assert '[contenteditable="true"] { cursor:text; }' in CANVAS_CSS
+    assert '.prompt-rich-input {' in CANVAS_CSS and 'cursor:text; user-select:text;' in CANVAS_CSS
+    assert '.prompt-preview-content {' in CANVAS_CSS and 'user-select:text; cursor:text;' in CANVAS_CSS
+    assert 'button { cursor:pointer; }' in CANVAS_CSS
+    assert 'select:not(:disabled) { cursor:pointer; }' in CANVAS_CSS
+    assert 'input[type="range"]' in CANVAS_CSS
+    assert '.node-head:active { cursor:grabbing; }' in CANVAS_CSS
+    assert 'body.canvas-node-drag * { cursor:grabbing !important; }' in CANVAS_CSS
+    assert '[contenteditable="true"]' in CANVAS_JS.split('function isNodeControl(', 1)[1].split('function destroyLTXEditor(', 1)[0]
+
+
+def test_online_and_canvas_load_inline_reference_mention_ui():
+    assert '/static/js/image-mentions.js?v=' in ONLINE_HTML
+    assert '/static/css/image-mentions.css?v=' in ONLINE_HTML
+    assert '/static/js/image-mentions.js?v=' in CANVAS_HTML
+    assert '/static/css/image-mentions.css?v=' in CANVAS_HTML
+    assert 'contenteditable="true"' in ONLINE_HTML
+    assert 'onlineMentionCandidates' in ONLINE_HTML
+    assert 'display_prompt:compiled.displayPrompt' in ONLINE_HTML
+    assert 'source_id:`online-ref-${id}`' in ONLINE_HTML
+
+
+def test_canvas_modelscope_shortcut_and_local_generator_visibility():
+    toolbar = CANVAS_HTML.split('<div class="toolbar-items">', 1)[1].split('</div>', 1)[0]
+    assert 'onclick="addMsGenNode()"' not in toolbar
+    assert 'data-provider-required="modelscope"' in CANVAS_HTML
+    assert CANVAS_HTML.count('data-local-tools-required="comfy"') == 2
+    assert CANVAS_HTML.count('data-local-tools-required="ltxDirector"') == 2
+    assert "const STUDIO_LOCAL_TOOLS_VISIBLE_KEY = 'studio_local_tools_visible'" in CANVAS_JS
+    assert "function refreshCanvasLocalToolsVisibility(" in CANVAS_JS
+    assert CANVAS_JS.count("if(!canvasLocalToolsVisible()) return null;") == 2
+    assert CANVAS_JS.count("...(canvasLocalToolsVisible() ? [{type:'comfy'") == 2
+    assert CANVAS_JS.count("...(canvasLocalToolsVisible() ? [{type:'ltxDirector'") == 2
+    assert '[data-link-create="comfy"], [data-link-create="ltxDirector"]' in CANVAS_JS
+    assert "event.data?.type === 'studio-local-tools-visibility'" in CANVAS_JS
+    assert "type:'studio-local-tools-visibility'" in INDEX_HTML
+
+
 def test_generated_and_output_content_invalidates_downstream_inputs():
     merge_block = CANVAS_JS.split("function mergeGeneratedOutputs(", 1)[1].split("function pendingById(", 1)[0]
     assert merge_block.count("notifyCanvasInputConsumers([node.id])") == 2
@@ -102,11 +188,18 @@ def test_quality_control_only_sends_supported_upstream_parameter():
 
 def test_prompt_preview_keeps_prompts_that_share_a_media_source():
     assert "src.prompt && !src.refs?.length" not in CANVAS_JS
-    assert "escapeHtml(src.prompt || src.label)" in CANVAS_JS
+    assert "promptPreviewHtml(src)" in CANVAS_JS
+    assert "source?.prompt || source?.label" in CANVAS_JS
 
 
 def test_connection_run_feedback_is_stateful_and_motion_safe():
     assert "function connectionRunState(" in CANVAS_JS
+    assert "function beginNodeRunState(" in CANVAS_JS
+    assert "node.runStatus = 'running'" in CANVAS_JS.split("function beginNodeRunState(", 1)[1].split("function", 1)[0]
+    assert "node.runError = ''" in CANVAS_JS.split("function beginNodeRunState(", 1)[1].split("function", 1)[0]
+    assert "beginNodeRunState(gen, !opts.cascade)" in CANVAS_JS
+    assert "beginNodeRunState(node, !opts.cascade)" in CANVAS_JS
+    assert "filter(item => !item?.failed || item?.querying)" in CANVAS_JS
     for state in ("queued", "running", "success", "failed"):
         assert f"return '{state}'" in CANVAS_JS
         assert f".link-feedback.link-{state}" in CANVAS_CSS

@@ -22,6 +22,7 @@
     <script src="/static/js/i18n.js?v=2026.07.4.2.1784104411"></script>
     <script src="/static/js/image-preview.js?v=2026.07.4.2.1783154122"></script>
     <script src="/static/js/history-bulk-manager.js?v=2026.07.4.2.1783154122"></script>
+    <link rel="stylesheet" href="/static/css/image-mentions.css?v=2026.07.4.2.1784552837">
     <style>
         @import url('/static/vendor/css/fonts.css?v=2026.07.4.2.1783154122');
         :root { --accent:#111827; --bg:#f9fafb; --card:#fff; --easing:cubic-bezier(0.4,0,0.2,1); }
@@ -140,6 +141,11 @@
         .prompt-action-btn { height:30px; border:1px solid #e2e8f0; border-radius:10px; padding:0 10px; font-size:10px; font-weight:950; color:#475569; background:#f8fafc; }
         .prompt-action-btn.primary { background:#111827; color:#fff; border-color:#111827; }
         .prompt-picker-empty { min-height:180px; border:1px dashed #cbd5e1; border-radius:16px; display:flex; align-items:center; justify-content:center; color:#94a3b8; font-size:12px; font-weight:850; }
+        .online-prompt-editor { min-height:142px; padding:22px 24px; border-radius:24px; font-size:14px; line-height:1.7; background:var(--card); border:1px solid transparent; transition:all .25s var(--easing); }
+        .online-prompt-editor:focus { border-color:#111827; box-shadow:0 0 0 1px #111827; }
+        .online-reference-index { position:absolute; left:7px; top:7px; z-index:12; width:20px; height:20px; border-radius:999px; display:flex; align-items:center; justify-content:center; background:rgba(15,23,42,.86); color:#fff; font-size:10px; font-weight:950; box-shadow:0 2px 8px rgba(15,23,42,.2); pointer-events:none; }
+        html.studio-theme-dark .online-prompt-editor,body.studio-theme-dark .online-prompt-editor { border-color:#334155; }
+        html.studio-theme-dark .online-prompt-editor:focus,body.studio-theme-dark .online-prompt-editor:focus { border-color:#94a3b8; box-shadow:0 0 0 1px #94a3b8; }
         @media (max-width:720px){ .prompt-picker-body{ grid-template-columns:1fr; } .prompt-picker-side{ border-right:0; border-bottom:1px solid #eef2f7; max-height:260px; } }
         @keyframes fadeIn { from{opacity:0} to{opacity:1} }
     </style>
@@ -184,7 +190,10 @@
                             <span>提示词库</span>
                         </button>
                     </div>
-                    <textarea id="promptInput" rows="5" class="nano-input w-full p-6 rounded-3xl text-sm outline-none resize-none placeholder-gray-300" placeholder="输入想生成或编辑的画面..." data-i18n-placeholder="online.promptPlaceholder"></textarea>
+                    <div class="image-mention-shell">
+                        <div id="promptInput" class="nano-input image-mention-editor online-prompt-editor" contenteditable="true" data-placeholder="输入想生成或编辑的画面..." role="textbox" aria-multiline="true"></div>
+                        <div id="onlineMentionPicker" class="image-mention-picker"></div>
+                    </div>
                 </section>
 
                 <section class="space-y-4">
@@ -397,12 +406,15 @@
         </div>
     </div>
 
+    <script src="/static/js/image-mentions.js?v=2026.07.4.2.1784552837"></script>
     <script>
         lucide.createIcons();
         function tr(key){ return window.StudioI18n ? StudioI18n.t(key) : key; }
         function applyLanguage(lang){
             if(lang && window.StudioI18n) StudioI18n.set(lang);
             document.title = tr('online.title');
+            const promptEditor = document.getElementById('promptInput');
+            if(promptEditor) promptEditor.dataset.placeholder = tr('online.promptPlaceholder');
             const loader = document.getElementById('loadMoreTrigger');
             if(loader && !isLoading) loader.innerText = tr('online.loadMore');
         }
@@ -441,6 +453,7 @@
         let activePromptLibraryId = '';
         let activePromptCategory = 'all';
         let promptLibraryQuery = '';
+        let onlineMentionEditor = null;
         const PAGE_SIZE = 24;
         const SIZE_OPTIONS = {
             square: [
@@ -792,21 +805,9 @@
             if(!text) return;
             const input = document.getElementById('promptInput');
             if(!input) return;
-            if(mode === 'replace' || !input.value.trim()){
-                input.value = text;
-            } else {
-                const start = input.selectionStart ?? input.value.length;
-                const end = input.selectionEnd ?? input.value.length;
-                const before = input.value.slice(0, start);
-                const after = input.value.slice(end);
-                const prefix = before && !before.endsWith('\n') ? '\n' : '';
-                const suffix = after && !text.endsWith('\n') ? '\n' : '';
-                input.value = `${before}${prefix}${text}${suffix}${after}`;
-                const caret = (before + prefix + text).length;
-                input.setSelectionRange(caret, caret);
-            }
+            const current = onlineMentionEditor?.plainText() || input.innerText || '';
+            onlineMentionEditor?.insertText(text, mode === 'replace' || !current.trim() ? 'replace' : 'insert');
             input.focus();
-            input.dispatchEvent(new Event('input', {bubbles:true}));
             closePromptLibraryPicker();
         }
         document.addEventListener('click', event => {
@@ -968,6 +969,25 @@
         }
 
         function refSlotIds(){ return Array.from({length:REF_SLOT_COUNT}, (_, index) => index + 1); }
+        function onlineMentionCandidates(){
+            return refSlotIds().filter(id => refs[id]?.url).map((id, index) => ({
+                key:`online-ref-${id}`,
+                sourceId:`online-ref-${id}`,
+                source_id:`online-ref-${id}`,
+                url:refs[id].url,
+                name:refs[id].name || `图片${index + 1}`,
+                label:`图片${index + 1}`,
+                index:index + 1,
+                slotId:id
+            }));
+        }
+        function refreshOnlineMentions(){ onlineMentionEditor?.refresh(); }
+        function initOnlineMentions(){
+            const editor = document.getElementById('promptInput');
+            const picker = document.getElementById('onlineMentionPicker');
+            if(!editor || !picker || !window.StudioImageMentions) return;
+            onlineMentionEditor = StudioImageMentions.create({editor, picker, getCandidates:onlineMentionCandidates});
+        }
         function resetReferenceState(){
             refs = {};
             refDims = {};
@@ -982,6 +1002,7 @@
             grid.innerHTML = refSlotIds().map(id => `
                 <div id="drop-zone-${id}" onclick="document.getElementById('file${id}').click()" class="upload-item group aspect-square rounded-2xl flex flex-col items-center justify-center cursor-pointer">
                     <input type="file" id="file${id}" accept="image/*" class="hidden" onchange="handleFile(this.files[0],${id}); this.value='';">
+                    <span class="online-reference-index">${id}</span>
                     <i data-lucide="plus" class="w-5 h-5 text-gray-300 group-hover:text-black"></i><span class="text-[9px] mt-2 font-bold text-gray-400 uppercase">${escapeHtml(REF_SLOT_LABELS[id - 1] || `Ref ${id}`)}</span>
                     <img id="prev${id}" class="preview-img hidden"><button id="del${id}" onclick="clearSlot(${id},event)" class="hidden absolute top-2 right-2 w-6 h-6 bg-white/90 rounded-full shadow-sm z-10">×</button>
                 </div>
@@ -1007,9 +1028,11 @@
                     updateSizeUI();
                 }).catch(() => {});
             }
+            refreshOnlineMentions();
         }
         resetReferenceState();
         renderReferenceSlots();
+        initOnlineMentions();
         window.addEventListener('paste', e => {
             const item = [...(e.clipboardData?.items || [])].find(x => x.kind === 'file' && x.type.startsWith('image/'));
             if (item) handleFile(item.getAsFile(), firstEmptySlot());
@@ -1033,6 +1056,7 @@
             form.append('files', file);
             const data = await fetch('/api/ai/upload', {method:'POST', body:form}).then(r=>r.json());
             refs[index] = data.files[0];
+            refreshOnlineMentions();
         }
         function clearSlot(index, ev){
             if(ev) ev.stopPropagation();
@@ -1041,6 +1065,7 @@
             document.getElementById(`prev${index}`).src = '';
             document.getElementById(`prev${index}`).classList.add('hidden');
             document.getElementById(`del${index}`).classList.add('hidden');
+            refreshOnlineMentions();
         }
 
         function formatGenerationDuration(ms){
@@ -1136,13 +1161,21 @@
             });
         }
         async function submitImage(){
-            const prompt = document.getElementById('promptInput').value.trim();
-            if(!prompt){ showOnlineToast('error','缺少提示词',tr('online.promptRequired')); return; }
+            const promptParts = onlineMentionEditor?.serialize() || [];
+            const mentionRefs = onlineMentionCandidates();
+            const compiled = StudioImageMentions.compile(promptParts, mentionRefs);
+            if(compiled.invalid.length){ showOnlineToast('error','参考图引用已失效','请重新上传对应图片，或删除提示词中的红色引用标签。'); return; }
+            if(!compiled.displayPrompt){ showOnlineToast('error','缺少提示词',tr('online.promptRequired')); return; }
             const loader = document.getElementById('loader'), placeholder = document.getElementById('placeholder'), out = document.getElementById('outputImg'), dl = document.getElementById('downloadBtn'), status = document.getElementById('resultStatus');
             placeholder.classList.add('hidden'); out.classList.add('hidden'); dl.classList.add('hidden'); status.classList.add('hidden'); loader.classList.remove('hidden');
             beginGenerationFeedback();
             try {
-                const reqBody = { prompt, provider_id:provider, model:selectedModel, size:currentSize(), temperature:normalizedTemperature(temperature), n:outputCount, reference_images:refSlotIds().map(id => refs[id]).filter(Boolean).slice(0, REF_SLOT_COUNT) };
+                const requestRefs = refSlotIds().map(id => {
+                    if(!refs[id]?.url) return null;
+                    const candidate = mentionRefs.find(item => item.slotId === id);
+                    return {...refs[id], source_id:`online-ref-${id}`, name:candidate?.label || refs[id].name || `图片${id}`};
+                }).filter(Boolean).slice(0, REF_SLOT_COUNT);
+                const reqBody = { prompt:compiled.modelPrompt, display_prompt:compiled.displayPrompt, provider_id:provider, model:selectedModel, size:currentSize(), temperature:normalizedTemperature(temperature), n:outputCount, reference_images:requestRefs };
                 if(QUALITY_PROTOCOLS.has(providerProtocol(provider))) reqBody.quality = quality;
                 setGenerationPhase('generate');
                 const response = await fetch('/api/online-image', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(reqBody)});
@@ -1310,9 +1343,12 @@
         function zoomImage(){ if(currentResult) openLightbox(currentResult); }
         function applySameStyle(){
             if(!currentLightboxData) return;
-            document.getElementById('promptInput').value = currentLightboxData.prompt || '';
             refSlotIds().forEach(id => clearSlot(id));
-            (currentLightboxData.params?.reference_images || []).slice(0, REF_SLOT_COUNT).forEach((ref,i) => hydrateReferenceSlot(i + 1, ref));
+            (currentLightboxData.params?.reference_images || []).slice(0, REF_SLOT_COUNT).forEach((ref,i) => {
+                const sourceMatch = String(ref.source_id || '').match(/online-ref-(\d+)/);
+                hydrateReferenceSlot(sourceMatch ? Number(sourceMatch[1]) : i + 1, ref);
+            });
+            onlineMentionEditor?.restoreText(currentLightboxData.prompt || '');
             setTemperature(currentLightboxData.params?.temperature ?? 0.7);
             const size = currentLightboxData.params?.size || '1024x1024';
             const matchedRatio = Object.keys(SIZE_OPTIONS).find(key => SIZE_OPTIONS[key].some(([value]) => value === size)) || 'square';

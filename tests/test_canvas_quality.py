@@ -26,3 +26,13 @@ def test_public_provider_exposes_per_model_quality_capability():
     item.update({"image_models": ["gpt-image-2"], "chat_models": [], "video_models": [], "enabled": True})
     public = main.public_provider(item)
     assert public["image_quality_support"] == {"gpt-image-2": True}
+
+
+def test_online_image_request_preserves_reference_source_and_display_prompt():
+    request = main.OnlineImageRequest(
+        prompt="参考图映射：\n图1：图片1\n\n用户要求：\n让图1作为主体",
+        display_prompt="让@图片1作为主体",
+        reference_images=[{"url": "/assets/input/ref.png", "name": "图片1", "source_id": "online-ref-1"}],
+    )
+    assert request.display_prompt == "让@图片1作为主体"
+    assert request.reference_images[0].source_id == "online-ref-1"
