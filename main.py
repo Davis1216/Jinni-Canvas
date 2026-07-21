@@ -2662,7 +2662,9 @@ class MsGenerateRequest(BaseModel):
     client_id: Optional[str] = None
 
 class CanvasLLMRequest(BaseModel):
-    message: str = Field(min_length=1, max_length=LLM_MESSAGE_MAX_LENGTH)
+    # Multimodal requests may intentionally have no user text: a connected
+    # image/video plus the system prompt is a complete LLM request.
+    message: str = Field(default="", max_length=LLM_MESSAGE_MAX_LENGTH)
     system_prompt: str = ""
     model: str = ""
     messages: List[Dict[str, Any]] = []
@@ -15385,8 +15387,20 @@ async def canvas_video(payload: CanvasVideoRequest):
 
 # --- Canvas LLM ---
 
+def canvas_llm_media_inputs(payload: CanvasLLMRequest):
+    images = [img for img in (payload.images or []) if is_image_reference_value(img)]
+    videos = [video for video in (payload.videos or []) if is_video_reference_value(video)]
+    return images, videos
+
+def canvas_llm_has_usable_input(payload: CanvasLLMRequest):
+    images, videos = canvas_llm_media_inputs(payload)
+    return bool(str(payload.message or "").strip() or images or videos)
+
 @app.post("/api/canvas-llm")
 async def canvas_llm(payload: CanvasLLMRequest):
+    image_inputs, video_inputs = canvas_llm_media_inputs(payload)
+    if not canvas_llm_has_usable_input(payload):
+        raise HTTPException(status_code=422, detail="请输入文字，或至少连接一张图片/一个视频到 LLM。")
     _provider = get_api_provider(payload.provider)
     if is_codex_provider(_provider):
         model = selected_model(payload.model, (_provider.get("chat_models") or CODEX_DEFAULT_CHAT_MODELS)[0])
@@ -15412,10 +15426,10 @@ async def canvas_llm(payload: CanvasLLMRequest):
         if role in {"user", "assistant"} and content:
             upstream_messages.append({"role": role, "content": content})
     # 构造用户消息：有图片/视频时用 OpenAI/Gemini 多模态格式
-    image_inputs = [img for img in (payload.images or []) if is_image_reference_value(img)]
-    video_inputs = [video for video in (payload.videos or []) if is_video_reference_value(video)]
     if image_inputs or video_inputs:
-        content_parts = [{"type": "text", "text": payload.message}]
+        content_parts = []
+        if str(payload.message or "").strip():
+            content_parts.append({"type": "text", "text": payload.message})
         ok_imgs = 0
         for img in image_inputs[:8]:
             if not img or not isinstance(img, str):

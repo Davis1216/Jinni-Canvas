@@ -39,13 +39,22 @@
 
     function apply(root=document){
         root.querySelectorAll('[data-i18n]').forEach(el => {
-            el.textContent = t(el.dataset.i18n);
+            const key = el.dataset.i18n;
+            const translated = t(key);
+            // Preserve the human-readable HTML fallback when a bundle is stale
+            // or a key was omitted. Missing translations must never surface as
+            // implementation keys such as "canvas.outputSingle".
+            if(translated !== key || !el.textContent.trim()) el.textContent = translated;
         });
         root.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
-            el.setAttribute('placeholder', t(el.dataset.i18nPlaceholder));
+            const key = el.dataset.i18nPlaceholder;
+            const translated = t(key);
+            if(translated !== key || !el.getAttribute('placeholder')) el.setAttribute('placeholder', translated);
         });
         root.querySelectorAll('[data-i18n-title]').forEach(el => {
-            el.setAttribute('title', t(el.dataset.i18nTitle));
+            const key = el.dataset.i18nTitle;
+            const translated = t(key);
+            if(translated !== key || !el.getAttribute('title')) el.setAttribute('title', translated);
         });
         root.documentElement?.setAttribute('lang', lang() === 'en' ? 'en' : 'zh-CN');
         window.dispatchEvent(new CustomEvent('studio-lang-change', { detail:{ lang:lang() } }));

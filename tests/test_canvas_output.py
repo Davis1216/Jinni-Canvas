@@ -52,7 +52,23 @@ def test_llm_can_write_versioned_text_into_unified_output():
     assert "function syncLLMTextOutputs(" in CANVAS_JS
     assert "syncLLMTextOutputs(node, node.outputText, 'node')" in CANVAS_JS
     assert "syncLLMTextOutputs(node, text, 'chat')" in CANVAS_JS
-    assert "to.type === 'output' || CANVAS_GENERATOR_TYPES.includes(to.type)" in CANVAS_JS
+    assert "from.type === 'llm') return to.type === 'output' && outputAcceptsSource(to, from)" in CANVAS_JS
+    assert "if(!requireOutputConnection(node, opts)) return;" in CANVAS_JS
+
+
+def test_llm_accepts_connected_media_without_prompt_text():
+    assert "CanvasInteractionRules.hasLLMRequestInput(input, images, videos)" in CANVAS_JS
+    assert "const images = llmInputImages(node);" in CANVAS_JS
+    assert "const videos = llmInputVideos(node);" in CANVAS_JS
+    assert "message: str = Field(default=\"\", max_length=LLM_MESSAGE_MAX_LENGTH)" in MAIN_PY
+    assert "if not canvas_llm_has_usable_input(payload):" in MAIN_PY
+
+
+def test_missing_i18n_keys_preserve_human_readable_fallbacks():
+    i18n_core = (ROOT / "static" / "js" / "i18n-core.js").read_text(encoding="utf-8")
+    i18n_loader = (ROOT / "static" / "js" / "i18n.js").read_text(encoding="utf-8")
+    assert "translated !== key || !el.textContent.trim()" in i18n_core
+    assert "2026.07.21.canvas-output-llm.1" in i18n_loader
 
 
 def test_output_text_has_preview_source_and_actions():
@@ -82,9 +98,39 @@ def test_canvas_input_changes_refresh_every_connected_consumer():
     assert "else if(target.type === 'loop')" in CANVAS_JS
     assert "else if(target.type === 'output')" in CANVAS_JS
     assert "refreshGeneratorInputViews([...targets.generators])" in CANVAS_JS
-    assert "CANVAS_IMAGE_OUTPUT_TYPES.includes(from.type) && to.type === 'loop' && to.imageInput" in CANVAS_JS
-    assert "CANVAS_MEDIA_OUTPUT_TYPES.includes(from.type) && to.type === 'llm'" in CANVAS_JS
+    assert "return to.type === 'output' && outputAcceptsSource(to, from)" in CANVAS_JS
+    assert "if(from.type === 'llm') return to.type === 'output' && outputAcceptsSource(to, from)" in CANVAS_JS
     assert "generatedImageRefs(n).filter(ref => ref.kind === 'image')" in CANVAS_JS
+
+
+def test_output_nodes_are_explicitly_typed_and_required_before_api_calls():
+    for kind in ("single-image", "image-group", "general"):
+        assert kind in CANVAS_JS
+    for label in ("单图输出", "图组输出", "通用输出"):
+        assert label in CANVAS_HTML
+    assert "function requireOutputConnection(" in CANVAS_JS
+    assert "function normalizeCanvasOutputGraph(" in CANVAS_JS
+    assert "const missingOutputs = order.map" in CANVAS_JS
+    assert "CANVAS_GENERATOR_TYPES.includes(from.type))" in CANVAS_JS
+    assert "return to.type === 'output' && outputAcceptsSource(to, from);" in CANVAS_JS
+
+
+def test_single_image_output_keeps_only_latest_round_main_image():
+    assert "out.activeRunId = run.id" in CANVAS_JS
+    assert "if(out.activeRunId && runId !== out.activeRunId) return" in CANVAS_JS
+    assert "out.roundCandidates = []" in CANVAS_JS
+    assert "out.images = selected ? [selected] : []" in CANVAS_JS
+    assert 'data-single-output-toggle' in CANVAS_JS
+    assert 'data-single-candidate' in CANVAS_JS
+    assert "notifyCanvasInputConsumers([node.id], {refreshRelays:false})" in CANVAS_JS
+    assert "if(hasSingleImageRelay) return 1" in CANVAS_JS
+
+
+def test_image_group_output_preserves_real_media_ratio():
+    assert "normalizedPendingPreviewSize(meta)" in CANVAS_JS
+    assert "item.width = previewSize.w" in CANVAS_JS
+    assert "wrap.style.aspectRatio" in CANVAS_JS
+    assert ".single-output-candidates" in CANVAS_CSS
 
 
 def test_reference_mentions_are_scoped_to_prompt_or_shared_generation_flow():
@@ -164,8 +210,9 @@ def test_canvas_modelscope_shortcut_and_local_generator_visibility():
     assert "const STUDIO_LOCAL_TOOLS_VISIBLE_KEY = 'studio_local_tools_visible'" in CANVAS_JS
     assert "function refreshCanvasLocalToolsVisibility(" in CANVAS_JS
     assert CANVAS_JS.count("if(!canvasLocalToolsVisible()) return null;") == 2
-    assert CANVAS_JS.count("...(canvasLocalToolsVisible() ? [{type:'comfy'") == 2
-    assert CANVAS_JS.count("...(canvasLocalToolsVisible() ? [{type:'ltxDirector'") == 2
+    # 生成节点必须先连 Output，输出菜单不再提供绕过 Output 的下游生成器快捷项。
+    assert CANVAS_JS.count("...(canvasLocalToolsVisible() ? [{type:'comfy'") == 1
+    assert CANVAS_JS.count("...(canvasLocalToolsVisible() ? [{type:'ltxDirector'") == 1
     assert '[data-link-create="comfy"], [data-link-create="ltxDirector"]' in CANVAS_JS
     assert "event.data?.type === 'studio-local-tools-visibility'" in CANVAS_JS
     assert "type:'studio-local-tools-visibility'" in INDEX_HTML

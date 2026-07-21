@@ -5,6 +5,21 @@ function trf(key, values={}){
     return Object.entries(values).reduce((text, [name, value]) => text.replaceAll(`{${name}}`, String(value)), tr(key));
 }
 function langIsEn(){ return window.StudioI18n?.lang?.() === 'en'; }
+const CanvasInteractionRules = window.CanvasInteractionRules || {
+    clampViewportScale:value => Math.max(.06, Math.min(3, Number(value) || 1)),
+    allowedOutputKinds:(type, mediaKind) => type === 'rh'
+        ? ['single-image','image-group','general']
+        : (type === 'llm' || type === 'video' || type === 'ltxDirector')
+            ? ['general']
+            : ['generator','msgen','comfy'].includes(type) ? ['single-image','image-group'] : [],
+    requiredOutputKinds:(type, mediaKind) => type === 'rh' && mediaKind !== 'image'
+        ? ['general']
+        : (type === 'llm' || type === 'video' || type === 'ltxDirector')
+            ? ['general']
+            : ['generator','msgen','comfy','rh'].includes(type) ? ['single-image','image-group'] : [],
+    normalizeMediaKind:value => String(value || '').toLowerCase() === 'image' ? 'image' : 'unknown',
+    inferWorkflowOutputMediaKind:() => 'unknown'
+};
 const CANVAS_UPLOAD_MAX = 20;
 const CANVAS_REFERENCE_IMAGE_MAX = 20;
 function actionFailed(labelKey, detail=''){
@@ -331,6 +346,54 @@ const logList = document.getElementById('logList');
 const errorModal = document.getElementById('errorModal');
 const errorTitle = document.getElementById('errorTitle');
 const errorMessage = document.getElementById('errorMessage');
+const canvasDialogIds = ['outputLightbox','promptTemplateModal','logModal','assetManagerModal','imageEditModal','errorModal'];
+const canvasDialogs = canvasDialogIds.map(id => document.getElementById(id)).filter(Boolean);
+const canvasDialogReturnFocus = new WeakMap();
+let lastCanvasFocusOutsideDialog = document.activeElement;
+function canvasDialogIsOpen(dialog){ return Boolean(dialog?.classList.contains('open')); }
+function activeCanvasDialog(){ return [...canvasDialogs].reverse().find(canvasDialogIsOpen) || null; }
+function canvasDialogFocusable(dialog){
+    return [...(dialog?.querySelectorAll?.('button:not(:disabled),a[href],input:not(:disabled),select:not(:disabled),textarea:not(:disabled),[tabindex]:not([tabindex="-1"]),[contenteditable="true"]') || [])]
+        .filter(el => !el.hidden && el.getClientRects().length > 0);
+}
+function focusCanvasDialog(dialog){
+    if(!canvasDialogIsOpen(dialog)) return;
+    const focusable = canvasDialogFocusable(dialog);
+    (focusable[0] || dialog).focus?.({preventScroll:true});
+}
+function trapCanvasDialogFocus(event){
+    if(event.key !== 'Tab') return false;
+    const dialog = activeCanvasDialog();
+    if(!dialog) return false;
+    const focusable = canvasDialogFocusable(dialog);
+    if(!focusable.length){ event.preventDefault(); dialog.focus({preventScroll:true}); return true; }
+    const first = focusable[0], last = focusable[focusable.length - 1];
+    if(event.shiftKey && (document.activeElement === first || !dialog.contains(document.activeElement))){ event.preventDefault(); last.focus({preventScroll:true}); }
+    else if(!event.shiftKey && (document.activeElement === last || !dialog.contains(document.activeElement))){ event.preventDefault(); first.focus({preventScroll:true}); }
+    return true;
+}
+document.addEventListener('focusin', event => {
+    if(!event.target?.closest?.('[role="dialog"],[role="alertdialog"]')) lastCanvasFocusOutsideDialog = event.target;
+});
+const canvasDialogObserver = new MutationObserver(mutations => {
+    mutations.forEach(({target:dialog}) => {
+        const open = canvasDialogIsOpen(dialog);
+        if(open && dialog.dataset.canvasDialogOpen !== '1'){
+            dialog.dataset.canvasDialogOpen = '1';
+            canvasDialogReturnFocus.set(dialog, lastCanvasFocusOutsideDialog);
+            requestAnimationFrame(() => {
+                if(canvasDialogIsOpen(dialog) && !dialog.contains(document.activeElement)) focusCanvasDialog(dialog);
+            });
+        } else if(!open && dialog.dataset.canvasDialogOpen === '1'){
+            delete dialog.dataset.canvasDialogOpen;
+            const restore = canvasDialogReturnFocus.get(dialog);
+            canvasDialogReturnFocus.delete(dialog);
+            if(restore?.isConnected) requestAnimationFrame(() => restore.focus?.({preventScroll:true}));
+        }
+    });
+});
+canvasDialogs.forEach(dialog => canvasDialogObserver.observe(dialog, {attributes:true, attributeFilter:['class']}));
+document.addEventListener('keydown', trapCanvasDialogFocus, true);
 let canvases = [];
 let deletedCanvases = [];
 let canvas = null;
@@ -343,10 +406,12 @@ let minimapDrag = false;
 let minimapState = null;
 let minimapRenderQueued = false;
 let linksRenderQueued = false;
+let viewportWheelFrame = 0;
 let zoomPreviewState = null;
 let resizeNode = null;
 let llmPaneDrag = null;
 let tempLink = null;
+let keyboardLinkOrigin = null;
 let knifeActive = false;
 let knifePoint = null;
 let knifeTrail = [];
@@ -1351,12 +1416,19 @@ function centerViewportOnWorldPoint(point){
     viewport.x = rect.width / 2 - point.x * viewport.scale;
     viewport.y = rect.height / 2 - point.y * viewport.scale;
     applyViewport();
-    renderLinks();
     renderSelectionHub();
 }
+function scheduleViewportWheelRender(){
+    if(viewportWheelFrame) return;
+    viewportWheelFrame = requestAnimationFrame(() => {
+        viewportWheelFrame = 0;
+        applyViewport();
+        renderSelectionHub();
+        scheduleViewportSave();
+    });
+}
 function safeViewportScale(value){
-    const n = Number(value);
-    return Number.isFinite(n) && n > 0 ? n : 1;
+    return CanvasInteractionRules.clampViewportScale(value, 1);
 }
 function fitAllNodesViewport(){
     const rect = board.getBoundingClientRect();
@@ -1365,7 +1437,6 @@ function fitAllNodesViewport(){
         viewport.x = rect.width / 2;
         viewport.y = rect.height / 2;
         applyViewport();
-        renderLinks();
         renderSelectionHub();
         scheduleViewportSave();
         return;
@@ -1385,7 +1456,6 @@ function fitAllNodesViewport(){
     viewport.x = rect.width / 2 - cx * viewport.scale;
     viewport.y = rect.height / 2 - cy * viewport.scale;
     applyViewport();
-    renderLinks();
     renderSelectionHub();
     scheduleViewportSave();
 }
@@ -1414,7 +1484,6 @@ function exitZoomPreview(point=null){
         viewport.y = prev.y;
     }
     applyViewport();
-    renderLinks();
     renderSelectionHub();
     scheduleViewportSave();
     return true;
@@ -1443,7 +1512,6 @@ function exitZoomPreviewToNode(nodeId){
     viewport.x = boardRect.width / 2 - cx * viewport.scale;
     viewport.y = boardRect.height / 2 - cy * viewport.scale;
     applyViewport();
-    renderLinks();
     renderSelectionHub();
     scheduleViewportSave();
     return true;
@@ -1509,6 +1577,7 @@ function serializableCanvasNode(node){
     delete copy._cascadeIdx;
     delete copy._cascadeFailed;
     delete copy._activeLoopCtx;
+    delete copy._singleExpanded;
     return copy;
 }
 function serializableCanvasNodes(list=nodes){
@@ -1595,11 +1664,7 @@ async function loadConfig(){
             comfyWorkflows = [];
         }
         runningHubWorkflowCache = {};
-        const rhProvider = apiProviders.find(p => p.id === 'runninghub');
-        const rhWorkflowIds = (rhProvider?.rh_workflows || []).map(item => String(item.workflowId || item.id || '').trim()).filter(Boolean);
-        await Promise.all(rhWorkflowIds.map(async workflowId => {
-            try { await ensureRunningHubWorkflow(workflowId); } catch(_) {}
-        }));
+        // RunningHub 工作流详情只在选中或运行对应节点时加载。画布首屏不应被全部远端配置阻塞。
     } catch(e) {
         apiProviders = defaultApiProviders();
         refreshCanvasProviderVisibility();
@@ -2142,14 +2207,14 @@ async function openCanvas(id){
         localCanvasDirty = false;
         resetTransientRunState(nodes);
         const repairedGroupItems = sanitizeCanvasGroupItems({useDom:false});
-        sanitizeConnections();
+        const repairedOutputs = sanitizeConnections();
         pruneMissingComfyWorkflows();
         await refreshMissingCanvasAssets();
         selected.clear();
         setCanvasMode(true);
         renderCanvasList();
         render();
-        if(repairedGroupItems) scheduleSave();
+        if(repairedGroupItems || repairedOutputs) scheduleSave();
         resumeCanvasImageTasks();
         startCanvasRemotePolling();
         setStatus('Ready');
@@ -3119,6 +3184,7 @@ function renderMsGenBody(node){
 async function runMsGenNode(nodeId, opts={}){
     const node = nodes.find(n => n.id === nodeId);
     if(!node || (node.running && !opts.cascade)) return;
+    if(!requireOutputConnection(node, opts)) return;
     const cascadeTargetId = cascadeTargetIdFromOptions(opts);
     const sources = orderedSources(node, generatorSources(node));
     const mentionContext = generationMentionContext(node, sources);
@@ -3132,10 +3198,11 @@ async function runMsGenNode(nodeId, opts={}){
     if(!prompt){ alert(tr('canvas.needPrompt')); return; }
     if(msModel.supportsImage && !refs.length){ alert(tr('canvas.needImage')); return; }
     const count = Math.max(1, Math.min(8, Number(node.count || 1)));
-    // 链路中间节点默认不创建 Output；链尾、手动开启或已有 Output 连接时才输出。
+    // Output 必须由用户显式选择；无兼容 Output 时会在提交 API 前被本地预检拦截。
     let out = outputForNode(node, 460);
     const pendingIds = Array.from({length:count}, () => uid('p'));
     const run = runSnapshot(node, prompt, refs, mentionContext.displayPrompt);
+    registerOutputRun(node, run);
     const size = apiImageSize(node.msRatio ?? 'square', node.msResolution || '1k', node.msCustomRatio || '', node.msCustomSize || '');
     const parsed = parseSizeValue(size);
     let width = Number(parsed?.width) || 1024;
@@ -3200,7 +3267,7 @@ async function runMsGenNode(nodeId, opts={}){
         run.request = results[0] ? requestMetaFromResult(results[0]) : {};
         if(out) out._pending = (out._pending || []).filter(p => !pendingIds.includes(p.id));
         appendOutputImages(out, outputUrls, refs[0], metas);
-        mergeGeneratedOutputs(node, outputUrls, Boolean(opts.cascade));
+        mergeGeneratedOutputs(node, outputUrls, Boolean(opts.cascade), {metas, compareRef:refs[0]});
         addGenerationLog({run, outputs:outputUrls, runMs:Math.max(...metas.map(m => m.runMs || 0), 0)});
         node.runStatus = 'done'; node.runError = '';
         refreshRunNodes(node, out);
@@ -3252,30 +3319,57 @@ function addComfyNode(point){
         inputs:[]
     });
 }
-function addOutputNode(point){
+function addOutputNode(kind='image-group', point=null){
+    if(kind && typeof kind === 'object') { point = kind; kind = 'image-group'; }
     const p = point || defaultPoint(260, 0);
-    return addNode({id:uid('out'), type:'output', x:p.x, y:p.y, images:[], texts:[], activeTextVersions:{}, textViewModes:{}});
+    const outputKind = ['single-image','image-group','general'].includes(kind) ? kind : 'image-group';
+    return addNode({id:uid('out'), type:'output', outputKind, x:p.x, y:p.y, images:[], texts:[], activeTextVersions:{}, textViewModes:{}});
 }
 function openCreateMenu(clientX, clientY){
     menuPoint = screenToWorld(clientX, clientY);
     closeLinkCreateMenu();
+    createMenu.classList.remove('output-only');
+    document.getElementById('toolbarOutputBtn')?.setAttribute('aria-expanded', 'false');
     createMenu.style.left = `${clientX}px`;
     createMenu.style.top = `${clientY}px`;
     createMenu.classList.add('open');
     refreshIcons();
 }
+function openToolbarOutputMenu(button, event){
+    event?.preventDefault?.();
+    event?.stopPropagation?.();
+    if(!canvas) return;
+    const wasOpen = createMenu.classList.contains('open') && createMenu.classList.contains('output-only');
+    closeCreateMenu();
+    if(wasOpen) return;
+    const rect = button?.getBoundingClientRect?.() || {left:24, bottom:70};
+    const menuWidth = 210;
+    menuPoint = defaultPoint(260, 0);
+    createMenu.style.left = `${Math.max(10, Math.min(window.innerWidth - menuWidth - 10, rect.left))}px`;
+    createMenu.style.top = `${Math.min(window.innerHeight - 190, rect.bottom + 8)}px`;
+    createMenu.classList.add('output-only', 'open');
+    button?.setAttribute('aria-expanded', 'true');
+    refreshIcons();
+    requestAnimationFrame(() => createMenu.querySelector('.output-menu-option')?.focus({preventScroll:true}));
+}
 function closeCreateMenu(){
     createMenu.classList.remove('open');
+    createMenu.classList.remove('output-only');
+    document.getElementById('toolbarOutputBtn')?.setAttribute('aria-expanded', 'false');
     closeLinkCreateMenu();
     closeImageNodeMenu();
 }
+window.openToolbarOutputMenu = openToolbarOutputMenu;
 function linkCreateOptions(state){
     const node = nodes.find(n => n.id === state?.originId);
     if(!node) return [];
     if(state.originKind === 'out'){
+        if(CANVAS_GENERATOR_TYPES.includes(node.type) || node.type === 'llm'){
+            return outputCreationOptionsForSource(node);
+        }
         if(['image','prompt','loop','group','promptGroup','llm','output'].includes(node.type)){
             return [
-                ...(node.type === 'llm' ? [{type:'output', label:'Output', icon:'panel-top'}] : []),
+                ...(node.type === 'llm' ? [{type:'outputGeneral', label:tr('canvas.outputGeneral'), icon:'panel-top'}] : []),
                 {type:'generator', label:tr('canvas.apiGenerate'), icon:'wand-sparkles'},
                 ...(hasConfiguredCanvasProvider('modelscope') ? [{type:'msgen', label:tr('canvas.modelscopeGenerate'), icon:'cloud-lightning'}] : []),
                 ...(canvasLocalToolsVisible() ? [{type:'comfy', label:tr('canvas.comfyGenerate'), icon:'workflow'}] : []),
@@ -3289,12 +3383,11 @@ function linkCreateOptions(state){
     }
     if(CANVAS_GENERATOR_TYPES.includes(node.type) || node.type === 'llm'){
         return [
-            ...(node.type === 'llm' ? [{type:'output', label:'Output', icon:'panel-top'}] : []),
+            ...(node.type === 'llm' ? [{type:'outputGeneral', label:tr('canvas.outputGeneral'), icon:'panel-top'}] : []),
             {type:'image', label:tr('canvas.imageCard'), icon:'image-plus'},
             {type:'prompt', label:tr('canvas.prompt'), icon:'text-cursor-input'},
             {type:'loop', label:tr('canvas.loopNode'), icon:'repeat-2'},
-            {type:'group', label:tr('canvas.group'), icon:'group'},
-            {type:'llm', label:'LLM', icon:'message-square-text'}
+            {type:'group', label:tr('canvas.group'), icon:'group'}
         ];
     }
     return [];
@@ -3325,16 +3418,7 @@ function openGeneratorNodeMenu(nodeId, clientX, clientY){
     const rect = el?.getBoundingClientRect();
     const point = screenToWorld(clientX, clientY);
     const inputOptions = linkCreateOptions({originId:nodeId, originKind:'in', point});
-    const outputOptions = [
-        {type:'output', label:'Output', icon:'circle-dot'},
-        ...(CANVAS_IMAGE_OUTPUT_TYPES.includes(node.type) ? [
-            {type:'generator', label:tr('canvas.apiGenerate'), icon:'wand-sparkles'},
-            ...(hasConfiguredCanvasProvider('modelscope') ? [{type:'msgen', label:tr('canvas.modelscopeGenerate'), icon:'cloud-lightning'}] : []),
-            ...(canvasLocalToolsVisible() ? [{type:'comfy', label:tr('canvas.comfyGenerate'), icon:'workflow'}] : []),
-            ...(canvasLocalToolsVisible() ? [{type:'ltxDirector', label:tr('canvas.ltxDirector'), icon:'film'}] : []),
-            {type:'video', label:tr('canvas.videoGenerateNode'), icon:'clapperboard'}
-        ] : [])
-    ];
+    const outputOptions = outputCreationOptionsForSource(node);
     const buttonsHtml = (options, kind) => `<div class="node-port-menu-grid">${options.map(opt => `<button class="menu-btn" data-link-create="${escapeAttr(opt.type)}" data-link-kind="${kind}" title="${escapeAttr(opt.label)}"><i data-lucide="${escapeAttr(opt.icon)}"></i><span>${escapeHtml(opt.label.replace('生成', ''))}</span></button>`).join('')}</div>`;
     linkCreateState = {originId:nodeId, originKind:'in', point};
     createMenu.classList.remove('open');
@@ -3682,7 +3766,9 @@ function createNodeByType(type, point){
     if(type === 'rh') return addRhNode(point);
     if(type === 'comfy') return addComfyNode(point);
     if(type === 'ltxDirector') return addLTXDirectorNode(point);
-    if(type === 'output') return addOutputNode(point);
+    if(type === 'output' || type === 'outputGroup') return addOutputNode('image-group', point);
+    if(type === 'outputSingle') return addOutputNode('single-image', point);
+    if(type === 'outputGeneral') return addOutputNode('general', point);
     return null;
 }
 function menuAdd(type){
@@ -3697,7 +3783,9 @@ function menuAdd(type){
     if(type === 'rh') addRhNode(menuPoint);
     if(type === 'comfy') addComfyNode(menuPoint);
     if(type === 'ltxDirector') addLTXDirectorNode(menuPoint);
-    if(type === 'output') addOutputNode(menuPoint);
+    if(type === 'output' || type === 'outputGroup') addOutputNode('image-group', menuPoint);
+    if(type === 'outputSingle') addOutputNode('single-image', menuPoint);
+    if(type === 'outputGeneral') addOutputNode('general', menuPoint);
 }
 function mediaKindForUpload(file){
     const type = String(file?.type || '').toLowerCase();
@@ -5311,7 +5399,7 @@ function imageEditorOutputNode(sourceNode){
         .find(n => n?.type === 'output');
     if(!out){
         const p = imageEditorOutputPoint(sourceNode, 0);
-        out = {id:uid('out'), type:'output', x:p.x, y:p.y, images:[]};
+        out = {id:uid('out'), type:'output', outputKind:'image-group', x:p.x, y:p.y, images:[]};
         nodes.push(out);
     }
     return out;
@@ -6148,7 +6236,7 @@ function renderPendingOutput(pending){
                 <div class="output-recover-sub" title="${escapeAttr(msg)}">${sub}</div>
                 <button class="output-recover-query" type="button" ${taskId && !querying ? '' : 'disabled'}>${querying ? '查询中...' : '查询结果'}</button>
             </div>
-            <button class="output-del" title="${tr('common.delete')}">×</button>
+            <button class="output-del" type="button" title="${tr('common.delete')}" aria-label="${tr('common.delete')}">×</button>
         </div>`;
     }
     return `<div class="output-img-wrap loading-wrap" data-pending-id="${escapeAttr(pending.id)}"${pendingOutputStyle(pending)} role="status" aria-live="polite">
@@ -6159,7 +6247,7 @@ function renderPendingOutput(pending){
             <div class="output-progress-detail">模型仍在处理，耗时会持续更新</div>
             <div class="output-progress-line" aria-hidden="true"></div>
         </div>
-        <button class="output-del" title="${tr('common.delete')}">×</button>
+        <button class="output-del" type="button" title="${tr('common.delete')}" aria-label="${tr('common.delete')}">×</button>
     </div>`;
 }
 function captureOutputScrolls(){
@@ -6221,6 +6309,8 @@ function renderNode(node){
     el.style.width = `${node.w || size.w}px`;
     if(node.h || size.h) el.style.height = `${node.h || size.h}px`;
     el.dataset.id = node.id;
+    el.tabIndex = 0;
+    el.setAttribute('role', 'group');
     el.onclick = (e) => {
         e.stopPropagation();
         if(isNodeControl(e.target)) return;
@@ -6235,8 +6325,9 @@ function renderNode(node){
         if(node.type === 'output') openOutputNodeMenu(node.id, e.clientX, e.clientY);
         else openGeneratorNodeMenu(node.id, e.clientX, e.clientY);
     };
-    const title = node.type === 'image' ? 'Image' : node.type === 'prompt' ? 'Prompt' : node.type === 'loop' ? tr('canvas.loopNode') : node.type === 'promptGroup' ? 'Prompts' : node.type === 'group' ? 'Group' : node.type === 'output' ? 'Output' : node.type === 'llm' ? 'LLM' : node.type === 'comfy' ? 'ComfyUI' : node.type === 'ltxDirector' ? tr('canvas.ltxDirector') : node.type === 'rh' ? 'RunningHub' : node.type === 'msgen' ? tr('canvas.modelscopeGenerate') : node.type === 'video' ? tr('canvas.videoGenerateNode') : tr('canvas.apiGenerate');
+    const title = node.type === 'image' ? tr('canvas.image') : node.type === 'prompt' ? tr('canvas.prompt') : node.type === 'loop' ? tr('canvas.loopNode') : node.type === 'promptGroup' ? `${tr('canvas.prompt')} ${tr('canvas.group')}` : node.type === 'group' ? tr('canvas.group') : node.type === 'output' ? outputTitleForNode(node) : node.type === 'llm' ? 'LLM' : node.type === 'comfy' ? 'ComfyUI' : node.type === 'ltxDirector' ? tr('canvas.ltxDirector') : node.type === 'rh' ? 'RunningHub' : node.type === 'msgen' ? tr('canvas.modelscopeGenerate') : node.type === 'video' ? tr('canvas.videoGenerateNode') : tr('canvas.apiGenerate');
     const displayTitle = node.type === 'image' && node.url ? nodeTitleForMedia(node) : title;
+    el.setAttribute('aria-label', `${displayTitle} · ${langIsEn() ? 'Canvas node' : '画布节点'}`);
     // 失败徽章只在一键运行模式中显示，单节点失败已通过 alert 提示
     const showStatus = ['generator','msgen','comfy','ltxDirector','llm','video','rh'].includes(node.type) && node.runStatus
         && (node.runStatus !== 'failed' || node._cascadeFailed);
@@ -6244,7 +6335,7 @@ function renderNode(node){
         const label = { queued:'排队中', running:'运行中', done:'完成', failed:'失败' }[node.runStatus] || '';
         return `<span class="node-run-status ${node.runStatus}" role="status"><span class="dot"></span>${escapeHtml(label)}${node._cascadeIdx?' '+node._cascadeIdx:''}</span>`;
     })() : '';
-    el.innerHTML = `<div class="node-head"><span class="node-title">${displayTitle}</span><div style="display:flex;align-items:center;gap:8px">${statusHtml}<button onclick="deleteNodeFromButton('${node.id}', event)" class="text-gray-300 hover:text-red-500"><i data-lucide="x" class="w-4 h-4"></i></button></div></div>`;
+    el.innerHTML = `<div class="node-head"><span class="node-title">${displayTitle}</span><div style="display:flex;align-items:center;gap:8px">${statusHtml}<button type="button" onclick="deleteNodeFromButton('${node.id}', event)" class="text-gray-300 hover:text-red-500" title="${escapeAttr(tr('common.delete'))}" aria-label="${escapeAttr(tr('common.delete'))}"><i data-lucide="x" class="w-4 h-4"></i></button></div></div>`;
     const body = document.createElement('div');
     body.className = 'node-body';
     if(node.type === 'image') {
@@ -6439,6 +6530,7 @@ function renderNode(node){
         };
         body.querySelectorAll('.output-img-wrap').forEach(wrap => bindOutputWrap(wrap, node));
         bindOutputTextControls(body, node);
+        bindSingleOutputControls(body, node);
     }
     el.appendChild(body);
     el.querySelectorAll('button, select, textarea, input').forEach(control => {
@@ -6451,9 +6543,9 @@ function renderNode(node){
     };
     const canInput = ['prompt','generator','comfy','ltxDirector','output','llm','msgen','video','rh'].includes(node.type) || (node.type === 'loop' && (node.imageInput || node.showPrompt));
     const canOutput = ['image','prompt','loop','group','promptGroup','generator','comfy','ltxDirector','llm','msgen','video','rh','output'].includes(node.type);
-    if(canInput) el.insertAdjacentHTML('beforeend', `<div class="port in" title="${tr('canvas.connectHere')}"></div>`);
-    if(canOutput) el.insertAdjacentHTML('beforeend', `<div class="port out" title="${tr('canvas.dragConnect')}"></div>`);
-    el.insertAdjacentHTML('beforeend', `<div class="resize-handle" title="${tr('canvas.resize')}"></div>`);
+    if(canInput) el.insertAdjacentHTML('beforeend', `<button type="button" class="port in" title="${escapeAttr(tr('canvas.connectHere'))}" aria-label="${escapeAttr(tr('canvas.connectHere'))}"></button>`);
+    if(canOutput) el.insertAdjacentHTML('beforeend', `<button type="button" class="port out" title="${escapeAttr(tr('canvas.dragConnect'))}" aria-label="${escapeAttr(tr('canvas.dragConnect'))}"></button>`);
+    el.insertAdjacentHTML('beforeend', `<button type="button" class="resize-handle" title="${escapeAttr(tr('canvas.resize'))}" aria-label="${escapeAttr(tr('canvas.resize'))}"></button>`);
     el.querySelector('.node-head').onmousedown = e => {
         if(e.button !== 0) return;
         if(isNodeControl(e.target)) return;
@@ -6466,12 +6558,29 @@ function renderNode(node){
         }
         startNodeDrag(e, node);
     };
-    el.querySelector('.resize-handle').onmousedown = e => { if(e.button === 0 && !e.shiftKey) startNodeResize(e, node); };
+    const resizeHandle = el.querySelector('.resize-handle');
+    resizeHandle.onmousedown = e => { if(e.button === 0 && !e.shiftKey) startNodeResize(e, node); };
+    resizeHandle.onkeydown = e => resizeNodeByKeyboard(e, node);
     el.ondragstart = e => { e.preventDefault(); e.stopPropagation(); };
     const out = el.querySelector('.port.out');
-    if(out) out.onmousedown = e => { if(e.button === 0 && !e.shiftKey) startLink(e, node.id, 'out'); };
+    if(out){
+        out.onmousedown = e => { if(e.button === 0 && !e.shiftKey) startLink(e, node.id, 'out'); };
+        out.onkeydown = e => activateKeyboardPort(e, node.id, 'out');
+    }
     const inp = el.querySelector('.port.in');
-    if(inp) inp.onmousedown = e => { if(e.button === 0 && !e.shiftKey) startLink(e, node.id, 'in'); };
+    if(inp){
+        inp.onmousedown = e => { if(e.button === 0 && !e.shiftKey) startLink(e, node.id, 'in'); };
+        inp.onkeydown = e => activateKeyboardPort(e, node.id, 'in');
+    }
+    el.onkeydown = e => {
+        if(e.target !== el) return;
+        if(e.key === 'Enter' || e.key === ' '){
+            e.preventDefault();
+            selected.clear();
+            selected.add(node.id);
+            refreshSelectionVisuals();
+        }
+    };
     return el;
 }
 function bindOutputWrap(wrap, node){
@@ -6498,6 +6607,19 @@ function bindOutputWrap(wrap, node){
             if(img.dataset.dragging) return;
             openOutputLightbox(img.dataset.url, node);
         };
+        const rememberNaturalSize = () => {
+            if(!img.naturalWidth || !img.naturalHeight) return;
+            const url = img.dataset.url;
+            let changed = false;
+            [...(node.images || []), ...(node.roundCandidates || [])].forEach(item => {
+                if(!item || typeof item !== 'object' || outputUrlValue(item) !== url) return;
+                if(item.width !== img.naturalWidth || item.height !== img.naturalHeight){ item.width = img.naturalWidth; item.height = img.naturalHeight; changed = true; }
+            });
+            wrap.style.aspectRatio = `${img.naturalWidth}/${img.naturalHeight}`;
+            if(changed) scheduleSave();
+        };
+        if(img.complete) rememberNaturalSize();
+        else img.addEventListener('load', rememberNaturalSize, {once:true});
     }
     wrap.addEventListener('click', e => {
         const fallbackVideo = e.target.closest?.('video[data-output-video-fallback]');
@@ -6527,7 +6649,12 @@ function bindOutputWrap(wrap, node){
                 node._pending = (node._pending || []).filter(p => p.id !== pid);
             } else {
                 const url = img?.dataset.url || video?.dataset.url || audio?.dataset.url || wrap.dataset.outputUrl || wrap.dataset.missingUrl || '';
-                node.images = (node.images || []).filter(item => outputUrlValue(item) !== url);
+                if(outputKindForNode(node) === 'single-image'){
+                    node.images = [];
+                    node.roundCandidates = [];
+                    node.selectedCandidateUrl = '';
+                    node.candidateRunId = '';
+                } else node.images = (node.images || []).filter(item => outputUrlValue(item) !== url);
                 if(node.imageComparisons) delete node.imageComparisons[url];
                 notifyCanvasInputConsumers([node.id], {refreshRelays:false});
                 scheduleSave();
@@ -6566,7 +6693,7 @@ function refreshOutputNodeContent(node){
     const el = nodesEl.querySelector(`.output-node[data-id="${CSS.escape(node.id)}"]`);
     const body = el?.querySelector('.node-body');
     const grid = body?.querySelector('.output-grid');
-    if(!body || !grid) return false;
+    if(!body || !grid || outputKindForNode(node) === 'single-image') return false;
     if((node.texts || []).length || body.querySelector('.output-text-sections')) return false;
     body.onwheel = e => { e.stopPropagation(); };
     const layout = outputGridLayout(node);
@@ -8125,10 +8252,11 @@ function renderLLMBody(node){
     const imgs = llmInputImages(node);
     const videos = llmInputVideos(node);
     const mediaBadgeText = [
-        imgs.length ? `${imgs.length} 张图片` : '',
-        videos.length ? `${videos.length} 个视频` : ''
+        imgs.length ? tr('canvas.llmImagesConnected').replace('{n}', imgs.length) : '',
+        videos.length ? tr('canvas.llmVideosConnected').replace('{n}', videos.length) : ''
     ].filter(Boolean).join(' · ');
-    const imgBadge = mediaBadgeText ? `<div style="display:flex;align-items:center;gap:6px;padding:5px 10px;border-radius:8px;background:rgba(16,185,129,.12);color:#047857;font-size:10.5px;font-weight:700;width:fit-content;line-height:1.4"><i data-lucide="${videos.length && !imgs.length ? 'video' : 'image'}" class="w-3 h-3"></i>已连接 ${mediaBadgeText} · 需选支持视觉/视频的模型</div>` : '';
+    const mediaBadgeLabel = tr('canvas.llmMediaConnected').replace('{media}', mediaBadgeText);
+    const imgBadge = mediaBadgeText ? `<div style="display:flex;align-items:center;gap:6px;padding:5px 10px;border-radius:8px;background:rgba(16,185,129,.12);color:#047857;font-size:10.5px;font-weight:700;width:fit-content;line-height:1.4"><i data-lucide="${videos.length && !imgs.length ? 'video' : 'image'}" class="w-3 h-3"></i>${mediaBadgeLabel}</div>` : '';
     node.showSystem = Boolean(node.showSystem);
     wrap.innerHTML = `
         <div class="llm-row">
@@ -8189,18 +8317,18 @@ function renderLLMNodePane(container, node){
     const inputValue = connectedInput || node.userInput || '';
     const inputHeight = Math.max(70, node.llmInputHeight || 110);
     const outputHeight = Math.max(70, node.llmOutputHeight || 150);
-    const inputPlaceholder = langIsEn() ? 'Type input, or connect a Prompt node…' : '直接输入，或连接提示词节点…';
+    const inputPlaceholder = tr('canvas.llmInputPlaceholder');
     container.innerHTML = `
-        <div class="llm-pane-label">Input${isReadonly ? ' <span style="font-size:9px;opacity:.5;font-weight:600;text-transform:none;letter-spacing:0">(来自连接)</span>' : ''}</div>
+        <div class="llm-pane-label">${tr('canvas.llmInput')}${isReadonly ? ` <span style="font-size:9px;opacity:.5;font-weight:600;text-transform:none;letter-spacing:0">(${tr('canvas.llmConnectedInput')})</span>` : ''}</div>
         <textarea class="llm-input-area llm-input-output" style="height:${inputHeight}px; flex:0 0 ${inputHeight}px;" ${isReadonly ? 'readonly' : ''} placeholder="${inputPlaceholder}">${escapeHtml(inputValue)}</textarea>
         <div class="llm-pane-resizer" title="${tr('canvas.resizePanes')}"></div>
-        <div class="llm-pane-label">Output</div>
+        <div class="llm-pane-label">${tr('canvas.llmOutput')}</div>
         <div class="llm-output-wrap" style="height:${outputHeight}px; flex:0 0 ${outputHeight}px;">
-            <button class="llm-copy-btn llm-output-copy" type="button" title="复制"><i data-lucide="copy" class="w-3.5 h-3.5"></i></button>
+            <button class="llm-copy-btn llm-output-copy" type="button" title="${tr('studio.copy')}"><i data-lucide="copy" class="w-3.5 h-3.5"></i></button>
             <div class="llm-output llm-result-output">${escapeHtml(node.outputText || tr('canvas.llmOutputEmpty'))}</div>
         </div>
         <div class="gen-run-row mt-2">
-            <button class="llm-run ${node.running ? 'running' : ''}" ${node.running ? 'disabled' : ''}><i data-lucide="play" class="w-4 h-4"></i>${node.running ? tr('canvas.running') : 'Run LLM'}</button>
+            <button class="llm-run ${node.running ? 'running' : ''}" ${node.running ? 'disabled' : ''}><i data-lucide="play" class="w-4 h-4"></i>${node.running ? tr('canvas.running') : tr('canvas.llmRun')}</button>
             ${cascadeBtnHtml(node)}
         </div>
         ${retryBarHtml(node)}
@@ -9971,6 +10099,7 @@ async function rhBuildNodeInfoList(node, media){
 async function runRhNode(nodeId, opts={}){
     const node = nodes.find(n => n.id === nodeId);
     if(!node || (node.running && !opts.cascade)) return;
+    if(!requireOutputConnection(node, opts)) return;
     const cascadeTargetId = cascadeTargetIdFromOptions(opts);
     ensureRhNodeSelection(node);
     const mode = rhCurrentKind(node);
@@ -9992,6 +10121,7 @@ async function runRhNode(nodeId, opts={}){
     let out = outputForNode(node, 500);
     const pendingId = uid('p');
     const run = runSnapshot(node, media.prompt || 'RunningHub', media.refs, generationMentionContext(node, media.sources).displayPrompt);
+    registerOutputRun(node, run);
     run.taskLabel = 'RunningHub';
     if(out) out._pending = [...(out._pending || []), makePendingForRun(pendingId, run, node, {refs:media.refs, cascadeTargetId})];
     beginNodeRunState(node, !opts.cascade);
@@ -10036,7 +10166,7 @@ async function runRhNode(nodeId, opts={}){
         const meta = collectRunMeta(out, pendingId);
         if(out) out._pending = (out._pending || []).filter(p => p.id !== pendingId);
         appendOutputImages(out, outputs, media.refs[0], [meta]);
-        mergeGeneratedOutputs(node, outputs, Boolean(opts.cascade));
+        mergeGeneratedOutputs(node, outputs, Boolean(opts.cascade), {metas:[meta], compareRef:media.refs[0]});
         addGenerationLog({run, outputs, runMs:meta.runMs || 0});
         node.runStatus = 'done';
         node.runError = '';
@@ -10224,56 +10354,177 @@ function updateComfyField(node, input, event){
 const CANVAS_GENERATOR_TYPES = ['generator','msgen','comfy','ltxDirector','video','rh'];
 const CANVAS_IMAGE_OUTPUT_TYPES = ['generator','msgen','comfy','ltxDirector','rh'];
 const CANVAS_MEDIA_OUTPUT_TYPES = ['generator','msgen','comfy','ltxDirector','video','rh'];
-function hasExplicitOutputConnection(nodeId){
-    return connections.some(c => {
-        if(c.from !== nodeId) return false;
-        const to = nodes.find(n => n.id === c.to);
-        return to?.type === 'output';
-    });
+const CANVAS_OUTPUT_KINDS = ['single-image','image-group','general'];
+function outputKindForNode(node){
+    if(node?.type !== 'output') return '';
+    return CANVAS_OUTPUT_KINDS.includes(node.outputKind) ? node.outputKind : 'image-group';
 }
-function hasDownstreamGenerator(nodeId){
-    return connections.some(c => {
-        if(c.from !== nodeId) return false;
-        const to = nodes.find(n => n.id === c.to);
-        if(!to) return false;
-        if(CANVAS_GENERATOR_TYPES.includes(to.type) || to.type === 'llm') return true;
-        if(to.type !== 'output') return false;
-        return connections.some(cc => {
-            if(cc.from !== to.id) return false;
-            const next = nodes.find(n => n.id === cc.to);
-            return next && (CANVAS_GENERATOR_TYPES.includes(next.type) || next.type === 'llm');
-        });
-    });
+function outputTitleForNode(node){
+    const kind = outputKindForNode(node);
+    if(kind === 'single-image') return tr('canvas.outputSingle');
+    if(kind === 'image-group') return tr('canvas.outputGroup');
+    return tr('canvas.outputGeneral');
 }
-function shouldCreateOutputForNode(node){
-    if(!node) return false;
-    if(hasExplicitOutputConnection(node.id)) return true;
-    return !hasDownstreamGenerator(node.id);
+function configuredOutputMediaKind(value){
+    return CanvasInteractionRules.normalizeMediaKind(value);
 }
-function outputForNode(node, dx=460){
-    if(!node || !shouldCreateOutputForNode(node)) return null;
-    let out = connections
+function rhWorkflowOutputMediaKind(config){
+    const workflow = config?.workflowJson || config?.workflow_json || config?.raw?.workflowJson || config?.raw?.workflow_json;
+    return CanvasInteractionRules.inferWorkflowOutputMediaKind(workflow);
+}
+function rhConfiguredOutputMediaKind(node){
+    const entry = rhCurrentEntry(node);
+    const config = rhCurrentKind(node) === 'workflow' ? currentRunningHubWorkflowConfig(node) : currentRunningHubAppConfig(node);
+    const sources = [node, entry, config, entry?.raw, config?.raw, node?.rhAppInfo, node?.rhWorkflowInfo];
+    for(const source of sources){
+        if(!source || typeof source !== 'object') continue;
+        for(const key of ['outputMediaKind','output_media_kind','outputType','output_type','mediaType','media_type','resultType','result_type']){
+            const kind = configuredOutputMediaKind(source[key]);
+            if(kind !== 'unknown') return kind;
+        }
+    }
+    return rhWorkflowOutputMediaKind(config || entry);
+}
+function sourceOutputMediaKind(node){
+    if(!node) return 'unknown';
+    if(['generator','msgen','comfy'].includes(node.type)) return 'image';
+    if(node.type === 'llm') return 'text';
+    if(node.type === 'video' || node.type === 'ltxDirector') return 'general';
+    if(node.type === 'rh') return rhConfiguredOutputMediaKind(node);
+    return 'unknown';
+}
+function allowedOutputKindsForSource(node){
+    if(!node) return [];
+    return CanvasInteractionRules.allowedOutputKinds(node.type, sourceOutputMediaKind(node));
+}
+function expectedOutputKindsForSource(node){
+    if(!node) return [];
+    return CanvasInteractionRules.requiredOutputKinds(node.type, sourceOutputMediaKind(node));
+}
+function outputCreationOptionsForSource(node){
+    const map = {
+        'single-image':{type:'outputSingle', label:tr('canvas.outputSingle'), icon:'image'},
+        'image-group':{type:'outputGroup', label:tr('canvas.outputGroup'), icon:'images'},
+        general:{type:'outputGeneral', label:tr('canvas.outputGeneral'), icon:'panel-top'}
+    };
+    return expectedOutputKindsForSource(node).map(kind => map[kind]).filter(Boolean);
+}
+function outputAcceptsSource(out, source){
+    return out?.type === 'output' && allowedOutputKindsForSource(source).includes(outputKindForNode(out));
+}
+function compatibleOutputNodesForSource(node){
+    if(!node) return [];
+    return connections
         .filter(c => c.from === node.id)
         .map(c => nodes.find(n => n.id === c.to))
-        .find(n => n?.type === 'output');
-    if(!out){
-        out = {id:uid('out'), type:'output', x:node.x + dx, y:node.y, images:[], texts:[], activeTextVersions:{}, textViewModes:{}};
-        nodes.push(out);
-        connections.push({id:uid('c'), from:node.id, to:out.id});
-    }
-    return out;
+        .filter(out => outputAcceptsSource(out, node));
+}
+function outputConnectionError(node){
+    const kinds = expectedOutputKindsForSource(node);
+    const connectedKinds = new Set(compatibleOutputNodesForSource(node).map(outputKindForNode));
+    if(!kinds.length || kinds.some(kind => connectedKinds.has(kind))) return '';
+    if(node.type === 'llm') return langIsEn() ? 'Connect a General Output before sending.' : '请先连接“通用输出”节点，再发送文本请求。';
+    if(node.type === 'video') return langIsEn() ? 'Connect a General Output before generating video.' : '请先连接“通用输出”节点，再生成视频。';
+    if(node.type === 'ltxDirector') return langIsEn() ? 'Connect a General Output before generating video.' : '请先连接“通用输出”节点，再生成视频。';
+    if(node.type === 'rh' && sourceOutputMediaKind(node) !== 'image') return langIsEn() ? 'Connect a General Output before running this dynamic workflow.' : '当前 RunningHub 结果类型未知或包含非图像内容，请先连接“通用输出”节点，避免付费生成后内容丢失。';
+    if(node.type === 'rh') return langIsEn() ? 'Connect a Single Image or Image Group Output before generating.' : '该 RunningHub 工作流输出图像，请先连接“单图输出”或“图组输出”节点。';
+    return langIsEn() ? 'Connect a Single Image or Image Group Output before generating.' : '请先连接“单图输出”或“图组输出”节点，再发起生成。';
+}
+function requireOutputConnection(node, opts={}){
+    const message = outputConnectionError(node);
+    if(!message) return true;
+    if(opts.cascade) throw new Error(message);
+    showErrorModal(message, langIsEn() ? 'Output required' : '需要连接输出节点');
+    return false;
+}
+function registerOutputRun(node, run){
+    if(!node || !run?.id) return;
+    compatibleOutputNodesForSource(node).forEach(out => {
+        if(outputKindForNode(out) === 'single-image') out.activeRunId = run.id;
+    });
+}
+function inferLegacyOutputKind(out){
+    const incoming = connections.filter(c => c.to === out.id).map(c => nodes.find(n => n.id === c.from)).filter(Boolean);
+    const hasGeneralSource = incoming.some(source => ['llm','video'].includes(source.type));
+    const hasNonImage = (out.images || []).some(item => mediaKindForOutputItem(item) !== 'image');
+    return hasGeneralSource || hasNonImage ? 'general' : 'image-group';
+}
+function legacyRelayKind(source){
+    const required = expectedOutputKindsForSource(source);
+    if(required.includes('general')) return 'general';
+    const generated = generatedImageRefs(source);
+    if(generated.some(ref => ref.kind !== 'image')) return 'general';
+    return 'single-image';
+}
+function normalizeCanvasOutputGraph(){
+    let changed = false;
+    nodes.filter(n => n.type === 'output').forEach(out => {
+        if(!CANVAS_OUTPUT_KINDS.includes(out.outputKind)){
+            out.outputKind = inferLegacyOutputKind(out);
+            changed = true;
+        }
+        out.images = Array.isArray(out.images) ? out.images : [];
+        out.texts = Array.isArray(out.texts) ? out.texts : [];
+    });
+    const runTypes = new Set([...CANVAS_GENERATOR_TYPES, 'llm']);
+    nodes.filter(node => runTypes.has(node.type)).forEach(source => {
+        const directOutputs = connections
+            .filter(connection => connection.from === source.id)
+            .map(connection => nodes.find(node => node.id === connection.to))
+            .filter(node => node?.type === 'output');
+        if(!directOutputs.length) return;
+        const requiredKinds = expectedOutputKindsForSource(source);
+        if(!requiredKinds.length || directOutputs.some(out => requiredKinds.includes(outputKindForNode(out)))) return;
+        // 旧画布中 LTX/动态 RH 可能只连接图像 Output。保留旧 Output 内容，并补一个安全的通用出口，
+        // 使付费任务不会因为返回视频/文件而在提交后被静默丢弃。
+        if(requiredKinds.length === 1 && requiredKinds[0] === 'general'){
+            const anchor = directOutputs[0];
+            const out = {id:uid('out'), type:'output', outputKind:'general', x:Number(anchor.x || source.x || 0) + 36, y:Number(anchor.y || source.y || 0) + 36, images:[], texts:[], activeTextVersions:{}, textViewModes:{}};
+            nodes.push(out);
+            connections.push({id:uid('c'), from:source.id, to:out.id});
+            changed = true;
+        }
+    });
+    const legacy = connections.filter(c => {
+        const from = nodes.find(n => n.id === c.from);
+        const to = nodes.find(n => n.id === c.to);
+        return from && to && runTypes.has(from.type) && to.type !== 'output';
+    });
+    legacy.forEach(connection => {
+        const source = nodes.find(n => n.id === connection.from);
+        const target = nodes.find(n => n.id === connection.to);
+        if(!source || !target) return;
+        const kind = legacyRelayKind(source);
+        let out = compatibleOutputNodesForSource(source).find(item => outputKindForNode(item) === kind);
+        if(!out){
+            out = {id:uid('out'), type:'output', outputKind:kind, x:(Number(source.x || 0) + Number(target.x || 0)) / 2, y:(Number(source.y || 0) + Number(target.y || 0)) / 2, images:[], texts:[], activeTextVersions:{}, textViewModes:{}};
+            nodes.push(out);
+            connections.push({id:uid('c'), from:source.id, to:out.id});
+        }
+        connections = connections.filter(c => c.id !== connection.id);
+        if(!connections.some(c => c.from === out.id && c.to === target.id)) connections.push({id:uid('c'), from:out.id, to:target.id});
+        changed = true;
+    });
+    return changed;
+}
+function outputForNode(node, dx=460){
+    if(!node) return null;
+    const outputs = compatibleOutputNodesForSource(node);
+    const required = new Set(expectedOutputKindsForSource(node));
+    return outputs.find(out => required.has(outputKindForNode(out))) || outputs[0] || null;
 }
 function outputNodesForSource(nodeId){
+    const source = nodes.find(n => n.id === nodeId);
     return connections
         .filter(c => c.from === nodeId)
         .map(c => nodes.find(n => n.id === c.to))
-        .filter(n => n?.type === 'output');
+        .filter(n => n?.type === 'output' && (!source || outputAcceptsSource(n, source)));
 }
 function latestGeneratedOutputItem(node){
     return [...(node?.generatedOutputs || [])].reverse().find(item => outputUrlValue(item));
 }
 function outputHasUrl(out, url){
-    return Boolean(url && (out?.images || []).some(item => outputUrlValue(item) === url));
+    return Boolean(url && [...(out?.images || []), ...(out?.roundCandidates || [])].some(item => outputUrlValue(item) === url));
 }
 function appendOutputImagesWithoutDuplicates(out, images, compareRef=null, metas=[], layout=null){
     const unique = (images || []).filter(item => {
@@ -10293,11 +10544,11 @@ function syncLatestGeneratedOutputToConnection(fromId, toId){
     if(!latest) return false;
     return appendOutputImagesWithoutDuplicates(out, [latest]) > 0;
 }
-function syncConnectedOutputsFromGenerated(node, outputs){
+function syncConnectedOutputsFromGenerated(node, outputs, delivery={}){
     if(!node || !CANVAS_MEDIA_OUTPUT_TYPES.includes(node.type)) return;
     const list = (outputs || []).filter(item => outputUrlValue(item));
     if(!list.length) return;
-    outputNodesForSource(node.id).forEach(out => appendOutputImagesWithoutDuplicates(out, list));
+    outputNodesForSource(node.id).forEach(out => appendOutputImagesWithoutDuplicates(out, list, delivery.compareRef || null, delivery.metas || [], delivery.layout || null));
 }
 function generatedImageRefs(node){
     const keepGeneratedMedia = ['rh','ltxDirector','video'].includes(node?.type);
@@ -10733,6 +10984,7 @@ function refreshGeneratorInputViews(generatorIds=null){
 async function runGenerator(genId, opts={}){
     const gen = nodes.find(n => n.id === genId);
     if(!gen || (gen.running && !opts.cascade)) return;
+    if(!requireOutputConnection(gen, opts)) return;
     const cascadeTargetId = cascadeTargetIdFromOptions(opts);
     const sources = orderedSources(gen, generatorSources(gen));
     const mentionContext = generationMentionContext(gen, sources);
@@ -10745,6 +10997,7 @@ async function runGenerator(genId, opts={}){
     const count = Math.max(1, Math.min(8, Number(gen.count || 1)));
     let out = outputForNode(gen, 460);
     const run = runSnapshot(gen, prompt || 'Edit the reference images.', refs, mentionContext.displayPrompt);
+    registerOutputRun(gen, run);
     const payload = {
         prompt: prompt || 'Edit the reference images.',
         provider_id:resolveImageProviderId(gen.apiProvider || 'comfly'),
@@ -10774,7 +11027,7 @@ async function runGenerator(genId, opts={}){
                 run.request = requestMetaFromResult(result);
             }
             if(!outputs.length) throw new Error(tr('canvas.generationFailed'));
-            mergeGeneratedOutputs(gen, outputs, Boolean(opts.cascade));
+            mergeGeneratedOutputs(gen, outputs, Boolean(opts.cascade), {metas:[{runMs:nowMs() - startedAt, run}], compareRef:refs[0]});
             addGenerationLog({run, outputs, runMs:nowMs() - startedAt});
             gen.runStatus = 'done';
             gen.runError = '';
@@ -10826,6 +11079,7 @@ async function runGenerator(genId, opts={}){
 async function runGeneratorLegacy(genId, opts={}){
     const gen = nodes.find(n => n.id === genId);
     if(!gen || (gen.running && !opts.cascade)) return;
+    if(!requireOutputConnection(gen, opts)) return;
     const sources = orderedSources(gen, generatorSources(gen));
     const mentionContext = generationMentionContext(gen, sources);
     if(rejectInvalidCanvasMentions(mentionContext)) return;
@@ -10838,6 +11092,7 @@ async function runGeneratorLegacy(genId, opts={}){
     let out = outputForNode(gen, 460);
     const pendingIds = Array.from({length:count}, () => uid('p'));
     const run = runSnapshot(gen, prompt || 'Edit the reference images.', refs, mentionContext.displayPrompt);
+    registerOutputRun(gen, run);
     const requestSize = await generatorSizeForRun(gen, refs);
     if(out) out._pending = [...(out._pending||[]), ...pendingIds.map(id => makePendingForRun(id, run, gen, {refs, requestSize}))];
     beginNodeRunState(gen, !opts.cascade);
@@ -10867,7 +11122,7 @@ async function runGeneratorLegacy(genId, opts={}){
         run.request = results[0] ? requestMetaFromResult(results[0]) : {};
         if(out) out._pending = (out._pending||[]).filter(p => !pendingIds.includes(p.id));
         appendOutputImages(out, images, refs[0], metas);
-        mergeGeneratedOutputs(gen, images, Boolean(opts.cascade));
+        mergeGeneratedOutputs(gen, images, Boolean(opts.cascade), {metas, compareRef:refs[0]});
         addGenerationLog({run, outputs:images, runMs:Math.max(...metas.map(m => m.runMs || 0), 0)});
         gen.runStatus = 'done'; gen.runError = '';
         refreshRunNodes(gen, out);
@@ -10885,6 +11140,7 @@ async function runGeneratorLegacy(genId, opts={}){
 async function runVideoNode(nodeId, opts={}){
     const node = nodes.find(n => n.id === nodeId);
     if(!node || (node.running && !opts.cascade)) return;
+    if(!requireOutputConnection(node, opts)) return;
     const cascadeTargetId = cascadeTargetIdFromOptions(opts);
     const sources = orderedSources(node, generatorSources(node));
     const prompt = sources.map(s => s.prompt).filter(Boolean).join('\n\n');
@@ -10899,6 +11155,7 @@ async function runVideoNode(nodeId, opts={}){
     let out = outputForNode(node, 460);
     const pendingId = uid('p');
     const run = runSnapshot(node, prompt, refs);
+    registerOutputRun(node, run);
     if(out) out._pending = [...(out._pending || []), makePendingForRun(pendingId, run, node, {refs, cascadeTargetId})];
     beginNodeRunState(node, !opts.cascade);
     refreshRunNodes(node, out);
@@ -10935,7 +11192,7 @@ async function runVideoNode(nodeId, opts={}){
         if(!outputUrls.length) throw new Error(tr('canvas.videoFailed'));
         run.request = requestMetaFromResult(result);
         appendOutputImages(out, outputUrls, refs[0], [{...meta, kind:'video'}]);
-        mergeGeneratedOutputs(node, outputUrls, Boolean(opts.cascade));
+        mergeGeneratedOutputs(node, outputUrls, Boolean(opts.cascade), {metas:[{...meta, kind:'video'}], compareRef:refs[0]});
         addGenerationLog({run, outputs:outputUrls, runMs:meta.runMs || 0});
         node.runStatus = 'done'; node.runError = '';
         refreshRunNodes(node, out);
@@ -11531,6 +11788,7 @@ async function runLTXDirectorNode(nodeId, opts={}){
     const cascadeTargetId = cascadeTargetIdFromOptions(opts);
     clearStuckGeneratorRunning(node);
     if(node.running && !opts.cascade) return;
+    if(!requireOutputConnection(node, opts)) return;
     ltxFlushTimelineToNode(node);
     const sources = orderedSources(node, generatorSources(node));
     const upstreamPrompt = sources.map(s => s.prompt).filter(Boolean).join('\n\n');
@@ -11555,6 +11813,7 @@ async function runLTXDirectorNode(nodeId, opts={}){
     const pendingId = uid('p');
     const refs = sources.flatMap(s => s.refs || []);
     const run = runSnapshot(node, globalPrompt || segments.map(s => s.prompt).join(' | '), refs);
+    registerOutputRun(node, run);
     run.taskLabel = tr('canvas.ltxDirector');
     if(out) out._pending = [...(out._pending || []), makePendingForRun(pendingId, run, node, {refs, cascadeTargetId})];
     beginNodeRunState(node, !opts.cascade);
@@ -11584,7 +11843,7 @@ async function runLTXDirectorNode(nodeId, opts={}){
         const meta = collectRunMeta(out, pendingId);
         if(out) out._pending = (out._pending || []).filter(p => p.id !== pendingId);
         appendOutputImages(out, outputs, refs[0], [meta]);
-        mergeGeneratedOutputs(node, outputs, Boolean(opts.cascade));
+        mergeGeneratedOutputs(node, outputs, Boolean(opts.cascade), {metas:[meta], compareRef:refs[0]});
         addGenerationLog({run, outputs, runMs:meta.runMs || 0});
         node.runStatus = 'done';
         node.runError = '';
@@ -11613,6 +11872,7 @@ async function runLTXDirectorNode(nodeId, opts={}){
 async function runComfyNode(nodeId, opts={}){
     const node = nodes.find(n => n.id === nodeId);
     if(!node || (node.running && !opts.cascade)) return;
+    if(!requireOutputConnection(node, opts)) return;
     const cascadeTargetId = cascadeTargetIdFromOptions(opts);
     const sources = orderedSources(node, generatorSources(node));
     const mentionContext = generationMentionContext(node, sources);
@@ -11632,6 +11892,7 @@ async function runComfyNode(nodeId, opts={}){
     let out = outputForNode(node, 480);
     const pendingId = uid('p');
     const run = runSnapshot(node, prompt, refs, mentionContext.displayPrompt);
+    registerOutputRun(node, run);
     run.taskLabel = comfyRunLabel(node);
     const requestSize = mode === 'text' ? {width:Number(node.width || 1024), height:Number(node.height || 1024)} : null;
     if(out) out._pending = [...(out._pending||[]), makePendingForRun(pendingId, run, node, {refs, requestSize, cascadeTargetId})];
@@ -11752,7 +12013,7 @@ async function runComfyNode(nodeId, opts={}){
         const meta = collectRunMeta(out, pendingId);
         if(out) out._pending = (out._pending||[]).filter(p => p.id !== pendingId);
         appendOutputImages(out, images, refs[0], [meta]);
-        mergeGeneratedOutputs(node, images, Boolean(opts.cascade));
+        mergeGeneratedOutputs(node, images, Boolean(opts.cascade), {metas:[meta], compareRef:refs[0]});
         addGenerationLog({run, outputs:images, runMs:meta.runMs || 0});
         node.runStatus = 'done'; node.runError = '';
         refreshRunNodes(node, out);
@@ -11801,10 +12062,16 @@ async function callCanvasLLM(node, message, messages=[], options={}){
 async function runLLMNode(nodeId, opts={}){
     const node = nodes.find(n => n.id === nodeId);
     if(!node || (node.running && !opts.cascade)) return;
+    if(!requireOutputConnection(node, opts)) return;
     const cascadeTargetId = cascadeTargetIdFromOptions(opts);
     const input = llmInputText(node) || node.userInput || '';
-    if(!input){
-        if(opts.cascade) throw new Error('LLM 缺少提示词输入');
+    const images = llmInputImages(node);
+    const videos = llmInputVideos(node);
+    const hasInput = window.CanvasInteractionRules?.hasLLMRequestInput
+        ? CanvasInteractionRules.hasLLMRequestInput(input, images, videos)
+        : Boolean(String(input || '').trim() || images.length || videos.length);
+    if(!hasInput){
+        if(opts.cascade) throw new Error(tr('canvas.needPromptToLLM'));
         alert(tr('canvas.needPromptToLLM')); return;
     }
     beginNodeRunState(node, !opts.cascade);
@@ -11935,6 +12202,12 @@ async function runCascadeNodeWithLoopContext(node, ctx, opts={}){
     }
 }
 function cascadeParallelLimit(order, totalRounds){
+    const hasSingleImageRelay = order.some(id => {
+        const node = nodes.find(n => n.id === id);
+        return compatibleOutputNodesForSource(node).some(out => outputKindForNode(out) === 'single-image');
+    });
+    // 单图输出按回合替换；串行化回合可保证下游始终读取同一回合的新主图。
+    if(hasSingleImageRelay) return 1;
     const hasComfy = order.some(id => nodes.find(n => n.id === id)?.type === 'comfy');
     if(hasComfy) return Math.max(1, Math.min(totalRounds, comfyBackendCount || 1));
     return Math.max(1, Math.min(totalRounds, 6));
@@ -12063,6 +12336,12 @@ async function runNodeCascade(nodeId){
     if(target.running){ alert('当前节点正在运行'); return; }
     const order = computeCascadeOrder(nodeId);
     if(!order.length){ alert('没有可运行的生成节点'); return; }
+    const missingOutputs = order.map(id => nodes.find(n => n.id === id)).filter(Boolean).filter(node => outputConnectionError(node));
+    if(missingOutputs.length){
+        const labels = missingOutputs.map(node => `${node.type === 'llm' ? 'LLM' : node.type} (${node.id})`).join('\n');
+        showErrorModal(`${langIsEn() ? 'Connect compatible Output nodes before running the workflow:' : '工作流运行前，请先为以下节点连接兼容的 Output：'}\n${labels}`, langIsEn() ? 'Output required' : '需要连接输出节点');
+        return;
+    }
     const loop = resolveCascadeLoop(nodeId);
     const totalRounds = loop?.count || 1;
     const startIdx = Math.max(1, Number(loop?.node?.loopStart) || 1);
@@ -12235,6 +12514,7 @@ function cancelCascade(nodeId){
 async function runLLMChat(nodeId){
     const node = nodes.find(n => n.id === nodeId);
     if(!node || node.running) return;
+    if(!requireOutputConnection(node)) return;
     const message = (node.chatInput || '').trim();
     if(!message) return;
     node.messages = node.messages || [];
@@ -12288,6 +12568,10 @@ function clearNodeContentBeforeDelete(id){
     if(node.type === 'output' && ((node.images || []).length || (node.texts || []).length || (node._pending || []).length)){
         pushUndo();
         node.images = [];
+        node.roundCandidates = [];
+        node.selectedCandidateUrl = '';
+        node.candidateRunId = '';
+        node.activeRunId = '';
         node.texts = [];
         node.activeTextVersions = {};
         node.textViewModes = {};
@@ -12361,6 +12645,8 @@ function runSnapshot(node, prompt, refs=[], displayPrompt=''){
     delete clone.runError;
     delete clone.inputs;
     return {
+        id:uid('run'),
+        startedAt:nowMs(),
         nodeType: node?.type || '',
         node: clone,
         prompt: prompt || '',
@@ -12555,7 +12841,7 @@ function makePendingForRun(id, run, node, options={}, task={}){
     if(options?.cascadeTargetId) pending.cascadeTargetId = String(options.cascadeTargetId);
     return pending;
 }
-function mergeGeneratedOutputs(node, outputs, append=false){
+function mergeGeneratedOutputs(node, outputs, append=false, delivery={}){
     if(!node) return;
     const keepGeneratedMedia = ['rh','ltxDirector','video'].includes(node.type);
     const clean = (outputs || []).map(item => {
@@ -12571,7 +12857,7 @@ function mergeGeneratedOutputs(node, outputs, append=false){
     }).filter(Boolean);
     if(!append){
         node.generatedOutputs = clean;
-        syncConnectedOutputsFromGenerated(node, clean);
+        syncConnectedOutputsFromGenerated(node, clean, delivery);
         notifyCanvasInputConsumers([node.id]);
         return;
     }
@@ -12581,7 +12867,7 @@ function mergeGeneratedOutputs(node, outputs, append=false){
         return url && !seen.has(url) && seen.add(url);
     });
     node.generatedOutputs = [...(node.generatedOutputs || []), ...added];
-    syncConnectedOutputsFromGenerated(node, added);
+    syncConnectedOutputsFromGenerated(node, added, delivery);
     notifyCanvasInputConsumers([node.id]);
 }
 function pendingById(out, id){
@@ -12591,6 +12877,7 @@ function collectRunMetas(out, ids){
     return (ids || []).map(id => pendingById(out, id)).filter(Boolean).map(p => ({
         runMs: nowMs() - Number(p.startedAt || nowMs()),
         run: p.run || {},
+        previewSize:p.previewSize || null,
     }));
 }
 function collectRunMeta(out, id){
@@ -12668,7 +12955,7 @@ function completeRecoverPendingOutput(out, pending, result){
     appendOutputImages(out, images, meta.run?.refs?.[0], [meta]);
     const gen = nodes.find(n => n.id === meta.run?.node?.id);
     if(gen){
-        mergeGeneratedOutputs(gen, images, Boolean(pending.appendGenerated));
+        mergeGeneratedOutputs(gen, images, Boolean(pending.appendGenerated), {metas:[meta], compareRef:meta.run?.refs?.[0]});
         gen.runStatus = 'done';
         gen.runError = '';
         gen.running = false;
@@ -12786,7 +13073,7 @@ function completeCanvasImageTask(taskId, result){
     appendOutputImages(out, images, meta.run?.refs?.[0], [meta]);
     const gen = nodes.find(n => n.id === meta.run?.node?.id);
     if(gen){
-        mergeGeneratedOutputs(gen, images, Boolean(pending.appendGenerated));
+        mergeGeneratedOutputs(gen, images, Boolean(pending.appendGenerated), {metas:[meta], compareRef:meta.run?.refs?.[0]});
         gen.runStatus = 'done';
         gen.runError = '';
         gen.running = false;
@@ -12845,23 +13132,28 @@ function renderOutputMedia(item, useGridLayout=false){
     const meta = item && typeof item === 'object' ? item : {};
     const kind = mediaKindForOutputItem(item);
     const grid = useGridLayout ? (meta.grid || null) : null;
-    const gridStyle = grid ? ` style="grid-row:${Number(grid.row || 0) + 1};grid-column:${Number(grid.col || 0) + 1};aspect-ratio:${Math.max(1, Number(grid.w || 1))}/${Math.max(1, Number(grid.h || 1))}"` : '';
+    const size = normalizedPendingPreviewSize(meta);
+    const styleParts = [];
+    if(grid){
+        styleParts.push(`grid-row:${Number(grid.row || 0) + 1}`, `grid-column:${Number(grid.col || 0) + 1}`, `aspect-ratio:${Math.max(1, Number(grid.w || 1))}/${Math.max(1, Number(grid.h || 1))}`);
+    } else if(size) styleParts.push(`aspect-ratio:${size.w}/${size.h}`);
+    const gridStyle = styleParts.length ? ` style="${styleParts.join(';')}"` : '';
     const timePill = meta.runMs && !meta.viewed ? `<span class="output-time-pill">${formatRunDuration(meta.runMs)}</span>` : '';
     if(isMissingAssetUrl(url)){
-        return `<div class="output-img-wrap" data-output-url="${safe}" data-missing-url="${safe}"${gridStyle}>${missingAssetHtml(url, true)}${timePill}<button class="output-del" title="${tr('common.delete')}">×</button></div>`;
+        return `<div class="output-img-wrap" data-output-url="${safe}" data-missing-url="${safe}"${gridStyle}>${missingAssetHtml(url, true)}${timePill}<button class="output-del" type="button" title="${tr('common.delete')}" aria-label="${tr('common.delete')}">×</button></div>`;
     }
     if(kind === 'video'){
-        return `<div class="output-img-wrap" data-output-url="${safe}"${gridStyle}>${canvasVideoPreviewHtml(url, useGridLayout ? 512 : 768, 'alt="video output" data-video-fallback-attrs="controls data-output-video-fallback=&quot;1&quot;"')}${timePill}<button class="canvas-video-play output-video-play" type="button" title="播放"><i data-lucide="play"></i></button><div class="output-video-badge"><i data-lucide="play" class="w-3 h-3"></i>VIDEO</div><button class="output-del" title="${tr('common.delete')}">×</button></div>`;
+        return `<div class="output-img-wrap" data-output-url="${safe}"${gridStyle}>${canvasVideoPreviewHtml(url, useGridLayout ? 512 : 768, 'alt="video output" data-video-fallback-attrs="controls data-output-video-fallback=&quot;1&quot;"')}${timePill}<button class="canvas-video-play output-video-play" type="button" title="播放"><i data-lucide="play"></i></button><div class="output-video-badge"><i data-lucide="play" class="w-3 h-3"></i>VIDEO</div><button class="output-del" type="button" title="${tr('common.delete')}" aria-label="${tr('common.delete')}">×</button></div>`;
     }
     if(kind === 'audio'){
-        return `<div class="output-img-wrap output-audio-wrap" data-output-url="${safe}"${gridStyle}><div class="output-audio-card"><i data-lucide="file-audio" class="w-7 h-7"></i><span>${escapeHtml(outputImageName(url))}</span><audio src="${safe}" data-url="${safe}" controls preload="metadata"></audio></div>${timePill}<button class="output-del" title="${tr('common.delete')}">×</button></div>`;
+        return `<div class="output-img-wrap output-audio-wrap" data-output-url="${safe}"${gridStyle}><div class="output-audio-card"><i data-lucide="file-audio" class="w-7 h-7"></i><span>${escapeHtml(outputImageName(url))}</span><audio src="${safe}" data-url="${safe}" controls preload="metadata"></audio></div>${timePill}<button class="output-del" type="button" title="${tr('common.delete')}" aria-label="${tr('common.delete')}">×</button></div>`;
     }
     if(kind === 'text' || kind === 'file'){
         const icon = kind === 'text' ? 'file-text' : 'file';
         const label = kind === 'text' ? 'TEXT' : 'FILE';
-        return `<div class="output-img-wrap output-file-wrap" data-output-url="${safe}"${gridStyle}><div class="output-file-card"><i data-lucide="${icon}" class="w-7 h-7"></i><span>${escapeHtml(meta.name || outputImageName(url))}</span><small>${label}</small></div>${timePill}<button class="output-del" title="${tr('common.delete')}">×</button></div>`;
+        return `<div class="output-img-wrap output-file-wrap" data-output-url="${safe}"${gridStyle}><div class="output-file-card"><i data-lucide="${icon}" class="w-7 h-7"></i><span>${escapeHtml(meta.name || outputImageName(url))}</span><small>${label}</small></div>${timePill}<button class="output-del" type="button" title="${tr('common.delete')}" aria-label="${tr('common.delete')}">×</button></div>`;
     }
-    return `<div class="output-img-wrap" data-output-url="${safe}"${gridStyle}>${canvasPreviewImgHtml(url, useGridLayout ? 512 : 768, 'alt="generated output"')}${timePill}<button class="output-del" title="${tr('common.delete')}">×</button></div>`;
+    return `<div class="output-img-wrap" data-output-url="${safe}"${gridStyle}>${canvasPreviewImgHtml(url, useGridLayout ? 512 : 768, 'alt="generated output"')}${timePill}<button class="output-del" type="button" title="${tr('common.delete')}" aria-label="${tr('common.delete')}">×</button></div>`;
 }
 function outputGridLayout(node){
     const images = node?.images || [];
@@ -12999,7 +13291,48 @@ function bindOutputTextControls(container, node){
         };
     });
 }
+function renderSingleOutputCandidate(item, selectedUrl){
+    const url = outputUrlValue(item);
+    if(!url) return '';
+    const meta = item && typeof item === 'object' ? item : {};
+    const size = normalizedPendingPreviewSize(meta);
+    const style = size ? ` style="aspect-ratio:${size.w}/${size.h}"` : '';
+    const active = url === selectedUrl;
+    return `<button type="button" class="single-output-candidate ${active ? 'active' : ''}" data-single-candidate="${escapeAttr(url)}"${style}>${canvasPreviewImgHtml(url, 512, 'alt="output candidate" draggable="false"')}<span><i data-lucide="${active ? 'check-circle-2' : 'circle'}"></i>${active ? (langIsEn() ? 'Main image' : '当前主图') : (langIsEn() ? 'Set as main' : '设为主图')}</span></button>`;
+}
+function bindSingleOutputControls(container, node){
+    if(outputKindForNode(node) !== 'single-image') return;
+    const toggle = container.querySelector('[data-single-output-toggle]');
+    if(toggle) toggle.onclick = event => {
+        event.preventDefault(); event.stopPropagation();
+        node._singleExpanded = !node._singleExpanded;
+        refreshNodes([node.id]);
+    };
+    container.querySelectorAll('[data-single-candidate]').forEach(button => {
+        button.onclick = event => {
+            event.preventDefault(); event.stopPropagation();
+            const url = button.dataset.singleCandidate || '';
+            const candidate = (node.roundCandidates || []).find(item => outputUrlValue(item) === url);
+            if(!candidate) return;
+            node.selectedCandidateUrl = url;
+            node.images = [candidate];
+            node._singleExpanded = false;
+            notifyCanvasInputConsumers([node.id], {refreshRelays:false});
+            refreshNodes([node.id]);
+            scheduleSave();
+        };
+    });
+}
 function renderOutputGrid(node, pendingHtml=''){
+    if(outputKindForNode(node) === 'single-image'){
+        const selectedUrl = outputUrlValue((node.images || [])[0]);
+        const candidates = node.roundCandidates || [];
+        const expanded = Boolean(node._singleExpanded && candidates.length > 1);
+        const toggle = candidates.length > 1 ? `<button type="button" class="single-output-toggle" data-single-output-toggle><i data-lucide="${expanded ? 'chevron-up' : 'chevron-down'}"></i><span>${expanded ? (langIsEn() ? 'Collapse choices' : '收起候选') : (langIsEn() ? `Choose main image (${candidates.length})` : `展开选择主图（${candidates.length}）`)}</span></button>` : '';
+        const empty = !selectedUrl && !pendingHtml ? `<div class="single-output-empty">${langIsEn() ? 'Run the connected generator to receive one main image.' : '运行已连接的生成节点后，这里只输出一张主图。'}</div>` : '';
+        const choices = expanded ? `<div class="single-output-candidates">${candidates.map(item => renderSingleOutputCandidate(item, selectedUrl)).join('')}</div>` : '';
+        return `<div class="single-output-shell">${toggle}<div class="output-grid single-output-main">${(node.images || []).map(item => renderOutputMedia(item, false)).join('')}${pendingHtml}</div>${empty}${choices}</div>`;
+    }
     const layout = outputGridLayout(node);
     const gridClass = layout ? 'output-grid grid-layout' : 'output-grid';
     const style = layout ? ` style="--grid-cols:${Math.max(1, Number(layout.cols || 1))}"` : '';
@@ -13025,26 +13358,59 @@ function setOutputDragPreview(event, img){
 function appendOutputImages(out, images, compareRef, metas=[], layout=null){
     const list = (images || []).filter(Boolean);
     if(!out || !list.length) return;
+    const outputKind = outputKindForNode(out);
+    let mapped = list.map((url, i) => {
+        const meta = metas[i] || metas[0] || {};
+        const source = url && typeof url === 'object' ? url : {};
+        const previewSize = normalizedPendingPreviewSize(meta.previewSize) || normalizedPendingPreviewSize(source) || normalizedPendingPreviewSize({
+            width:meta.run?.node?.width || meta.run?.node?.customWidth,
+            height:meta.run?.node?.height || meta.run?.node?.customHeight
+        });
+        const item = {url:outputUrlValue(url), viewed:false, runMs:meta.runMs || 0, run:meta.run || null};
+        if(source.name) item.name = source.name;
+        if(source.kind || source.mediaKind) item.kind = source.kind || source.mediaKind;
+        if(meta.kind) item.kind = meta.kind;
+        if(meta.grid) item.grid = meta.grid;
+        if(previewSize){ item.width = previewSize.w; item.height = previewSize.h; }
+        return item;
+    }).filter(item => item.url);
+    if(outputKind === 'image-group') mapped = mapped.filter(item => mediaKindForOutputItem(item) === 'image');
+    if(!mapped.length) return;
+    if(outputKind === 'single-image'){
+        const candidates = mapped.filter(item => mediaKindForOutputItem(item) === 'image');
+        if(!candidates.length) return;
+        const runId = String(candidates[0]?.run?.id || out.activeRunId || 'manual');
+        if(out.activeRunId && runId !== out.activeRunId) return;
+        if(out.candidateRunId !== runId){
+            out.candidateRunId = runId;
+            out.roundCandidates = [];
+            out.selectedCandidateUrl = '';
+        }
+        const seen = new Set((out.roundCandidates || []).map(outputUrlValue));
+        out.roundCandidates = [...(out.roundCandidates || []), ...candidates.filter(item => !seen.has(item.url) && seen.add(item.url))];
+        const selected = out.roundCandidates.find(item => outputUrlValue(item) === out.selectedCandidateUrl) || out.roundCandidates[0];
+        out.selectedCandidateUrl = outputUrlValue(selected);
+        out.images = selected ? [selected] : [];
+        if(compareRef?.url){
+            out.imageComparisons = out.imageComparisons || {};
+            candidates.forEach(item => { out.imageComparisons[item.url] = {url:compareRef.url, name:compareRef.name || 'input image'}; });
+        }
+        delete out.outputLayout;
+        notifyCanvasInputConsumers([out.id], {refreshRelays:false});
+        return;
+    }
     if(layout?.type === 'grid-split'){
         out.images = [];
         out.outputLayout = layout;
     } else if(out.outputLayout) {
         delete out.outputLayout;
     }
-    out.images = [...(out.images || []), ...list.map((url, i) => {
-        const meta = metas[i] || metas[0] || {};
-        const source = url && typeof url === 'object' ? url : {};
-        const item = {url:outputUrlValue(url), viewed:false, runMs:meta.runMs || 0, run:meta.run || null};
-        if(source.name) item.name = source.name;
-        if(source.kind || source.mediaKind) item.kind = source.kind || source.mediaKind;
-        if(meta.kind) item.kind = meta.kind;
-        if(meta.grid) item.grid = meta.grid;
-        return item;
-    })];
+    out.images = [...(out.images || []), ...mapped];
     if(compareRef?.url){
         out.imageComparisons = out.imageComparisons || {};
-        list.forEach(url => {
-            out.imageComparisons[url] = {url:compareRef.url, name:compareRef.name || 'input image'};
+        mapped.forEach(item => {
+            const url = outputUrlValue(item);
+            if(url) out.imageComparisons[url] = {url:compareRef.url, name:compareRef.name || 'input image'};
         });
     }
 }
@@ -14477,6 +14843,32 @@ function onNodeDrag(e){
     if(workflowTransferModal?.classList.contains('open')) updateWorkflowTransferMeta();
     scheduleMinimapRender();
 }
+function resizeNodeByKeyboard(e, node){
+    if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const step = e.shiftKey ? 48 : 16;
+    const el = nodesEl.querySelector(`.node[data-id="${CSS.escape(node.id)}"]`);
+    const rect = el?.getBoundingClientRect();
+    const min = defaultNodeSize(node.type);
+    const currentW = rect?.width ? rect.width / viewport.scale : node.w || min.w || 260;
+    const currentH = rect?.height ? rect.height / viewport.scale : node.h || min.h || 160;
+    pushUndo();
+    if(e.key === 'ArrowLeft' || e.key === 'ArrowRight'){
+        node.w = Math.round(Math.max(Math.min(min.w, 220), Math.min(3200, currentW + (e.key === 'ArrowRight' ? step : -step))));
+    } else {
+        node.h = Math.round(Math.max(96, Math.min(3200, currentH + (e.key === 'ArrowDown' ? step : -step))));
+    }
+    if(el){
+        el.classList.add('sized');
+        el.style.width = `${node.w || currentW}px`;
+        el.style.height = `${node.h || currentH}px`;
+    }
+    scheduleLinksRender();
+    renderSelectionHub();
+    scheduleMinimapRender();
+    scheduleSave();
+}
 function startNodeResize(e, node){
     e.preventDefault();
     e.stopPropagation();
@@ -14510,8 +14902,76 @@ function onNodeResize(e){
     renderSelectionHub();
     scheduleMinimapRender();
 }
+function clearKeyboardLinkOrigin(){
+    keyboardLinkOrigin = null;
+    document.body.classList.remove('canvas-keyboard-link');
+    nodesEl.querySelectorAll('.port.keyboard-link-source,.port.keyboard-link-compatible').forEach(port => {
+        port.classList.remove('keyboard-link-source', 'keyboard-link-compatible');
+        port.removeAttribute('aria-pressed');
+    });
+}
+function refreshKeyboardLinkPorts(){
+    nodesEl.querySelectorAll('.port').forEach(port => {
+        port.classList.remove('keyboard-link-source', 'keyboard-link-compatible');
+        port.removeAttribute('aria-pressed');
+        if(!keyboardLinkOrigin) return;
+        const nodeId = port.closest('.node')?.dataset.id || '';
+        const kind = port.classList.contains('out') ? 'out' : 'in';
+        if(nodeId === keyboardLinkOrigin.nodeId && kind === keyboardLinkOrigin.kind){
+            port.classList.add('keyboard-link-source');
+            port.setAttribute('aria-pressed', 'true');
+            return;
+        }
+        if(kind === keyboardLinkOrigin.kind) return;
+        const fromId = keyboardLinkOrigin.kind === 'out' ? keyboardLinkOrigin.nodeId : nodeId;
+        const toId = keyboardLinkOrigin.kind === 'out' ? nodeId : keyboardLinkOrigin.nodeId;
+        if(canConnect(fromId, toId)) port.classList.add('keyboard-link-compatible');
+    });
+}
+function activateKeyboardPort(e, nodeId, kind){
+    if(e.key === 'Escape'){
+        if(keyboardLinkOrigin){ e.preventDefault(); clearKeyboardLinkOrigin(); }
+        return;
+    }
+    if(e.key !== 'Enter' && e.key !== ' ') return;
+    e.preventDefault();
+    e.stopPropagation();
+    if(!keyboardLinkOrigin){
+        keyboardLinkOrigin = {nodeId, kind};
+        document.body.classList.add('canvas-keyboard-link');
+        refreshKeyboardLinkPorts();
+        setStatus(langIsEn() ? 'Choose a highlighted compatible port.' : '请选择高亮显示的兼容端口完成连接。');
+        return;
+    }
+    if(keyboardLinkOrigin.nodeId === nodeId && keyboardLinkOrigin.kind === kind){
+        clearKeyboardLinkOrigin();
+        return;
+    }
+    if(keyboardLinkOrigin.kind === kind){
+        keyboardLinkOrigin = {nodeId, kind};
+        refreshKeyboardLinkPorts();
+        return;
+    }
+    const fromId = keyboardLinkOrigin.kind === 'out' ? keyboardLinkOrigin.nodeId : nodeId;
+    const toId = keyboardLinkOrigin.kind === 'out' ? nodeId : keyboardLinkOrigin.nodeId;
+    if(!canConnect(fromId, toId)){
+        setStatus(langIsEn() ? 'These ports are not compatible.' : '这两个端口不兼容。');
+        return;
+    }
+    if(!connections.some(connection => connection.from === fromId && connection.to === toId)){
+        pushUndo();
+        connections.push({id:uid('c'), from:fromId, to:toId});
+        syncLatestGeneratedOutputToConnection(fromId, toId);
+        syncGeneratorInputs();
+        scheduleSave();
+    }
+    clearKeyboardLinkOrigin();
+    render();
+    requestAnimationFrame(() => nodesEl.querySelector(`.node[data-id="${CSS.escape(toId)}"] .port.in`)?.focus({preventScroll:true}));
+}
 function startLink(e, originId, originKind){
     e.stopPropagation();
+    clearKeyboardLinkOrigin();
     originKind = originKind || 'out';
     const src = portPoint(originId, originKind);
     const source = nodes.find(n => n.id === originId);
@@ -14541,19 +15001,7 @@ function startLink(e, originId, originKind){
                 render();
             }
         } else if(originKind === 'out'){
-            if(source && (CANVAS_GENERATOR_TYPES.includes(source.type) || source.type === 'llm')){
-                const p = screenToWorld(e2.clientX, e2.clientY);
-                pushUndo();
-                const out = {id:uid('out'), type:'output', x:p.x, y:p.y - 63, images:[], texts:[], activeTextVersions:{}, textViewModes:{}};
-                nodes.push(out);
-                connections.push({id:uid('c'), from:source.id, to:out.id});
-                syncLatestGeneratedOutputToConnection(source.id, out.id);
-                syncGeneratorInputs();
-                scheduleSave();
-                render();
-            } else {
-                openLinkCreateMenu(originId, originKind, e2.clientX, e2.clientY);
-            }
+            openLinkCreateMenu(originId, originKind, e2.clientX, e2.clientY);
         } else if(originKind === 'in'){
             openLinkCreateMenu(originId, originKind, e2.clientX, e2.clientY);
         }
@@ -14606,17 +15054,7 @@ function canConnect(fromId, toId){
     const to = nodes.find(n => n.id === toId);
     if(!from || !to) return false;
     if(CANVAS_GENERATOR_TYPES.includes(from.type)){
-        if(to.type === 'output') return true;
-        if(CANVAS_IMAGE_OUTPUT_TYPES.includes(from.type) && to.type === 'loop' && to.imageInput){
-            return !wouldCreateGeneratorCycle(fromId, toId);
-        }
-        if(CANVAS_MEDIA_OUTPUT_TYPES.includes(from.type) && to.type === 'llm'){
-            return !wouldCreateGeneratorCycle(fromId, toId);
-        }
-        if(CANVAS_MEDIA_OUTPUT_TYPES.includes(from.type) && CANVAS_GENERATOR_TYPES.includes(to.type)){
-            return !wouldCreateGeneratorCycle(fromId, toId);
-        }
-        return false;
+        return to.type === 'output' && outputAcceptsSource(to, from);
     }
     if(to.type === 'loop'){
         const allowImage = Boolean(to.imageInput) && ['image','group','output'].includes(from.type);
@@ -14624,12 +15062,19 @@ function canConnect(fromId, toId){
         return allowImage || allowPrompt;
     }
     if(to.type === 'prompt') return ['image','group','output'].includes(from.type);
-    if(to.type === 'llm') return ['prompt','loop','promptGroup','llm','image','group','output'].includes(from.type);
-    if(from.type === 'llm') return to.type === 'output' || CANVAS_GENERATOR_TYPES.includes(to.type);
-    return CANVAS_GENERATOR_TYPES.includes(to.type) && ['image','prompt','loop','group','promptGroup','output','llm'].includes(from.type);
+    if(to.type === 'llm'){
+        const allowed = ['prompt','loop','promptGroup','image','group','output'].includes(from.type);
+        return allowed && (from.type !== 'output' || !wouldCreateGeneratorCycle(fromId, toId));
+    }
+    if(from.type === 'llm') return to.type === 'output' && outputAcceptsSource(to, from);
+    const feedsGenerator = CANVAS_GENERATOR_TYPES.includes(to.type) && ['image','prompt','loop','group','promptGroup','output','llm'].includes(from.type);
+    return feedsGenerator && (from.type !== 'output' || !wouldCreateGeneratorCycle(fromId, toId));
 }
 function sanitizeConnections(){
+    const normalized = normalizeCanvasOutputGraph();
+    const before = (connections || []).length;
     connections = (connections || []).filter(c => canConnect(c.from, c.to));
+    return normalized || connections.length !== before;
 }
 function endDrag(event=null){
     const hadContentDrag = Boolean(dragNode || resizeNode || llmPaneDrag || knifeChanged || tempLink);
@@ -14944,12 +15389,27 @@ function linkDeleteButton(connection, a, b){
     btn.style.left = `${(a.x + b.x) / 2}px`;
     btn.style.top = `${(a.y + b.y) / 2}px`;
     btn.textContent = '×';
+    btn.onpointerenter = () => setHoveredConnection(connection.id);
+    btn.onpointerleave = () => setHoveredConnection('');
     btn.onclick = e => deleteConnection(connection.id, e);
     return btn;
 }
 function linkHitEl(x1,y1,x2,y2,id){
     const p = pathEl(x1, y1, x2, y2, 'link-hit');
     p.dataset.connectionId = id;
+    p.setAttribute('tabindex', '0');
+    p.setAttribute('role', 'button');
+    p.setAttribute('aria-label', tr('canvas.deleteLink'));
+    p.addEventListener('pointerenter', () => setHoveredConnection(id));
+    p.addEventListener('pointerdown', event => {
+        if(event.pointerType === 'touch' || event.pointerType === 'pen') setHoveredConnection(id);
+    });
+    p.addEventListener('focus', () => setHoveredConnection(id));
+    p.addEventListener('blur', () => setHoveredConnection(''));
+    p.addEventListener('keydown', event => {
+        if(event.key === 'Delete' || event.key === 'Backspace') deleteConnection(id, event);
+        else if(event.key === 'Enter' || event.key === ' '){ event.preventDefault(); setHoveredConnection(id); }
+    });
     return p;
 }
 function setHoveredConnection(id){
@@ -14964,38 +15424,6 @@ function setHoveredConnection(id){
         const btn = linkControlsEl.querySelector(`[data-connection-id="${CSS.escape(hoveredConnectionId)}"]`);
         if(btn) btn.classList.add('hover');
     }
-}
-function connectionDistanceToPoint(connection, point){
-    const from = portPoint(connection.from, 'out');
-    const to = portPoint(connection.to, 'in');
-    let min = Infinity;
-    let prev = cubicPoint(from, to, 0);
-    for(let i = 1; i <= 28; i++){
-        const cur = cubicPoint(from, to, i / 28);
-        min = Math.min(min, pointSegmentDistance(point, prev, cur));
-        prev = cur;
-    }
-    return min;
-}
-function updateConnectionHoverFromMouse(e){
-    if(!canvas || tempLink || dragNode || dragBoard || resizeNode || knifeActive){
-        setHoveredConnection('');
-        return;
-    }
-    const button = document.elementFromPoint(e.clientX, e.clientY)?.closest?.('.link-delete');
-    if(button?.dataset.connectionId){
-        setHoveredConnection(button.dataset.connectionId);
-        return;
-    }
-    const point = screenToWorld(e.clientX, e.clientY);
-    const threshold = Math.max(12, 16 / viewport.scale);
-    let bestId = '';
-    let best = Infinity;
-    connections.forEach(c => {
-        const d = connectionDistanceToPoint(c, point);
-        if(d < best){ best = d; bestId = c.id; }
-    });
-    setHoveredConnection(best <= threshold ? bestId : '');
 }
 function isConnectionSelected(connection){
     return selected.has(connection.from) || selected.has(connection.to);
@@ -15238,7 +15666,7 @@ board.onmousedown = e => {
 board.addEventListener('mousemove', e => {
     const point = screenToWorld(e.clientX, e.clientY);
     lastMouseBoard = point;
-    updateConnectionHoverFromMouse(e);
+    if(!e.target.closest?.('.link-hit,.link-delete')) setHoveredConnection('');
     if(canvas && knifeActive && !isEditableTarget(e.target) && !dragNode && !dragBoard && !resizeNode && !tempLink){
         continueKnifeDrag(e);
     } else if(!e.shiftKey) {
@@ -15263,18 +15691,36 @@ board.addEventListener('mousedown', e => {
     if(e.target.closest?.('#createMenu, #linkCreateMenu, #nodeInputMenu, #nodeOutputMenu, #imageNodeMenu')) return;
     closeCreateMenu();
 });
+createMenu.addEventListener('keydown', event => {
+    const items = [...createMenu.querySelectorAll('.menu-btn')].filter(button => getComputedStyle(button).display !== 'none');
+    if(!items.length) return;
+    const current = Math.max(0, items.indexOf(document.activeElement));
+    if(event.key === 'ArrowDown' || event.key === 'ArrowUp'){
+        event.preventDefault();
+        const delta = event.key === 'ArrowDown' ? 1 : -1;
+        items[(current + delta + items.length) % items.length].focus();
+    } else if(event.key === 'Home' || event.key === 'End'){
+        event.preventDefault();
+        items[event.key === 'Home' ? 0 : items.length - 1].focus();
+    } else if(event.key === 'Escape'){
+        event.preventDefault();
+        const restore = createMenu.classList.contains('output-only') ? document.getElementById('toolbarOutputBtn') : null;
+        closeCreateMenu();
+        restore?.focus({preventScroll:true});
+    }
+});
 board.onwheel = e => {
     if(!canvas) return;
     e.preventDefault();
     const before = screenToWorld(e.clientX, e.clientY);
-    viewport.scale = viewport.scale * (e.deltaY > 0 ? .92 : 1.08);
+    const normalizedDelta = Math.max(-120, Math.min(120, Number(e.deltaY) || 0));
+    const nextScale = safeViewportScale(viewport.scale * Math.exp(-normalizedDelta * .0015));
+    if(nextScale === viewport.scale) return;
+    viewport.scale = nextScale;
     const rect = board.getBoundingClientRect();
     viewport.x = e.clientX - rect.left - before.x * viewport.scale;
     viewport.y = e.clientY - rect.top - before.y * viewport.scale;
-    applyViewport();
-    renderLinks();
-    renderSelectionHub();
-    scheduleViewportSave();
+    scheduleViewportWheelRender();
 };
 board.addEventListener('dragover', e => {
     if(e.target.closest?.('.image-node')){
@@ -15341,6 +15787,11 @@ window.addEventListener('paste', e => {
 window.addEventListener('keydown', e => {
     if(!canvas) return;
     const key = String(e.key || '').toLowerCase();
+    if(e.key === 'Escape' && keyboardLinkOrigin){ e.preventDefault(); clearKeyboardLinkOrigin(); return; }
+    if(e.key === 'Escape' && errorModal?.classList.contains('open')) { closeErrorModal(); return; }
+    if(e.key === 'Escape' && assetManagerModal?.classList.contains('open')) { closeAssetManager(); return; }
+    if(e.key === 'Escape' && logModal?.classList.contains('open')) { closeCanvasLog(); return; }
+    if(e.key === 'Escape' && workflowTransferModal?.classList.contains('open')) { closeWorkflowTransferModal(); return; }
     if(key === 'r' && !isEditableTarget(e.target)) isRKeyDown = true;
     if(e.key === 'Shift' && !e.altKey && !isEditableTarget(document.activeElement)) setKnifeMode(true);
     if(e.key === 'Escape' && document.getElementById('imageEditModal').classList.contains('open')) { closeImageEditor(); return; }

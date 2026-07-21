@@ -1,5 +1,7 @@
 (function(){
-    const VERSION = '2026.07.15.jinni.1';
+    // Keep nested language bundles on an explicit version so a newly added key
+    // cannot be hidden behind a previously cached i18n/canvas.js response.
+    const VERSION = '2026.07.21.canvas-output-llm.1';
     const scripts = [
         '/static/js/i18n-core.js',
         '/static/js/i18n/common.js',
