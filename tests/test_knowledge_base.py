@@ -1,3 +1,4 @@
+import sys
 import time
 import unittest
 import uuid
@@ -77,6 +78,8 @@ class BundledPythonStartupTests(unittest.TestCase):
     def test_bundled_python_can_import_project_packages(self):
         root = Path(__file__).resolve().parent.parent
         bundled = root / "python" / "python.exe"
+        if sys.platform != "win32":
+            self.skipTest("内置 python.exe 仅在 Windows 平台下测试")
         if not bundled.exists():
             self.skipTest("当前环境没有内置 Python")
         runtime_probe = subprocess.run(

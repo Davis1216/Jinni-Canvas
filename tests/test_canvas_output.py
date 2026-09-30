@@ -22,7 +22,7 @@ def test_unconfigured_modelscope_and_runninghub_are_filtered_from_canvas():
     assert "if(id === 'modelscope') return provider.has_key === true" in CANVAS_JS
     assert "provider.has_wallet_key === true" in CANVAS_JS
     assert 'data-provider-required="modelscope"' in CANVAS_HTML
-    assert 'data-provider-required="runninghub"' in CANVAS_HTML
+    assert 'data-provider-required="runninghub"' not in CANVAS_HTML
     assert ".filter(p => providerReadyForCanvasSelection(p)" in CANVAS_JS
 
 
@@ -79,7 +79,7 @@ def test_output_text_has_preview_source_and_actions():
 
 
 def test_every_classic_canvas_entry_uses_current_asset_version():
-    version = "2026.07.16.2"
+    version = "2026.07.16.3"
     assert f"/static/canvas.html?id=${{enc}}&project=${{project}}&v={version}" in CANVAS_LIST_JS
     assert f"/static/canvas.html?id=${{id}}&v={version}" in ASSET_MANAGER_JS
     # HTML 中的 iframe 和静态资源会由启动时的 cache-buster 自动改写为文件时间戳，
@@ -201,21 +201,22 @@ def test_online_and_canvas_load_inline_reference_mention_ui():
     assert 'source_id:`online-ref-${id}`' in ONLINE_HTML
 
 
-def test_canvas_modelscope_shortcut_and_local_generator_visibility():
+def test_canvas_hides_removed_shortcuts_and_preserves_legacy_node_support():
     toolbar = CANVAS_HTML.split('<div class="toolbar-items">', 1)[1].split('</div>', 1)[0]
     assert 'onclick="addMsGenNode()"' not in toolbar
     assert 'data-provider-required="modelscope"' in CANVAS_HTML
-    assert CANVAS_HTML.count('data-local-tools-required="comfy"') == 2
-    assert CANVAS_HTML.count('data-local-tools-required="ltxDirector"') == 2
+    assert 'data-local-tools-required="comfy"' not in CANVAS_HTML
+    assert 'data-local-tools-required="ltxDirector"' not in CANVAS_HTML
+    for action in ('addRhNode()', 'addComfyNode()', 'addLTXDirectorNode()'):
+        assert f'onclick="{action}"' not in CANVAS_HTML
     assert "const STUDIO_LOCAL_TOOLS_VISIBLE_KEY = 'studio_local_tools_visible'" in CANVAS_JS
     assert "function refreshCanvasLocalToolsVisibility(" in CANVAS_JS
     assert CANVAS_JS.count("if(!canvasLocalToolsVisible()) return null;") == 2
-    # 生成节点必须先连 Output，输出菜单不再提供绕过 Output 的下游生成器快捷项。
-    assert CANVAS_JS.count("...(canvasLocalToolsVisible() ? [{type:'comfy'") == 1
-    assert CANVAS_JS.count("...(canvasLocalToolsVisible() ? [{type:'ltxDirector'") == 1
+    # 已有画布中的旧节点仍可加载，创建菜单不再显示这些入口。
+    assert CANVAS_JS.count("...(canvasLocalToolsVisible() ? [{type:'comfy'") == 0
+    assert CANVAS_JS.count("...(canvasLocalToolsVisible() ? [{type:'ltxDirector'") == 0
     assert '[data-link-create="comfy"], [data-link-create="ltxDirector"]' in CANVAS_JS
     assert "event.data?.type === 'studio-local-tools-visibility'" in CANVAS_JS
-    assert "type:'studio-local-tools-visibility'" in INDEX_HTML
 
 
 def test_generated_and_output_content_invalidates_downstream_inputs():

@@ -57,15 +57,13 @@ body { margin:0; height:100vh; overflow:hidden; background:var(--page); color:va
 /* ===== Workspace shell (two pane) ===== */
 .workspace { position:relative; display:flex; height:100vh; overflow:hidden; }
 html[data-studio-scale="off"].studio-scale-managed .workspace {
-    /* 标准化 zoom 下百分比宽度已按 zoom 换算，不能再除以 scale（会宽出 1/scale 倍、右侧被裁）；
-       vh 单位不受 zoom 影响，高度仍需除以 scale 补偿 */
     width: 100%;
-    height: calc(100vh / var(--studio-ui-scale, 1));
-    zoom: var(--studio-ui-scale, 1);
+    height: 100vh;
+    zoom: 1;
 }
 
 /* ===== LEFT sidebar ===== */
-.ws-sidebar { flex:0 0 272px; width:272px; display:flex; flex-direction:column; background:var(--panel); border-right:1px solid var(--line); border-left:0; backdrop-filter:blur(14px); box-shadow:none; }
+.ws-sidebar { flex:0 0 220px; width:220px; display:flex; flex-direction:column; background:var(--panel); border-right:1px solid var(--line); border-left:0; backdrop-filter:blur(14px); box-shadow:none; }
 .ws-side-head { display:flex; align-items:center; justify-content:space-between; padding:18px 16px 12px; }
 .ws-side-title { font-size:15px; font-weight:850; letter-spacing:0; color:var(--text); }
 .ws-side-add { width:32px; height:32px; border-radius:8px; display:flex; align-items:center; justify-content:center; color:var(--muted); background:var(--panel-solid); border:1px solid var(--line); transition:all .15s var(--ease); cursor:pointer; }
@@ -140,7 +138,7 @@ html[data-studio-scale="off"].studio-scale-managed .workspace {
 
 .ws-board { position:relative; flex:1; min-height:0; overflow:hidden; background:var(--page); background-image:linear-gradient(rgba(100,116,139,.045) 1px, transparent 1px), linear-gradient(90deg, rgba(100,116,139,.045) 1px, transparent 1px), radial-gradient(var(--grid) 1px, transparent 1px); background-size:120px 120px, 120px 120px, 24px 24px; cursor:grab; user-select:none; }
 .ws-board.panning { cursor:grabbing; }
-.ws-board-world { position:absolute; left:0; top:0; transform-origin:0 0; will-change:transform; }
+.ws-board-world { position:absolute; left:0; top:0; transform-origin:0 0;  }
 
 .ws-board-empty { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); display:flex; flex-direction:column; align-items:center; gap:12px; width:min(320px, calc(100% - 48px)); color:var(--faint); }
 .ws-board-empty.hidden { display:none; }
@@ -167,7 +165,7 @@ html[data-studio-scale="off"].studio-scale-managed .workspace {
     transition:box-shadow .16s var(--ease), border-color .16s var(--ease), transform .16s var(--ease), background .16s var(--ease);
 }
 .ws-card::before { display:none; }
-.ws-card:hover { border-color:var(--line-2); box-shadow:0 16px 36px var(--shadow-strong); transform:translateY(-2px); }
+.ws-card:hover { border-color:var(--line-2); box-shadow:0 8px 20px var(--shadow); }
 .ws-card.dragging { box-shadow:0 20px 48px var(--shadow-strong); border-color:var(--line-2); transform:none; z-index:50; cursor:grabbing; transition:none; }
 .ws-card.cc-marked { border-color:var(--line-2); }
 .ws-card.cut { opacity:.56; border-style:dashed; }
@@ -211,8 +209,17 @@ html[data-studio-scale="off"].studio-scale-managed .workspace {
 .ws-pop-proj.current:hover { background:transparent; }
 .ws-pop-scroll { max-height:200px; overflow:auto; }
 
-/* ===== Inline card create flow (on board) ===== */
-.ws-create-card { position:absolute; width:260px; border-radius:8px; background:var(--card-solid); border:1px solid var(--line-2); box-shadow:0 18px 44px var(--shadow-strong); padding:12px; display:flex; flex-direction:column; gap:10px; z-index:60; }
+/* ===== Canvas creation dialog ===== */
+.ws-create-dialog { width:min(400px,calc(100vw - 32px)); max-height:calc(100vh - 32px); margin:auto; padding:24px; border-radius:16px; border:1px solid var(--line-2); color:var(--text); background:var(--card-solid); box-shadow:0 24px 64px var(--shadow-strong); overflow:auto; }
+.ws-create-dialog::backdrop { background:rgba(15,23,42,.36); }
+.ws-create-form { display:flex; flex-direction:column; gap:16px; }
+.ws-create-form label { font-size:13px; color:var(--muted); margin-bottom:-8px; }
+.ws-create-dialog .ws-create-title { margin:0 0 4px; font-size:20px; line-height:1.4; }
+.ws-create-dialog .ws-create-input { height:42px; font-size:14px; }
+.ws-create-dialog button { min-height:38px; font-size:13px; }
+.ws-create-dialog button:disabled { opacity:.55; cursor:wait; }
+.ws-create-dialog :focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+.ws-create-error { margin:0; font-size:13px; line-height:1.5; color:var(--danger); }
 .ws-create-title { font-size:12px; font-weight:850; color:var(--text); }
 .ws-create-input { width:100%; height:34px; border-radius:8px; border:1px solid var(--line); background:var(--soft); color:var(--text); font-size:13px; font-weight:600; padding:0 10px; outline:none; }
 .ws-create-input:focus { border-color:var(--line-2); background:var(--card-solid); }
@@ -303,8 +310,8 @@ html[data-studio-scale="off"].studio-scale-managed .workspace {
     flex-direction:row;
 }
 html[data-studio-scale="off"].studio-scale-managed .ws-sidebar {
-    flex:0 0 272px;
-    width:272px;
+    flex:0 0 220px;
+    width:220px;
     max-height:none;
     border-right:1px solid var(--line);
     border-bottom:none;
@@ -353,4 +360,41 @@ html[data-studio-scale="off"].studio-scale-managed .ws-paste-btn span {
         visibility:visible;
         opacity:1;
     }
+}
+
+.ws-view-controls { position:absolute; right:16px; bottom:16px; display:flex; align-items:center; gap:8px; padding:6px 8px; border:1px solid var(--line); border-radius:12px; background:var(--panel-solid); box-shadow:0 4px 16px var(--shadow); cursor:default; }
+.ws-view-hint { padding:0 8px; font-size:12px; color:var(--muted); }
+.ws-zoom-value { width:56px; font-size:12px; font-variant-numeric:tabular-nums; }
+.ws-card-title { font-size:16px; line-height:1.5; font-weight:700; }
+.ws-card-kind,.ws-card-time,.ws-card-nodes { font-size:12px; }
+.ws-card:focus-visible { outline:2px solid var(--accent); outline-offset:3px; }
+@media (max-width:760px) {
+    html[data-studio-scale="off"].studio-scale-managed .ws-sidebar { flex-basis:168px; width:168px; }
+    .ws-view-hint { display:none; }
+}
+@media (max-width:480px) {
+    html[data-studio-scale="off"].studio-scale-managed .ws-sidebar { flex-basis:120px; width:120px; }
+    .ws-side-head,.ws-side-foot { padding:10px; }
+}
+@media (prefers-reduced-motion:reduce) { .workspace *, .workspace *::before, .workspace *::after { animation:none !important; transition:none !important; } }
+
+
+/* Board navigation stays outside the transformed card layer. */
+.ws-board { container-type:inline-size; }
+.ws-board-navigator { position:absolute; left:16px; bottom:16px; width:180px; overflow:hidden; border:1px solid var(--line); border-radius:12px; background:var(--panel-solid); box-shadow:0 4px 16px var(--shadow); z-index:2; cursor:default; }
+.ws-board-minimap { display:block; width:100%; height:96px; background:var(--soft); touch-action:none; cursor:crosshair; }
+.ws-board-minimap [data-card] { fill:var(--muted); opacity:.55; }
+.ws-minimap-viewport { fill:var(--accent); fill-opacity:.08; stroke:var(--accent); stroke-width:1.5; vector-effect:non-scaling-stroke; pointer-events:none; }
+.ws-fit-button { display:flex; justify-content:center; align-items:center; gap:7px; width:100%; height:34px; background:var(--panel-solid); border:0; border-top:1px solid var(--line); color:var(--text); font-size:12px; cursor:pointer; }
+.ws-fit-button:hover { background:var(--soft); }
+.ws-view-controls { z-index:2; }
+@container (max-width:780px) { .ws-view-hint { display:none; } }
+@container (max-width:420px) {
+    .ws-board-navigator { left:8px; bottom:66px; width:132px; }
+    .ws-board-minimap { height:64px; }
+    .ws-view-controls { left:8px; right:auto; bottom:8px; gap:4px; }
+}
+@media (prefers-reduced-motion:no-preference) {
+    .ws-create-dialog[open] { animation:ws-dialog-enter .16s ease-out; }
+    @keyframes ws-dialog-enter { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
 }

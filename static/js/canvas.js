@@ -73,6 +73,25 @@ function canvasPreviewImgHtml(url, size=512, attrs=''){
     // decoding=async：解码放到主线程外，渲染时不阻塞。
     return `<img loading="lazy" decoding="async" src="${escapeAttr(preview)}" data-preview-src="${escapeAttr(preview)}" data-original-src="${escapeAttr(original)}" data-url="${escapeAttr(original)}"${attrs ? ` ${attrs}` : ''}>`;
 }
+// 交互停下后按屏幕像素与设备像素比提升可见预览，避免拖动中解码大图。
+function refreshVisibleCanvasPreviewResolution(){
+    if(document.hidden || canvasImageEditorIsOpen()) return;
+    const screen = board.getBoundingClientRect();
+    nodesEl.querySelectorAll('img[data-preview-src][data-original-src]').forEach(img => {
+        if(img.dataset.previewKind === 'video' || img.dataset.previewFailed) return;
+        const rect = img.getBoundingClientRect();
+        if(!rect.width || !rect.height || rect.right < screen.left || rect.left > screen.right || rect.bottom < screen.top || rect.top > screen.bottom) return;
+        const current = new URL(img.dataset.previewSrc, location.href);
+        if(current.pathname !== '/api/media-preview') return;
+        const required = Math.max(rect.width, rect.height) * (window.devicePixelRatio || 1);
+        const size = [64,128,256,512,768,1024,1536,2048].find(size => size >= required) || 2048;
+        if(size <= Number(current.searchParams.get('w'))) return;
+        const previous = img.dataset.previewSrc;
+        const next = canvasMediaPreviewUrl(img.dataset.originalSrc, size);
+        img.dataset.previewSrc = next;
+        if(img.getAttribute('src') === previous) img.src = next;
+    });
+}
 function loadCanvasOriginalImageDimensions(url){
     const src = String(url || '');
     if(!src || /^data:/i.test(src) || /^blob:/i.test(src)) return Promise.resolve(null);
@@ -133,6 +152,7 @@ function bindCanvasPreviewImageFallbacks(root=document){
     root.querySelectorAll?.('img[data-preview-src][data-original-src]:not([data-preview-fallback-bound])').forEach(img => {
         img.dataset.previewFallbackBound = '1';
         img.addEventListener('error', () => {
+            img.dataset.previewFailed = '1';
             const original = img.dataset.originalSrc || img.dataset.url || '';
             if(img.dataset.previewKind === 'video'){
                 const video = document.createElement('template');
@@ -174,12 +194,12 @@ function syncCanvasSelectedImageResolution(root=nodesEl){
     root.querySelectorAll?.('.node img[data-preview-src][data-original-src]').forEach(img => {
         if(img.dataset.previewKind === 'video') return;
         const nodeEl = img.closest('.node');
-        const selectedNode = Boolean(nodeEl?.dataset?.id && selected.has(nodeEl.dataset.id));
+        const selectedNode = Boolean(nodeEl?.matches('.image-node,.output-node') && selected.has(nodeEl.dataset.id));
         const preview = img.dataset.previewSrc || '';
         const original = img.dataset.originalSrc || img.dataset.url || '';
         if(!selectedNode){
             delete img.dataset.selectedHighResTarget;
-            if(preview && img.getAttribute('src') !== preview) img.src = preview;
+            if(preview && !img.dataset.previewFailed && img.getAttribute('src') !== preview) img.src = preview;
             return;
         }
         const target = canvasDisplayMediaUrl(original);
@@ -1324,7 +1344,8 @@ function screenToWorld(clientX, clientY){
 }
 function applyViewport(){
     world.style.transform = `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.scale})`;
-    scheduleMinimapRender();
+    scheduleMinimapRender(false);
+    updateZoomControlUI();
 }
 function estimatedNodeRect(n){
     const el = nodesEl?.querySelector?.(`.node[data-id="${CSS.escape(n.id)}"]`);
@@ -1343,8 +1364,8 @@ function currentWorldViewRect(){
         h:rect.height / scale
     };
 }
-function minimapBounds(){
-    const rects = (nodes || []).map(estimatedNodeRect);
+function minimapBounds(nodeRects=(nodes || []).map(estimatedNodeRect)){
+    const rects = [...nodeRects];
     rects.push(currentWorldViewRect());
     if(!rects.length) return {x:0, y:0, w:1000, h:700};
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
@@ -1357,12 +1378,18 @@ function minimapBounds(){
     const pad = Math.max(240, Math.max(maxX - minX, maxY - minY) * 0.08);
     return {x:minX - pad, y:minY - pad, w:Math.max(1, maxX - minX + pad * 2), h:Math.max(1, maxY - minY + pad * 2)};
 }
-function scheduleMinimapRender(){
+let minimapGeometryDirty = true;
+function scheduleMinimapRender(geometryChanged=true){
+    minimapGeometryDirty ||= geometryChanged;
     if(minimapRenderQueued) return;
     minimapRenderQueued = true;
     requestAnimationFrame(() => {
         minimapRenderQueued = false;
-        renderMinimap();
+        if(!minimapVisible || document.hidden) return;
+        if(minimapGeometryDirty || !minimapState){
+            minimapGeometryDirty = false;
+            renderMinimap();
+        } else updateMinimapViewport();
     });
 }
 // 拖动/缩放节点时每个 mousemove 都全量重建连线 SVG 会掉帧；用 rAF 合并成每帧最多刷新一次。
@@ -1377,7 +1404,8 @@ function scheduleLinksRender(){
 function renderMinimap(){
     if(!minimapContent || !minimapViewport) return;
     canvasArrangeBtn?.classList.toggle('visible', selected.size > 0);
-    const bounds = minimapBounds();
+    const nodeRects = (nodes || []).map(estimatedNodeRect);
+    const bounds = minimapBounds(nodeRects);
     const cw = minimapContent.clientWidth || 172;
     const ch = minimapContent.clientHeight || 110;
     const scale = Math.min(cw / bounds.w, ch / bounds.h);
@@ -1386,8 +1414,8 @@ function renderMinimap(){
     const ox = (cw - mapW) / 2;
     const oy = (ch - mapH) / 2;
     minimapState = {bounds, scale, ox, oy, cw, ch};
-    const nodeHtml = (nodes || []).map(n => {
-        const r = estimatedNodeRect(n);
+    const nodeHtml = (nodes || []).map((n, index) => {
+        const r = nodeRects[index];
         return `<div class="minimap-node ${selected.has(n.id) ? 'selected' : ''}" style="left:${ox + (r.x - bounds.x) * scale}px;top:${oy + (r.y - bounds.y) * scale}px;width:${Math.max(3, r.w * scale)}px;height:${Math.max(3, r.h * scale)}px"></div>`;
     }).join('');
     minimapContent.innerHTML = `${nodeHtml}${nodes?.length ? '' : '<div class="minimap-empty">EMPTY</div>'}<div id="minimapViewport" class="minimap-viewport"></div>`;
@@ -1412,13 +1440,33 @@ function minimapEventToWorld(e){
     return {x, y};
 }
 function centerViewportOnWorldPoint(point){
+    cancelViewportAnimation();
+    beginViewportMotion();
     const rect = board.getBoundingClientRect();
     viewport.x = rect.width / 2 - point.x * viewport.scale;
     viewport.y = rect.height / 2 - point.y * viewport.scale;
     applyViewport();
     renderSelectionHub();
 }
+// Cache node painting only while the viewport moves. Releasing these layers at
+// rest lets WebKit rasterize text at the final scale instead of retaining blur.
+let viewportMotionTimer = 0;
+function finishViewportMotion(){
+    clearTimeout(viewportMotionTimer);
+    viewportMotionTimer = 0;
+    world.classList.remove('viewport-moving');
+}
+function beginViewportMotion(){
+    if(!viewportMotionTimer) world.classList.add('viewport-moving');
+    clearTimeout(viewportMotionTimer);
+    viewportMotionTimer = setTimeout(finishViewportMotion, 180);
+}
+document.addEventListener('visibilitychange', () => {
+    if(document.hidden) finishViewportMotion();
+});
+window.addEventListener('pagehide', finishViewportMotion);
 function scheduleViewportWheelRender(){
+    beginViewportMotion();
     if(viewportWheelFrame) return;
     viewportWheelFrame = requestAnimationFrame(() => {
         viewportWheelFrame = 0;
@@ -1430,15 +1478,113 @@ function scheduleViewportWheelRender(){
 function safeViewportScale(value){
     return CanvasInteractionRules.clampViewportScale(value, 1);
 }
-function fitAllNodesViewport(){
-    const rect = board.getBoundingClientRect();
-    if(!nodes.length){
-        viewport.scale = 0.45;
-        viewport.x = rect.width / 2;
-        viewport.y = rect.height / 2;
+let canvasToolMode = 'select'; // 'select' | 'pan'
+let isSpaceDown = false;
+let redoStack = [];
+let minimapVisible = true;
+
+function setCanvasTool(mode){
+    canvasToolMode = mode;
+    const selectBtn = document.getElementById('toolSelectBtn');
+    const panBtn = document.getElementById('toolPanBtn');
+    selectBtn?.classList.toggle('active', mode === 'select');
+    panBtn?.classList.toggle('active', mode === 'pan');
+    document.body.classList.toggle('canvas-tool-pan', mode === 'pan' || isSpaceDown);
+}
+
+function updateZoomControlUI(){
+    const pct = Math.round((viewport.scale || 1) * 100);
+    const zoomText = document.getElementById('zoomValueText');
+    const slider = document.getElementById('zoomSlider');
+    if(zoomText && zoomText.textContent !== `${pct}%`) zoomText.textContent = `${pct}%`;
+    if(slider && document.activeElement !== slider) {
+        slider.value = String(Math.max(10, Math.min(300, pct)));
+    }
+}
+
+let viewportAnimationFrame = 0;
+function cancelViewportAnimation(){
+    cancelAnimationFrame(viewportAnimationFrame);
+    viewportAnimationFrame = 0;
+}
+function moveCanvasViewport(target, animated=true){
+    cancelViewportAnimation();
+    if(viewportWheelFrame){ cancelAnimationFrame(viewportWheelFrame); viewportWheelFrame = 0; }
+    const start = {...viewport};
+    const started = performance.now();
+    const duration = animated && !matchMedia('(prefers-reduced-motion: reduce)').matches ? 200 : 0;
+    function step(now){
+        if(duration) beginViewportMotion();
+        const progress = duration ? Math.min(1, (now - started) / duration) : 1;
+        const ease = 1 - Math.pow(1 - progress, 3);
+        for(const key of ['x','y','scale']) viewport[key] = start[key] + (target[key] - start[key]) * ease;
         applyViewport();
         renderSelectionHub();
-        scheduleViewportSave();
+        if(progress < 1) viewportAnimationFrame = requestAnimationFrame(step);
+        else { viewportAnimationFrame = 0; scheduleViewportSave(); }
+    }
+    if(duration) viewportAnimationFrame = requestAnimationFrame(step);
+    else step(started);
+}
+function setZoomAtCenter(nextScale, animated=false){
+    if(!canvas) return;
+    const rect = board.getBoundingClientRect();
+    const scale = safeViewportScale(nextScale);
+    const cx = rect.width / 2, cy = rect.height / 2;
+    moveCanvasViewport({
+        scale,
+        x:cx - (cx - viewport.x) / viewport.scale * scale,
+        y:cy - (cy - viewport.y) / viewport.scale * scale
+    }, animated);
+}
+
+function zoomStep(direction){
+    const factor = direction > 0 ? 1.18 : (1 / 1.18);
+    setZoomAtCenter(viewport.scale * factor, true);
+}
+
+function onZoomSliderInput(val){
+    beginViewportMotion();
+    setZoomAtCenter(Number(val) / 100, false);
+}
+
+function resetZoomTo100(){
+    setZoomAtCenter(1.0, true);
+}
+
+function toggleMinimap(){
+    minimapVisible = !minimapVisible;
+    try { localStorage.setItem('canvas_minimap_visible', minimapVisible ? '1' : '0'); } catch(e){}
+    const container = document.getElementById('minimapContainer');
+    const toggleBtn = document.getElementById('minimapToggleBtn');
+    container?.classList.toggle('collapsed', !minimapVisible);
+    toggleBtn?.classList.toggle('active', minimapVisible);
+    if(minimapVisible) renderMinimap();
+}
+
+function initMinimapAndZoomControls(){
+    try {
+        const stored = localStorage.getItem('canvas_minimap_visible');
+        minimapVisible = stored !== '0';
+    } catch(e) {
+        minimapVisible = true;
+    }
+    const container = document.getElementById('minimapContainer');
+    const toggleBtn = document.getElementById('minimapToggleBtn');
+    container?.classList.toggle('collapsed', !minimapVisible);
+    toggleBtn?.classList.toggle('active', minimapVisible);
+    updateZoomControlUI();
+    refreshIcons();
+}
+
+function fitAllNodesViewport(animated=true){
+    fitAllNodesViewportSmooth(animated);
+}
+
+function fitAllNodesViewportSmooth(animated=true){
+    const rect = board.getBoundingClientRect();
+    if(!nodes || !nodes.length){
+        moveCanvasViewport({x:rect.width / 2, y:rect.height / 2, scale:1}, animated);
         return;
     }
     const rects = nodes.map(estimatedNodeRect);
@@ -1446,19 +1592,21 @@ function fitAllNodesViewport(){
     const minY = Math.min(...rects.map(r => r.y));
     const maxX = Math.max(...rects.map(r => r.x + r.w));
     const maxY = Math.max(...rects.map(r => r.y + r.h));
-    const pad = 180;
+    const pad = 100;
     const width = Math.max(1, maxX - minX + pad * 2);
     const height = Math.max(1, maxY - minY + pad * 2);
-    const nextScale = Math.max(0.06, Math.min(0.82, (rect.width - 80) / width, (rect.height - 80) / height));
+    // 留出左下角控制器和底部 Dock 的视野安全边距
+    const availableW = Math.max(200, rect.width - 120);
+    const availableH = Math.max(200, rect.height - 140);
+    const nextScale = safeViewportScale(Math.min(1.2, Math.max(0.1, Math.min(availableW / width, availableH / height))));
     const cx = (minX + maxX) / 2;
     const cy = (minY + maxY) / 2;
-    viewport.scale = nextScale;
-    viewport.x = rect.width / 2 - cx * viewport.scale;
-    viewport.y = rect.height / 2 - cy * viewport.scale;
-    applyViewport();
-    renderSelectionHub();
-    scheduleViewportSave();
+    const targetX = rect.width / 2 - cx * nextScale;
+    const targetY = rect.height / 2 - cy * nextScale;
+
+    moveCanvasViewport({x:targetX, y:targetY, scale:nextScale}, animated);
 }
+
 function enterZoomPreview(){
     if(zoomPreviewState || !canvas) return;
     zoomPreviewState = {...viewport};
@@ -1469,6 +1617,7 @@ function enterZoomPreview(){
     fitAllNodesViewport();
 }
 function exitZoomPreview(point=null){
+    cancelViewportAnimation();
     if(!zoomPreviewState) return false;
     const prev = zoomPreviewState;
     zoomPreviewState = null;
@@ -1490,6 +1639,7 @@ function exitZoomPreview(point=null){
 }
 function exitZoomPreviewToNode(nodeId){
     if(!zoomPreviewState) return false;
+    cancelViewportAnimation();
     const node = nodes.find(n => n.id === nodeId);
     if(!node) return exitZoomPreview();
     const prev = zoomPreviewState;
@@ -1521,6 +1671,7 @@ function toggleZoomPreview(){
     else enterZoomPreview();
 }
 function refreshGeometry(){
+    scheduleMinimapRender();
     renderLinks();
     renderSelectionHub();
 }
@@ -1541,9 +1692,16 @@ function scheduleSave(){
     }
     saveTimer = setTimeout(saveCanvas, 500);
 }
+let viewportSaveTimer = 0;
 function scheduleViewportSave(){
-    saveLocalViewport();
+    clearTimeout(viewportSaveTimer);
+    viewportSaveTimer = setTimeout(() => {
+        saveLocalViewport();
+        scheduleMinimapRender();
+        refreshVisibleCanvasPreviewResolution();
+    }, 260);
 }
+window.addEventListener('pagehide', () => { clearTimeout(viewportSaveTimer); saveLocalViewport(); });
 function refreshOutputTimer(){
     const hasPending = nodes.some(n => n.type === 'output' && (n._pending || []).length);
     if(hasPending && !outputTimer){
@@ -2208,13 +2366,18 @@ async function openCanvas(id){
         resetTransientRunState(nodes);
         const repairedGroupItems = sanitizeCanvasGroupItems({useDom:false});
         const repairedOutputs = sanitizeConnections();
+        const repairedMentions = repairDanglingPromptMentions(nodes);
         pruneMissingComfyWorkflows();
         await refreshMissingCanvasAssets();
         selected.clear();
         setCanvasMode(true);
         renderCanvasList();
         render();
-        if(repairedGroupItems || repairedOutputs) scheduleSave();
+        // 首次打开以已布局的节点为准，不继承可能把内容移出屏幕的旧视图。
+        await new Promise(requestAnimationFrame);
+        if(canvas?.id !== id) return;
+        fitAllNodesViewportSmooth(false);
+        if(repairedGroupItems || repairedOutputs || repairedMentions) scheduleSave();
         resumeCanvasImageTasks();
         startCanvasRemotePolling();
         setStatus('Ready');
@@ -3328,10 +3491,20 @@ function addOutputNode(kind='image-group', point=null){
 function openCreateMenu(clientX, clientY){
     menuPoint = screenToWorld(clientX, clientY);
     closeLinkCreateMenu();
+    closeAllMenus();
     createMenu.classList.remove('output-only');
     document.getElementById('toolbarOutputBtn')?.setAttribute('aria-expanded', 'false');
-    createMenu.style.left = `${clientX}px`;
-    createMenu.style.top = `${clientY}px`;
+
+    // 智能视口边界防溢出保护
+    const menuWidth = 200;
+    const menuHeight = Math.min(500, window.innerHeight - 30);
+    const left = Math.max(10, Math.min(window.innerWidth - menuWidth - 10, clientX));
+    const top = Math.max(10, Math.min(window.innerHeight - menuHeight - 10, clientY));
+
+    createMenu.style.left = `${left}px`;
+    createMenu.style.top = `${top}px`;
+    createMenu.style.maxHeight = `${window.innerHeight - 20}px`;
+    createMenu.style.overflowY = 'auto';
     createMenu.classList.add('open');
     refreshIcons();
 }
@@ -3342,15 +3515,32 @@ function openToolbarOutputMenu(button, event){
     const wasOpen = createMenu.classList.contains('open') && createMenu.classList.contains('output-only');
     closeCreateMenu();
     if(wasOpen) return;
-    const rect = button?.getBoundingClientRect?.() || {left:24, bottom:70};
+    const rect = button?.getBoundingClientRect?.() || {left: window.innerWidth / 2, top: window.innerHeight - 60, bottom: window.innerHeight - 20, width: 60};
     const menuWidth = 210;
+    const menuHeight = 150;
     menuPoint = defaultPoint(260, 0);
-    createMenu.style.left = `${Math.max(10, Math.min(window.innerWidth - menuWidth - 10, rect.left))}px`;
-    createMenu.style.top = `${Math.min(window.innerHeight - 190, rect.bottom + 8)}px`;
+    const left = Math.max(10, Math.min(window.innerWidth - menuWidth - 10, rect.left + (rect.width - menuWidth) / 2));
+    // 底部 Dock 向上弹出，若在顶部则向下弹出
+    const top = rect.top > menuHeight + 20 ? (rect.top - menuHeight - 10) : (rect.bottom + 8);
+    createMenu.style.left = `${left}px`;
+    createMenu.style.top = `${top}px`;
     createMenu.classList.add('output-only', 'open');
     button?.setAttribute('aria-expanded', 'true');
     refreshIcons();
     requestAnimationFrame(() => createMenu.querySelector('.output-menu-option')?.focus({preventScroll:true}));
+}
+function closeNodeContextMenu(){
+    const menu = document.getElementById('nodeContextMenu');
+    if(menu){
+        menu.classList.remove('open');
+        menu.innerHTML = '';
+    }
+}
+function closeAllMenus(){
+    closeCreateMenu();
+    closeLinkCreateMenu();
+    closeImageNodeMenu();
+    closeNodeContextMenu();
 }
 function closeCreateMenu(){
     createMenu.classList.remove('open');
@@ -3358,6 +3548,101 @@ function closeCreateMenu(){
     document.getElementById('toolbarOutputBtn')?.setAttribute('aria-expanded', 'false');
     closeLinkCreateMenu();
     closeImageNodeMenu();
+    closeNodeContextMenu();
+}
+function openNodeContextMenu(nodeId, clientX, clientY){
+    const node = nodes.find(n => n.id === nodeId);
+    if(!node) return false;
+    closeAllMenus();
+
+    if(!selected.has(nodeId)){
+        selected.clear();
+        selected.add(nodeId);
+        refreshSelectionVisuals();
+    }
+
+    const menu = document.getElementById('nodeContextMenu');
+    if(!menu) return false;
+
+    const isRunnable = ['generator', 'llm', 'video', 'comfy', 'loop'].includes(node.type);
+    const isImage = node.type === 'image';
+    const isOutput = node.type === 'output';
+    const hasImage = isImage && node.url && !isMissingAssetUrl(node.url);
+
+    let html = '';
+    if(isRunnable){
+        html += `<button class="menu-btn" data-act="run"><i data-lucide="play" class="w-4 h-4"></i><span>运行节点</span></button>`;
+    }
+    html += `<button class="menu-btn" data-act="duplicate"><i data-lucide="copy" class="w-4 h-4"></i><span>复制节点</span></button>`;
+
+    if(hasImage){
+        html += `<button class="menu-btn" data-act="preview"><i data-lucide="eye" class="w-4 h-4"></i><span>查看大图</span></button>`;
+        html += `<button class="menu-btn" data-act="edit"><i data-lucide="crop" class="w-4 h-4"></i><span>编辑图片</span></button>`;
+        html += `<button class="menu-btn" data-act="main-ref"><i data-lucide="${node.primaryReference ? 'star-off' : 'star'}" class="w-4 h-4"></i><span>${node.primaryReference ? '取消固定主图' : '固定为主图'}</span></button>`;
+        html += `<button class="menu-btn" data-act="replace"><i data-lucide="image-plus" class="w-4 h-4"></i><span>替换图片</span></button>`;
+    } else if(isImage){
+        html += `<button class="menu-btn" data-act="upload"><i data-lucide="upload" class="w-4 h-4"></i><span>上传图片</span></button>`;
+    }
+
+    if(isOutput){
+        html += `<button class="menu-btn" data-act="export"><i data-lucide="download" class="w-4 h-4"></i><span>导出图片</span></button>`;
+    }
+
+    html += `<button class="menu-btn" data-act="disconnect"><i data-lucide="unlink" class="w-4 h-4"></i><span>断开所有连线</span></button>`;
+    html += `<div class="menu-divider"></div>`;
+    html += `<button class="menu-btn danger-act" data-act="delete"><i data-lucide="trash-2" class="w-4 h-4"></i><span>删除节点</span></button>`;
+
+    menu.innerHTML = html;
+
+    const menuWidth = 190;
+    const menuHeight = 220;
+    const left = (clientX + menuWidth > window.innerWidth - 10) ? Math.max(10, clientX - menuWidth) : clientX;
+    const top = (clientY + menuHeight > window.innerHeight - 10) ? Math.max(10, clientY - menuHeight) : clientY;
+    menu.style.left = `${left}px`;
+    menu.style.top = `${top}px`;
+    menu.classList.add('open');
+
+    menu.querySelectorAll('[data-act]').forEach(btn => {
+        btn.onclick = e => {
+            e.stopPropagation();
+            closeNodeContextMenu();
+            const act = btn.dataset.act;
+            if(act === 'run'){
+                if(node.type === 'loop') runLoop(nodeId);
+                else runCascadeNodeByType(node);
+            } else if(act === 'duplicate'){
+                pushUndo();
+                const cloned = cloneNode(node, 40, 40);
+                nodes.push(cloned);
+                selected.clear();
+                selected.add(cloned.id);
+                render();
+                scheduleSave();
+            } else if(act === 'preview'){
+                if(hasImage) openImageNodePreview(nodeId);
+            } else if(act === 'edit'){
+                if(hasImage) openImageEditor(nodeId);
+            } else if(act === 'main-ref'){
+                toggleImageNodePrimaryReference(nodeId);
+            } else if(act === 'replace' || act === 'upload'){
+                pickImageForNode(nodeId);
+            } else if(act === 'export'){
+                exportOutputNode(nodeId);
+            } else if(act === 'disconnect'){
+                pushUndo();
+                connections = connections.filter(c => c.from !== nodeId && c.to !== nodeId);
+                sanitizeConnections();
+                syncGeneratorInputs();
+                renderLinks();
+                scheduleSave();
+            } else if(act === 'delete'){
+                deleteNode(nodeId);
+            }
+        };
+    });
+
+    refreshIcons();
+    return true;
 }
 window.openToolbarOutputMenu = openToolbarOutputMenu;
 function linkCreateOptions(state){
@@ -3372,9 +3657,6 @@ function linkCreateOptions(state){
                 ...(node.type === 'llm' ? [{type:'outputGeneral', label:tr('canvas.outputGeneral'), icon:'panel-top'}] : []),
                 {type:'generator', label:tr('canvas.apiGenerate'), icon:'wand-sparkles'},
                 ...(hasConfiguredCanvasProvider('modelscope') ? [{type:'msgen', label:tr('canvas.modelscopeGenerate'), icon:'cloud-lightning'}] : []),
-                ...(canvasLocalToolsVisible() ? [{type:'comfy', label:tr('canvas.comfyGenerate'), icon:'workflow'}] : []),
-                ...(hasConfiguredCanvasProvider('runninghub') ? [{type:'rh', label:tr('canvas.rhGenerate'), icon:'workflow'}] : []),
-                ...(canvasLocalToolsVisible() ? [{type:'ltxDirector', label:tr('canvas.ltxDirector'), icon:'film'}] : []),
                 {type:'video', label:tr('canvas.videoGenerateNode'), icon:'clapperboard'},
                 ...(node.type === 'output' ? [] : [{type:'llm', label:'LLM', icon:'message-square-text'}])
             ];
@@ -6319,11 +6601,9 @@ function renderNode(node){
         refreshSelectionVisuals();
     };
     el.oncontextmenu = e => {
-    if(!CANVAS_GENERATOR_TYPES.includes(node.type) && node.type !== 'output') return;
         e.preventDefault();
         e.stopPropagation();
-        if(node.type === 'output') openOutputNodeMenu(node.id, e.clientX, e.clientY);
-        else openGeneratorNodeMenu(node.id, e.clientX, e.clientY);
+        openNodeContextMenu(node.id, e.clientX, e.clientY);
     };
     const title = node.type === 'image' ? tr('canvas.image') : node.type === 'prompt' ? tr('canvas.prompt') : node.type === 'loop' ? tr('canvas.loopNode') : node.type === 'promptGroup' ? `${tr('canvas.prompt')} ${tr('canvas.group')}` : node.type === 'group' ? tr('canvas.group') : node.type === 'output' ? outputTitleForNode(node) : node.type === 'llm' ? 'LLM' : node.type === 'comfy' ? 'ComfyUI' : node.type === 'ltxDirector' ? tr('canvas.ltxDirector') : node.type === 'rh' ? 'RunningHub' : node.type === 'msgen' ? tr('canvas.modelscopeGenerate') : node.type === 'video' ? tr('canvas.videoGenerateNode') : tr('canvas.apiGenerate');
     const displayTitle = node.type === 'image' && node.url ? nodeTitleForMedia(node) : title;
@@ -6525,9 +6805,6 @@ function renderNode(node){
             renderPendingOutput(p)
         ).join('');
         body.innerHTML = renderOutputGrid(node, pendingHtml);
-        body.onwheel = e => {
-            e.stopPropagation();
-        };
         body.querySelectorAll('.output-img-wrap').forEach(wrap => bindOutputWrap(wrap, node));
         bindOutputTextControls(body, node);
         bindSingleOutputControls(body, node);
@@ -6695,7 +6972,6 @@ function refreshOutputNodeContent(node){
     const grid = body?.querySelector('.output-grid');
     if(!body || !grid || outputKindForNode(node) === 'single-image') return false;
     if((node.texts || []).length || body.querySelector('.output-text-sections')) return false;
-    body.onwheel = e => { e.stopPropagation(); };
     const layout = outputGridLayout(node);
     grid.classList.toggle('grid-layout', !!layout);
     if(layout) grid.style.setProperty('--grid-cols', String(Math.max(1, Number(layout.cols || 1))));
@@ -9031,18 +9307,16 @@ function renderPromptPreview(container, promptInputs){
 function promptPreviewHtml(source){
     const parts = Array.isArray(source?.promptParts) ? source.promptParts : null;
     if(!parts?.some(part => part?.type === 'image')) return escapeHtml(source?.prompt || source?.label || '').replace(/\n/g, '<br>');
-    const candidates = new Map((source.mentionCandidates || []).map(item => [StudioImageMentions.candidateKey(item), item]));
-    const scoped = Boolean(source.mentionCandidatesScoped);
+    const candidateList = source.mentionCandidates || [];
     return parts.map(part => {
         if(part?.type !== 'image') return escapeHtml(part?.text || '').replace(/\n/g, '<br>');
-        const key = StudioImageMentions.candidateKey(part);
-        const live = candidates.get(key) || (!scoped && part?.url ? part : null);
+        const live = StudioImageMentions.findMatchingCandidate ? StudioImageMentions.findMatchingCandidate(part, candidateList) : (part?.url ? part : null);
         const invalid = !live;
         const url = live?.url || part?.url || '';
         const label = live?.label || live?.name || part?.name || '图片';
         const title = invalid ? `引用已失效：${label}` : `${label}${live?.name && live.name !== label ? ` · ${live.name}` : ''}`;
         const thumbnail = url
-            ? `<img src="${escapeAttr(url)}" alt="">`
+            ? canvasPreviewImgHtml(url, 128, 'alt=""')
             : '<span class="prompt-preview-mention-missing">!</span>';
         return `<span class="prompt-preview-mention ${invalid ? 'invalid' : ''}" title="${escapeAttr(title)}">${thumbnail}<span>${escapeHtml(label)}${invalid ? '（失效）' : ''}</span></span>`;
     }).join('');
@@ -10622,6 +10896,7 @@ function promptReferenceCandidates(promptNode, targetGenerator=null){
                 sourceId:promptReferenceKey(source, ref, index),
                 linkSourceId:source.id,
                 url:ref.url,
+                thumbnailUrl:canvasMediaPreviewUrl(ref.url, 256),
                 name:ref.name || source.name || '参考图',
                 ref:{...ref, source_id:promptReferenceKey(source, ref, index)}
             });
@@ -10638,7 +10913,7 @@ function promptReferenceCandidates(promptNode, targetGenerator=null){
     }));
 }
 function promptReferenceStripHtml(candidates){
-    return (candidates || []).map(item => `<button type="button" class="prompt-reference-thumb" draggable="true" data-prompt-reference-key="${escapeAttr(item.key)}" title="${escapeAttr(`${item.label} · ${item.name}`)}"><img src="${escapeAttr(item.url)}" alt=""><span>${item.index}</span></button>`).join('');
+    return (candidates || []).map(item => `<button type="button" class="prompt-reference-thumb" draggable="true" data-prompt-reference-key="${escapeAttr(item.key)}" title="${escapeAttr(`${item.label} · ${item.name}`)}">${canvasPreviewImgHtml(item.url, 256, 'alt=""')}<span>${item.index}</span></button>`).join('');
 }
 function bindPromptReferenceStrip(strip, promptNode){
     if(!strip) return;
@@ -10688,12 +10963,13 @@ function generationMentionContext(target, orderedInputSources=null){
     let mentioned = false;
     const promptBlocks = sources.map(source => {
         if(!source.promptNodeId || !Array.isArray(source.promptParts)) return source.prompt || '';
-        const candidates = new Map((source.mentionCandidates || []).map(item => [item.key, item]));
+        const candidatesList = source.mentionCandidates || [];
+        const candidates = new Map(candidatesList.map(item => [item.key, item]));
         let body = '';
         source.promptParts.forEach(part => {
             if(part?.type !== 'image'){ body += part?.text || ''; return; }
             mentioned = true;
-            const candidate = candidates.get(StudioImageMentions.candidateKey(part));
+            const candidate = (StudioImageMentions.findMatchingCandidate ? StudioImageMentions.findMatchingCandidate(part, candidatesList) : null) || candidates.get(StudioImageMentions.candidateKey(part));
             const index = candidate?.url ? refIndexByUrl.get(candidate.url) : 0;
             if(!candidate || !index){ invalid.push({...part, promptNodeId:source.promptNodeId}); body += `@${part.name || '图片'}`; return; }
             body += `图${index}`;
@@ -13592,6 +13868,7 @@ async function addCurrentOutputToInspiration(event){
             const detail = (await res.json()).detail || '保存失败';
             throw new Error(detail === 'Not Found' ? '灵感空间接口未加载，请重启本地服务后再试。' : detail);
         }
+        try { localStorage.setItem('inspiration-space-changed', `${Date.now()}-${Math.random()}`); } catch {}
         alert('已加入灵感空间');
     } catch(err) {
         alert(err.message || '保存失败');
@@ -14388,10 +14665,24 @@ function pushUndo(){
     if(!canvas) return;
     undoStack.push({nodes:JSON.parse(JSON.stringify(serializableCanvasNodes())), connections:JSON.parse(JSON.stringify(connections))});
     if(undoStack.length > UNDO_MAX) undoStack.shift();
+    redoStack = [];
 }
 function performUndo(){
     if(!canvas || !undoStack.length) return;
+    redoStack.push({nodes:JSON.parse(JSON.stringify(serializableCanvasNodes())), connections:JSON.parse(JSON.stringify(connections))});
+    if(redoStack.length > UNDO_MAX) redoStack.shift();
     const state = undoStack.pop();
+    nodes = state.nodes;
+    connections = state.connections;
+    selected.clear();
+    render();
+    scheduleSave();
+}
+function performRedo(){
+    if(!canvas || !redoStack.length) return;
+    undoStack.push({nodes:JSON.parse(JSON.stringify(serializableCanvasNodes())), connections:JSON.parse(JSON.stringify(connections))});
+    if(undoStack.length > UNDO_MAX) undoStack.shift();
+    const state = redoStack.pop();
     nodes = state.nodes;
     connections = state.connections;
     selected.clear();
@@ -14445,6 +14736,36 @@ function sanitizeCanvasGroupItems(options={}){
         if(oldItems.length !== nextItems.length || oldItems.some((id, index) => id !== nextItems[index])){
             group.items = nextItems;
             changed = true;
+        }
+    });
+    return changed;
+}
+function repairDanglingPromptMentions(canvasNodes){
+    let changed = false;
+    const imageNodes = (canvasNodes || []).filter(n => n.type === 'image' && n.url);
+    (canvasNodes || []).filter(n => n.type === 'prompt').forEach(promptNode => {
+        if(Array.isArray(promptNode.promptParts)){
+            promptNode.promptParts.forEach(part => {
+                if(part && part.type === 'image'){
+                    const keyValid = (canvasNodes || []).some(n => n.id === part.key || n.id === part.sourceId);
+                    if(!keyValid){
+                        let matched = imageNodes.find(n => n.url && (n.url === part.url || n.url.split('?')[0] === String(part.url).split('?')[0]));
+                        if(!matched && part.name){
+                            const matchNum = String(part.name).match(/\d+/);
+                            if(matchNum){
+                                const idx = parseInt(matchNum[0], 10) - 1;
+                                if(imageNodes[idx]) matched = imageNodes[idx];
+                            }
+                        }
+                        if(matched){
+                            part.key = matched.id;
+                            part.sourceId = matched.id;
+                            part.url = matched.url;
+                            changed = true;
+                        }
+                    }
+                }
+            });
         }
     });
     return changed;
@@ -14750,6 +15071,28 @@ function insertWorkflowIntoCanvas(imported){
         if((node.type === 'group' || node.type === 'promptGroup') && Array.isArray(node.items)){
             node.items = node.items.map(id => idMap.get(id)).filter(Boolean);
         }
+        if(node.type === 'prompt'){
+            if(Array.isArray(node.referenceOrder)){
+                node.referenceOrder = node.referenceOrder.map(k => {
+                    const segs = String(k).split(':');
+                    if(idMap.has(segs[0])){ segs[0] = idMap.get(segs[0]); return segs.join(':'); }
+                    return k;
+                });
+            }
+            if(Array.isArray(node.promptParts)){
+                node.promptParts.forEach(p => {
+                    if(p && p.type === 'image'){
+                        const segsK = String(p.key || '').split(':');
+                        const segsS = String(p.sourceId || '').split(':');
+                        if(idMap.has(segsK[0])){ segsK[0] = idMap.get(segsK[0]); p.key = segsK.join(':'); }
+                        if(idMap.has(segsS[0])){ segsS[0] = idMap.get(segsS[0]); p.sourceId = segsS.join(':'); }
+                    }
+                });
+            }
+        }
+        if(node.type === 'generator' && Array.isArray(node.inputs)){
+            node.inputs = node.inputs.map(id => idMap.get(id) || id);
+        }
     });
     const newConnections = srcConnections
         .map(c => ({...c, id:uid('c'), from:idMap.get(c.from), to:idMap.get(c.to)}))
@@ -14780,6 +15123,7 @@ async function importWorkflowFile(file){
 }
 function startNodeDrag(e, node){
     if(e.button !== 0) return;
+    cancelViewportAnimation();
     if(startKnifeDrag(e)) return;
     e.preventDefault();
     e.stopPropagation();
@@ -14818,7 +15162,21 @@ function startNodeDrag(e, node){
     window.onmousemove = onNodeDrag;
     window.onmouseup = endDrag;
 }
+let nodeDragFrame = 0;
+let pendingNodeDrag = null;
 function onNodeDrag(e){
+    pendingNodeDrag = {clientX:e.clientX, clientY:e.clientY};
+    if(nodeDragFrame) return;
+    nodeDragFrame = requestAnimationFrame(flushNodeDrag);
+}
+function flushNodeDrag(){
+    cancelAnimationFrame(nodeDragFrame);
+    nodeDragFrame = 0;
+    const event = pendingNodeDrag;
+    pendingNodeDrag = null;
+    if(event) applyNodeDrag(event);
+}
+function applyNodeDrag(e){
     if(!dragNode) return;
     const dx = (e.clientX - dragNode.sx) / viewport.scale;
     const dy = (e.clientY - dragNode.sy) / viewport.scale;
@@ -15077,6 +15435,7 @@ function sanitizeConnections(){
     return normalized || connections.length !== before;
 }
 function endDrag(event=null){
+    flushNodeDrag();
     const hadContentDrag = Boolean(dragNode || resizeNode || llmPaneDrag || knifeChanged || tempLink);
     const hadViewportDrag = Boolean(dragBoard || minimapDrag);
     if(dragNode){
@@ -15614,6 +15973,7 @@ board.addEventListener('click', e => {
     else exitZoomPreview(screenToWorld(e.clientX, e.clientY));
 }, true);
 function startBoardPan(e, opts={}){
+    cancelViewportAnimation();
     if(!canvas) return false;
     if(isEditableTarget(e.target) || e.target.closest?.('#createMenu, #linkCreateMenu, #nodeInputMenu, #nodeOutputMenu, #imageNodeMenu, .minimap')) return false;
     e.preventDefault();
@@ -15626,7 +15986,7 @@ function startBoardPan(e, opts={}){
         if(Math.hypot(e2.clientX - dragBoard.sx, e2.clientY - dragBoard.sy) > 4) dragBoard.moved = true;
         viewport.x = dragBoard.ox + e2.clientX - dragBoard.sx;
         viewport.y = dragBoard.oy + e2.clientY - dragBoard.sy;
-        applyViewport();
+        scheduleViewportWheelRender();
     };
     window.onmouseup = e2 => {
         const shouldClearSelection = dragBoard?.clearSelectionOnClick && !dragBoard.moved && selected.size;
@@ -15641,9 +16001,11 @@ function startBoardPan(e, opts={}){
 
 board.onmousedown = e => {
     if(!canvas) return;
-    if(e.button === 1){
-        startBoardPan(e);
-        return;
+    if(e.button === 1 || isSpaceDown || canvasToolMode === 'pan'){
+        if(!isEditableTarget(e.target) && !e.target.closest?.('button, a, select, [contenteditable="true"]')){
+            startBoardPan(e);
+            return;
+        }
     }
     if(e.button !== 0) return;
     if(startKnifeDrag(e)) return;
@@ -15675,21 +16037,31 @@ board.addEventListener('mousemove', e => {
 });
 board.addEventListener('mouseleave', () => setHoveredConnection(''));
 board.ondblclick = null;
-board.oncontextmenu = e => {
+// 统一右键上下文菜单调度
+function handleCanvasContextMenu(e){
+    if(e.__handledByCanvasMenu) return;
+    e.__handledByCanvasMenu = true;
+    if(isEditableTarget(e.target)) return; // 允许输入框原生复制粘贴
+    if(typeof e.preventDefault === 'function') e.preventDefault();
+    if(typeof e.stopPropagation === 'function') e.stopPropagation();
+
     if(!canvas) return;
-    if((e.ctrlKey || e.metaKey) || isRKeyDown){
-        e.preventDefault();
-        e.stopPropagation();
+    const nodeEl = e.target?.closest?.('.node');
+    if(nodeEl?.dataset?.id){
+        openNodeContextMenu(nodeEl.dataset.id, e.clientX, e.clientY);
         return;
     }
-    if(e.target !== board && e.target !== world && e.target !== nodesEl && e.target !== linksEl) return;
-    e.preventDefault();
-    e.stopPropagation();
+    if(e.target?.closest?.('#createMenu, #linkCreateMenu, #nodeInputMenu, #nodeOutputMenu, #imageNodeMenu, #nodeContextMenu, .zoom-dock, .bottom-dock, .canvas-asset-panel')) return;
     openCreateMenu(e.clientX, e.clientY);
-};
+}
+
+window.addEventListener('contextmenu', handleCanvasContextMenu, false);
+document.addEventListener('contextmenu', handleCanvasContextMenu, false);
+if(board) board.addEventListener('contextmenu', handleCanvasContextMenu, false);
 board.addEventListener('mousedown', e => {
-    if(e.target.closest?.('#createMenu, #linkCreateMenu, #nodeInputMenu, #nodeOutputMenu, #imageNodeMenu')) return;
-    closeCreateMenu();
+    if(e.button !== 0) return;
+    if(e.target.closest?.('#createMenu, #linkCreateMenu, #nodeInputMenu, #nodeOutputMenu, #imageNodeMenu, #nodeContextMenu, .zoom-dock, .bottom-dock')) return;
+    closeAllMenus();
 });
 createMenu.addEventListener('keydown', event => {
     const items = [...createMenu.querySelectorAll('.menu-btn')].filter(button => getComputedStyle(button).display !== 'none');
@@ -15705,23 +16077,71 @@ createMenu.addEventListener('keydown', event => {
     } else if(event.key === 'Escape'){
         event.preventDefault();
         const restore = createMenu.classList.contains('output-only') ? document.getElementById('toolbarOutputBtn') : null;
-        closeCreateMenu();
+        closeAllMenus();
         restore?.focus({preventScroll:true});
     }
 });
-board.onwheel = e => {
+function isScrollableContent(el){
+    if(!el || el === board || el === world || el === nodesEl || el === linksEl) return false;
+    if(el.tagName === 'TEXTAREA' && document.activeElement === el){
+        return el.scrollHeight > el.clientHeight;
+    }
+    return false;
+}
+
+function handleCanvasWheel(e){
+    if(e.__handledByCanvasWheel) return;
+    e.__handledByCanvasWheel = true;
     if(!canvas) return;
-    e.preventDefault();
-    const before = screenToWorld(e.clientX, e.clientY);
-    const normalizedDelta = Math.max(-120, Math.min(120, Number(e.deltaY) || 0));
-    const nextScale = safeViewportScale(viewport.scale * Math.exp(-normalizedDelta * .0015));
-    if(nextScale === viewport.scale) return;
+    if(isScrollableContent(e.target)) return;
+    if(e.target?.closest?.('[data-canvas-no-zoom], .create-menu, .node-context-menu, .zoom-dock, .bottom-dock, .minimap-container, #canvasAssetPanel, #workflowTransferModal, #logModal, #assetManagerModal, #imageEditModal, #outputLightbox')) return;
+
+    cancelViewportAnimation();
+    if(typeof e.preventDefault === 'function') e.preventDefault();
+    if(typeof e.stopPropagation === 'function') e.stopPropagation();
+
+    let dx = e.deltaX || 0;
+    let dy = e.deltaY || 0;
+    if(e.deltaMode === 1){ dx *= 16; dy *= 16; }
+    else if(e.deltaMode === 2){ dx *= 80; dy *= 80; }
+
+    // Shift + 滚轮 或 纯水平滑动：横向平移
+    if(e.shiftKey && dy !== 0){
+        viewport.x -= dy;
+        scheduleViewportWheelRender();
+        return;
+    }
+    if(!e.ctrlKey && !e.metaKey && Math.abs(dx) > Math.abs(dy) * 2.5 && Math.abs(dx) > 3){
+        viewport.x -= dx;
+        scheduleViewportWheelRender();
+        return;
+    }
+
+    // 默认鼠标滚轮及捏合手势：以光标为中心平滑连续缩放 (Zoom)
+    const rect = board ? board.getBoundingClientRect() : {left: 0, top: 0, width: window.innerWidth, height: window.innerHeight};
+    const clientX = e.clientX != null ? e.clientX : rect.width / 2;
+    const clientY = e.clientY != null ? e.clientY : rect.height / 2;
+    const mouseX = clientX - rect.left;
+    const mouseY = clientY - rect.top;
+    const worldBefore = screenToWorld(clientX, clientY);
+
+    // 平滑连续阻尼缩放：单次事件根据实际位移连续变化，彻底杜绝突跳最大/最小
+    const clampedDy = Math.max(-60, Math.min(60, dy));
+    const zoomFactor = Math.pow(1.12, -clampedDy / 60);
+
+    const nextScale = safeViewportScale(viewport.scale * zoomFactor);
+    if(Math.abs(nextScale - viewport.scale) < 0.0001) return;
+
     viewport.scale = nextScale;
-    const rect = board.getBoundingClientRect();
-    viewport.x = e.clientX - rect.left - before.x * viewport.scale;
-    viewport.y = e.clientY - rect.top - before.y * viewport.scale;
+    viewport.x = mouseX - worldBefore.x * viewport.scale;
+    viewport.y = mouseY - worldBefore.y * viewport.scale;
+
     scheduleViewportWheelRender();
-};
+}
+
+window.addEventListener('wheel', handleCanvasWheel, { passive: false });
+document.addEventListener('wheel', handleCanvasWheel, { passive: false });
+if(board) board.addEventListener('wheel', handleCanvasWheel, { passive: false });
 board.addEventListener('dragover', e => {
     if(e.target.closest?.('.image-node')){
         dropOverlay.classList.remove('active');
@@ -15842,7 +16262,67 @@ window.addEventListener('keydown', e => {
     if((e.ctrlKey || e.metaKey) && key === 'z') {
         const tag = document.activeElement?.tagName;
         if(tag === 'INPUT' || tag === 'TEXTAREA' || document.activeElement?.isContentEditable) return;
-        e.preventDefault(); performUndo();
+        e.preventDefault();
+        if(e.shiftKey) performRedo();
+        else performUndo();
+        return;
+    }
+    if((e.ctrlKey || e.metaKey) && key === 'y') {
+        const tag = document.activeElement?.tagName;
+        if(tag === 'INPUT' || tag === 'TEXTAREA' || document.activeElement?.isContentEditable) return;
+        e.preventDefault();
+        performRedo();
+        return;
+    }
+    // 缩放快捷键：Ctrl/Cmd + [+] / [-] / [0]
+    if((e.ctrlKey || e.metaKey) && (e.key === '=' || e.key === '+')) {
+        const tag = document.activeElement?.tagName;
+        if(tag === 'INPUT' || tag === 'TEXTAREA' || document.activeElement?.isContentEditable) return;
+        e.preventDefault();
+        zoomStep(1);
+        return;
+    }
+    if((e.ctrlKey || e.metaKey) && (e.key === '-' || e.key === '_')) {
+        const tag = document.activeElement?.tagName;
+        if(tag === 'INPUT' || tag === 'TEXTAREA' || document.activeElement?.isContentEditable) return;
+        e.preventDefault();
+        zoomStep(-1);
+        return;
+    }
+    if((e.ctrlKey || e.metaKey) && e.key === '0') {
+        const tag = document.activeElement?.tagName;
+        if(tag === 'INPUT' || tag === 'TEXTAREA' || document.activeElement?.isContentEditable) return;
+        e.preventDefault();
+        resetZoomTo100();
+        return;
+    }
+    // 自适应全部节点：F 键 或 Shift + 1
+    if((!e.ctrlKey && !e.metaKey && !e.altKey && key === 'f') || (e.shiftKey && e.key === '!')) {
+        const tag = document.activeElement?.tagName;
+        if(tag === 'INPUT' || tag === 'TEXTAREA' || document.activeElement?.isContentEditable) return;
+        e.preventDefault();
+        fitAllNodesViewportSmooth(true);
+        return;
+    }
+    // 模式切换快捷键：V = 选择模式，H = 抓手平移模式
+    if(!e.ctrlKey && !e.metaKey && !e.altKey && key === 'v') {
+        const tag = document.activeElement?.tagName;
+        if(tag === 'INPUT' || tag === 'TEXTAREA' || document.activeElement?.isContentEditable) return;
+        setCanvasTool('select');
+        return;
+    }
+    if(!e.ctrlKey && !e.metaKey && !e.altKey && key === 'h') {
+        const tag = document.activeElement?.tagName;
+        if(tag === 'INPUT' || tag === 'TEXTAREA' || document.activeElement?.isContentEditable) return;
+        setCanvasTool('pan');
+        return;
+    }
+    // 空格键临时平移抓手
+    if(e.code === 'Space' && !isSpaceDown) {
+        const tag = document.activeElement?.tagName;
+        if(tag === 'INPUT' || tag === 'TEXTAREA' || document.activeElement?.isContentEditable) return;
+        isSpaceDown = true;
+        document.body.classList.add('canvas-tool-pan');
     }
     if(e.key === 'Delete' || e.key === 'Backspace') {
         const tag = document.activeElement?.tagName;
@@ -15853,6 +16333,10 @@ window.addEventListener('keydown', e => {
     }
 });
 window.addEventListener('keyup', e => {
+    if(e.code === 'Space') {
+        isSpaceDown = false;
+        if(canvasToolMode !== 'pan') document.body.classList.remove('canvas-tool-pan');
+    }
     if(String(e.key || '').toLowerCase() === 'r') isRKeyDown = false;
     if(e.key === 'Shift') setKnifeMode(false);
 });
@@ -15917,6 +16401,7 @@ window.onload = async () => {
     document.title = tr('canvas.title');
     initOutputCompareEvents();
     initOutputPreviewZoomEvents();
+    initMinimapAndZoomControls();
     applyViewport();
     await loadConfig();
     pruneMissingComfyWorkflows();
@@ -15928,3 +16413,13 @@ window.onload = async () => {
         window.location.replace(canvasListUrlForProject(rememberedCanvasListProject()));
     }
 };
+
+window.setCanvasTool = setCanvasTool;
+window.toggleMinimap = toggleMinimap;
+window.fitAllNodesViewportSmooth = fitAllNodesViewportSmooth;
+window.zoomStep = zoomStep;
+window.onZoomSliderInput = onZoomSliderInput;
+window.resetZoomTo100 = resetZoomTo100;
+window.performUndo = performUndo;
+window.performRedo = performRedo;
+window.deleteSelectedNodes = deleteSelectedNodes;

@@ -202,9 +202,32 @@ h3 { font-size:12px; line-height:1.2; font-weight:950; }
 .category-dot { width:8px; height:8px; border-radius:999px; background:var(--cat-color, var(--insp-blue)); }
 .category-name { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px; font-weight:900; }
 .category-count { font-size:10px; color:var(--insp-faint); font-weight:950; }
+.category-actions {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+.category-btn {
+    width:24px;
+    height:24px;
+    border:0;
+    border-radius:6px;
+    background:transparent;
+    color:var(--insp-faint);
+    display:grid;
+    place-items:center;
+    opacity:0;
+    padding:0;
+    min-height:0;
+    transition: opacity 0.15s, color 0.15s, background 0.15s;
+}
+.category-btn:hover { background:var(--insp-bg); color:var(--insp-text); box-shadow:none; transform:none; }
+.category-btn.category-delete:hover { background:#fee2e2; color:#ef4444; }
+.category-item:hover .category-btn { opacity:1; }
+.category-btn svg { width:13px; height:13px; }
 .category-edit {
-    width:26px;
-    height:26px;
+    width:24px;
+    height:24px;
     border:0;
     border-radius:6px;
     background:transparent;
@@ -217,7 +240,7 @@ h3 { font-size:12px; line-height:1.2; font-weight:950; }
 }
 .category-edit:hover { background:var(--insp-bg); color:var(--insp-text); box-shadow:none; transform:none; }
 .category-item:hover .category-edit { opacity:1; }
-.category-edit svg { width:14px; height:14px; }
+.category-edit svg { width:13px; height:13px; }
 
 .gallery-panel { min-height:68vh; padding:16px; }
 .gallery-grid {
@@ -274,6 +297,11 @@ h3 { font-size:12px; line-height:1.2; font-weight:950; }
     color:#0f172a;
     display:grid;
     place-items:center;
+    transition:background .15s, color .15s, transform .15s;
+}
+.card-overlay button.btn-delete-card:hover {
+    background:#ef4444;
+    color:#fff;
 }
 .card-overlay svg { width:15px; height:15px; }
 .card-body { padding:12px; display:grid; gap:8px; }

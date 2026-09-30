@@ -29,7 +29,7 @@ class CanvasInteractionRuleTests(unittest.TestCase):
         self.assertIn("p.setAttribute('tabindex', '0')", CANVAS_JS)
 
     def test_wheel_zoom_is_clamped_and_does_not_rebuild_links(self):
-        wheel = CANVAS_JS.split("board.onwheel = e => {", 1)[1].split("board.addEventListener('dragover'", 1)[0]
+        wheel = CANVAS_JS.split("function handleCanvasWheel(e){", 1)[1].split("window.addEventListener('wheel'", 1)[0]
         self.assertIn("safeViewportScale", wheel)
         self.assertIn("scheduleViewportWheelRender", wheel)
         self.assertNotIn("renderLinks()", wheel)

@@ -716,7 +716,7 @@ function canvasAssetsForCategory(categoryId=activeCanvasAssetCategory){
 function canvasAssetOpenUrl(canvas){
     if(!canvas?.id) return '';
     const id = encodeURIComponent(canvas.id);
-    return canvas.kind === 'smart' ? `/static/smart-canvas.html?id=${id}&v=2026.07.16.2` : `/static/canvas.html?id=${id}&v=2026.07.16.2`;
+    return canvas.kind === 'smart' ? `/static/smart-canvas.html?id=${id}&v=2026.07.16.3` : `/static/canvas.html?id=${id}&v=2026.07.16.3`;
 }
 function activeCanvasAssetCanvas(){
     if(!activeCanvasAssetCanvasId) return null;

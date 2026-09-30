@@ -46,6 +46,20 @@ PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
+if sys.platform == "darwin":
+    _extra_mac_paths = [
+        "/opt/homebrew/bin",
+        "/opt/homebrew/sbin",
+        "/usr/local/bin",
+        os.path.expanduser("~/.local/bin"),
+        os.path.expanduser("~/.cargo/bin"),
+    ]
+    _cur_paths = os.environ.get("PATH", "").split(":")
+    for _p in _extra_mac_paths:
+        if os.path.isdir(_p) and _p not in _cur_paths:
+            _cur_paths.insert(0, _p)
+    os.environ["PATH"] = ":".join(_cur_paths)
+
 from knowledge_base import router as knowledge_base_router, start_runtime as start_knowledge_runtime, stop_runtime as stop_knowledge_runtime
 from knowledge_base.answering import (build_knowledge_prompt, canonicalize_jinni_knowledge,
                                       knowledge_scope_ids, normalize_jinni_knowledge_config,
@@ -110,6 +124,16 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.middleware("http")
+async def add_no_cache_headers(request: Request, call_next):
+    response = await call_next(request)
+    path = request.url.path
+    if path.startswith("/static") or path == "/" or path.endswith(".html") or path.endswith(".js") or path.endswith(".css"):
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+    return response
 
 # --- WebSocket 状态管理器 ---
 class ConnectionManager:
@@ -218,7 +242,8 @@ async def startup_event():
     global GLOBAL_LOOP
     GLOBAL_LOOP = asyncio.get_running_loop()
     start_knowledge_runtime()
-    sync_static_html_versions()
+    if os.environ.get("JINNI_DESKTOP_BUNDLE") != "1":
+        sync_static_html_versions()
     # 启动时整理资产库：给所有图片分组（含默认角色/场景）建好文件夹，并把根目录里的旧素材归整进去。
     try:
         await asyncio.to_thread(migrate_asset_library_into_dirs)
@@ -264,15 +289,45 @@ STATIC_RUNNINGHUB_DIR = os.path.join(STATIC_DIR, "runninghub")
 STATIC_RUNNINGHUB_THUMBNAIL_DIR = os.path.join(STATIC_RUNNINGHUB_DIR, "thumbnails")
 STATIC_RUNNINGHUB_API_PROVIDERS_FILE = os.path.join(STATIC_RUNNINGHUB_DIR, "api_providers.json")
 STATIC_RUNNINGHUB_MODEL_REGISTRY_FILE = os.path.join(STATIC_RUNNINGHUB_DIR, "models_registry.json")
-OUTPUT_DIR = os.path.join(BASE_DIR, "output")
-ASSETS_DIR = os.path.join(BASE_DIR, "assets")
+
+# 智能存储路径路由：脱离源码独立运行（如处于 Contents/Resources/app）时，自动持久化至 macOS Application Support 目录
+def _resolve_jinni_storage_paths():
+    custom_data = os.environ.get("JINNI_DATA_DIR")
+    custom_assets = os.environ.get("JINNI_ASSETS_DIR")
+    if custom_data and custom_assets:
+        d_dir = os.path.abspath(custom_data)
+        a_dir = os.path.abspath(custom_assets)
+    elif "Contents/Resources/app" in os.path.abspath(__file__):
+        app_support = os.path.expanduser("~/Library/Application Support/Jinni Canvas")
+        d_dir = os.path.join(app_support, "data")
+        a_dir = os.path.join(app_support, "assets")
+        # 首次启动若新数据目录缺少基础模板，从内置 app 拷贝一份模板
+        initial_data = os.path.join(BASE_DIR, "data")
+        if os.path.isdir(initial_data) and not os.path.exists(os.path.join(d_dir, "api_providers.json")):
+            try:
+                os.makedirs(d_dir, exist_ok=True)
+                for item in os.listdir(initial_data):
+                    s_path = os.path.join(initial_data, item)
+                    d_path = os.path.join(d_dir, item)
+                    if not os.path.exists(d_path) and os.path.isfile(s_path):
+                        shutil.copy2(s_path, d_path)
+            except Exception as e:
+                print(f"初始化用户数据模板异常: {e}")
+    else:
+        d_dir = os.path.join(BASE_DIR, "data")
+        a_dir = os.path.join(BASE_DIR, "assets")
+    os.makedirs(d_dir, exist_ok=True)
+    os.makedirs(a_dir, exist_ok=True)
+    return d_dir, a_dir
+
+DATA_DIR, ASSETS_DIR = _resolve_jinni_storage_paths()
+OUTPUT_DIR = os.path.join(ASSETS_DIR, "output")
 OUTPUT_INPUT_DIR = os.path.join(ASSETS_DIR, "input")
 OUTPUT_OUTPUT_DIR = os.path.join(ASSETS_DIR, "output")
 ASSET_LIBRARY_DIR = os.path.join(ASSETS_DIR, "library")
 LOCAL_UPLOAD_DIR = os.path.join(ASSETS_DIR, "uploads")
-HISTORY_FILE = os.path.join(BASE_DIR, "history.json")
-API_ENV_FILE = os.path.join(BASE_DIR, "API", ".env")
-DATA_DIR = os.path.join(BASE_DIR, "data")
+HISTORY_FILE = os.path.join(DATA_DIR, "history.json")
+API_ENV_FILE = os.path.join(DATA_DIR, "api.env")
 CONVERSATION_DIR = os.path.join(DATA_DIR, "conversations")
 JINNI_DIR = os.path.join(DATA_DIR, "jinnis")
 CHAT_RUN_DIR = os.path.join(DATA_DIR, "chat_runs")
@@ -286,7 +341,7 @@ API_PROVIDERS_FILE = os.path.join(DATA_DIR, "api_providers.json")
 USAGE_PRICING_FILE = os.path.join(DATA_DIR, "usage_pricing.json")
 RUNNINGHUB_WORKFLOW_STORE_FILE = os.path.join(DATA_DIR, "runninghub_workflows.json")
 SHARED_FOLDERS_FILE = os.path.join(DATA_DIR, "shared_folders.json")
-GLOBAL_CONFIG_FILE = os.path.join(BASE_DIR, "global_config.json")
+GLOBAL_CONFIG_FILE = os.path.join(DATA_DIR, "global_config.json")
 CANVAS_TRASH_RETENTION_MS = 30 * 24 * 60 * 60 * 1000
 LOCAL_IMAGE_IMPORT_MAX_BYTES = int(os.getenv("LOCAL_IMAGE_IMPORT_MAX_BYTES", str(50 * 1024 * 1024)))
 LOCAL_IMAGE_IMPORT_EXTS = {".png", ".jpg", ".jpeg", ".webp", ".gif"}
@@ -763,123 +818,27 @@ def bearer_auth_value(value):
     return f"Bearer {token}" if token else ""
 
 def default_api_providers():
-    # 独立入口平台强制保留，其他平台均可自定义增删
-    return [
-        {
-            "id": "modelscope",
-            "name": "ModelScope",
-            "base_url": MODELSCOPE_CHAT_BASE_URL,
-            "protocol": "openai",
-            "image_request_mode": "openai",
-            "image_generation_endpoint": "",
-            "image_edit_endpoint": "",
-            # 内置入口仅作为可选模板保留；配置 API Key 后由设置页启用。
-            "enabled": False,
-            "primary": False,
-            "image_models": MODELSCOPE_DEFAULT_IMAGE_MODELS,
-            "chat_models": MODELSCOPE_CHAT_MODELS,
-            "video_models": [],
-            "ms_loras": MODELSCOPE_DEFAULT_LORAS,
-            "ms_defaults_version": MODELSCOPE_DEFAULTS_VERSION,
-        },
-        {
-            "id": "runninghub",
-            "name": "RunningHub",
-            "base_url": RUNNINGHUB_DEFAULT_BASE_URL,
-            "protocol": "runninghub",
-            "image_request_mode": "openai",
-            "image_generation_endpoint": "",
-            "image_edit_endpoint": "",
-            # RunningHub 不应在未配置 Key 时进入模型选择器。
-            "enabled": False,
-            "primary": False,
-            "image_models": [],
-            "chat_models": [],
-            "video_models": [],
-            "ms_loras": [],
-            "ms_defaults_version": 0,
-            "rh_apps": RUNNINGHUB_DEFAULT_APPS,
-            "rh_workflows": RUNNINGHUB_DEFAULT_WORKFLOWS,
-        },
-        {
-            "id": "volcengine",
-            "name": "火山引擎",
-            "base_url": VOLCENGINE_DEFAULT_BASE_URL,
-            "protocol": "volcengine",
-            "image_request_mode": "openai",
-            "image_generation_endpoint": "",
-            "image_edit_endpoint": "",
-            "enabled": True,
-            "primary": False,
-            "image_models": [],
-            "chat_models": [],
-            "video_models": [],
-            "ms_loras": [],
-            "ms_defaults_version": 0,
-            "volcengine_project_name": VOLCENGINE_DEFAULT_PROJECT_NAME,
-            "volcengine_region": VOLCENGINE_DEFAULT_REGION,
-        },
-    ]
+    return [{
+        "id": "custom-api",
+        "name": "自定义 API",
+        "base_url": "https://api.openai.com/v1",
+        "protocol": "openai",
+        "image_request_mode": "openai",
+        "image_generation_endpoint": "",
+        "image_edit_endpoint": "",
+        "enabled": True,
+        "primary": True,
+        "image_models": [],
+        "chat_models": [],
+        "video_models": [],
+        "ms_loras": [],
+        "ms_defaults_version": 0,
+    }]
 
 def merge_default_api_providers(providers):
+    if not providers:
+        return default_api_providers()
     merged = [dict(item) for item in providers]
-    # 强制保留独立入口平台（不再强制 comfly）
-    ms_default = next((d for d in default_api_providers() if d["id"] == "modelscope"), None)
-    if ms_default:
-        current = next((item for item in merged if item.get("id") == "modelscope"), None)
-        if not current:
-            merged.append(ms_default)
-        else:
-            if not current.get("base_url"):
-                current["base_url"] = ms_default["base_url"]
-            seeded_version = int(current.get("ms_defaults_version") or 0)
-            if seeded_version < MODELSCOPE_DEFAULTS_VERSION:
-                image_models = model_list_from_values([*MODELSCOPE_DEFAULT_IMAGE_MODELS, *(current.get("image_models") or [])])
-                chat_models = model_list_from_values([*MODELSCOPE_DEFAULT_CHAT_MODELS, *(current.get("chat_models") or [])])
-                loras = normalize_ms_loras([*MODELSCOPE_DEFAULT_LORAS, *(current.get("ms_loras") or [])])
-                current["image_models"] = image_models
-                current["chat_models"] = chat_models
-                current["ms_loras"] = loras
-                current["ms_defaults_version"] = MODELSCOPE_DEFAULTS_VERSION
-    rh_default = load_static_runninghub_provider() or next((d for d in default_api_providers() if d["id"] == "runninghub"), None)
-    if rh_default:
-        current = next((item for item in merged if item.get("id") == "runninghub"), None)
-        if not current:
-            merged.append(rh_default)
-        else:
-            if not current.get("base_url"):
-                current["base_url"] = rh_default["base_url"]
-            if not current.get("protocol") or current.get("protocol") == "openai":
-                current["protocol"] = "runninghub"
-            current["image_models"] = model_list_from_values(current.get("image_models") or [])
-            current["chat_models"] = model_list_from_values(current.get("chat_models") or [])
-            current["video_models"] = model_list_from_values(current.get("video_models") or [])
-            current["rh_apps"] = merge_runninghub_system_entries(rh_default.get("rh_apps") or [], current.get("rh_apps") or [], "app")
-            current["rh_workflows"] = merge_runninghub_system_entries(rh_default.get("rh_workflows") or [], current.get("rh_workflows") or [], "workflow")
-    volc_default = next((d for d in default_api_providers() if d["id"] == "volcengine"), None)
-    if volc_default:
-        current = next((item for item in merged if item.get("id") == "volcengine"), None)
-        legacy = next((item for item in merged if item.get("id") != "volcengine" and str(item.get("protocol") or "").lower() == "volcengine"), None)
-        if not current:
-            if legacy:
-                legacy_image_models = model_list_from_values(legacy.get("image_models") or [])
-                legacy_video_models = model_list_from_values(legacy.get("video_models") or [])
-                current = {
-                    **volc_default,
-                    "base_url": legacy.get("base_url") or volc_default["base_url"],
-                    "image_models": legacy_image_models or model_list_from_values(volc_default.get("image_models") or []),
-                    "chat_models": model_list_from_values(legacy.get("chat_models") or []),
-                    "video_models": legacy_video_models,
-                }
-                merged.append(current)
-            else:
-                merged.append(volc_default)
-        else:
-            if not current.get("base_url"):
-                current["base_url"] = volc_default["base_url"]
-            current["protocol"] = "volcengine"
-            current["volcengine_project_name"] = str(current.get("volcengine_project_name") or VOLCENGINE_DEFAULT_PROJECT_NAME).strip() or VOLCENGINE_DEFAULT_PROJECT_NAME
-            current["volcengine_region"] = str(current.get("volcengine_region") or VOLCENGINE_DEFAULT_REGION).strip() or VOLCENGINE_DEFAULT_REGION
     # 即梦 CLI 不再是强制保留的默认平台：仅在用户已添加了即梦协议的平台时，规范化其默认模型/地址。
     for current in merged:
         if not is_jimeng_provider(current):
@@ -4483,15 +4442,12 @@ def project_record(p):
     }
 
 def ensure_default_project():
-    """保证存在一个“默认项目”，并把没有归属项目的画布迁移进去（一次性、幂等）。"""
     projects = load_projects()
-    changed = False
-    if not any(p.get("id") == DEFAULT_PROJECT_ID for p in projects):
-        ts = now_ms()
-        projects.insert(0, {"id": DEFAULT_PROJECT_ID, "name": "默认项目", "order": 0, "created_at": ts, "updated_at": ts})
-        changed = True
-    if changed:
-        save_projects(projects)
+    if projects:
+        return projects
+    ts = now_ms()
+    projects = [{"id": DEFAULT_PROJECT_ID, "name": "我的画板", "order": 0, "created_at": ts, "updated_at": ts}]
+    save_projects(projects)
     return projects
 
 def new_project(name="新项目"):
@@ -5616,7 +5572,8 @@ def codex_decode_output(stdout, stderr):
 async def run_codex_cli(prompt, model="", image_paths=None, timeout=None, output_last_message=True):
     exe = codex_cli_executable()
     if not exe:
-        raise HTTPException(status_code=400, detail="未找到 OpenAI Codex CLI。请先运行 CLI/windows/openai/install_openai_codex_cli.bat，并完成 codex 登录。")
+        install_script = "CLI/macos/openai/install_openai_codex_cli.command" if sys.platform == "darwin" else ("CLI/windows/openai/install_openai_codex_cli.bat" if os.name == "nt" else "CLI/linux/openai/install_openai_codex_cli.sh")
+        raise HTTPException(status_code=400, detail=f"未找到 OpenAI Codex CLI。请先运行 {install_script}，并完成 codex 登录。")
     image_paths = [str(path) for path in (image_paths or []) if path and os.path.isfile(str(path))]
     last_path = ""
     args = [
@@ -7467,8 +7424,8 @@ def normalize_inspiration_space(data):
     categories = data.get("categories") if isinstance(data.get("categories"), list) else []
     seen = set()
     clean_categories = []
-    if not any(isinstance(cat, dict) and cat.get("id") == INSPIRATION_UNCATEGORIZED_ID for cat in categories):
-        categories.insert(0, default_inspiration_space()["categories"][0])
+    if not categories and not data.get("items"):
+        categories = default_inspiration_space()["categories"]
     for index, cat in enumerate(categories):
         if not isinstance(cat, dict):
             continue
@@ -7629,7 +7586,16 @@ def copy_inspiration_media(source_url: str, title: str = ""):
 
 def remove_inspiration_media(item):
     try:
-        path = output_file_from_url(item.get("image_url") if isinstance(item, dict) else "")
+        raw_url = item.get("image_url") if isinstance(item, dict) else ""
+        if not raw_url:
+            return
+        path = output_file_from_url(raw_url)
+        if not (path and os.path.isfile(path)):
+            unquoted = urllib.parse.unquote(urllib.parse.urlsplit(str(raw_url)).path)
+            basename = os.path.basename(unquoted)
+            candidate = os.path.join(INSPIRATION_MEDIA_DIR, basename)
+            if os.path.isfile(candidate):
+                path = candidate
         if path and os.path.abspath(path).startswith(os.path.abspath(INSPIRATION_MEDIA_DIR) + os.sep) and os.path.isfile(path):
             os.remove(path)
     except Exception as exc:
@@ -15601,15 +15567,13 @@ async def update_project(project_id: str, payload: ProjectUpdateRequest):
 
 @app.delete("/api/projects/{project_id}")
 async def delete_project(project_id: str):
-    """删除项目：默认项目不可删除；其余项目删除后，其下画布回归默认项目（不删画布）。"""
-    if project_id == DEFAULT_PROJECT_ID:
-        raise HTTPException(status_code=400, detail="默认项目不可删除")
-    projects = ensure_default_project()
+    """删除项目：允许删除任何项目。删除后其下画布自动转移到剩余第一个项目（或无项目）。"""
+    projects = load_projects()
     if not any(p.get("id") == project_id for p in projects):
         raise HTTPException(status_code=404, detail="项目不存在")
     projects = [p for p in projects if p.get("id") != project_id]
     save_projects(projects)
-    # 把该项目下的画布迁回默认项目
+    fallback_id = projects[0]["id"] if projects else ""
     moved = 0
     with CANVAS_LOCK:
         for filename in os.listdir(CANVAS_DIR):
@@ -15622,11 +15586,11 @@ async def delete_project(project_id: str):
             except Exception:
                 continue
             if str(data.get("project") or "") == project_id:
-                data["project"] = DEFAULT_PROJECT_ID
+                data["project"] = fallback_id
                 with open(path, 'w', encoding='utf-8') as f:
                     json.dump(data, f, ensure_ascii=False, indent=2)
                 moved += 1
-    return {"ok": True, "moved": moved}
+    return {"ok": True, "moved": moved, "fallback_project": fallback_id}
 
 @app.get("/api/canvases/trash")
 async def trashed_canvases():
@@ -16067,17 +16031,16 @@ async def update_inspiration_category(category_id: str, payload: InspirationCate
 
 @app.delete("/api/inspiration-space/categories/{category_id}")
 async def delete_inspiration_category(category_id: str):
-    if category_id == INSPIRATION_UNCATEGORIZED_ID:
-        raise HTTPException(status_code=400, detail="未分类不能删除")
     with INSPIRATION_SPACE_LOCK:
         data = load_inspiration_space()
         before = len(data.get("categories", []))
         data["categories"] = [cat for cat in data.get("categories", []) if cat.get("id") != category_id]
         if len(data["categories"]) == before:
             raise HTTPException(status_code=404, detail="分类不存在")
+        fallback_cat = data["categories"][0]["id"] if data["categories"] else ""
         for item in data.get("items", []):
             if item.get("category_id") == category_id:
-                item["category_id"] = INSPIRATION_UNCATEGORIZED_ID
+                item["category_id"] = fallback_cat
                 item["updated_at"] = now_ms()
         data = save_inspiration_space(data)
         return {"space": data}
@@ -19267,5 +19230,5 @@ if __name__ == "__main__":
     # 关闭服务端协议级 WebSocket ping：部分客户端（如 PS UXP 面板）不会自动回 pong，
     # 默认 20s ping/20s 超时会把这些连接每隔一会儿就踢掉造成"频繁断连"。
     # 客户端有自己的应用层心跳 + 断线重连兜底，这里禁用协议 ping 更稳。
-    uvicorn.run(app, host="0.0.0.0", port=3000,
+    uvicorn.run(app, host=os.getenv("JINNI_HOST", "0.0.0.0"), port=int(os.getenv("JINNI_PORT", "3000")),
                 ws_ping_interval=None, ws_ping_timeout=None)

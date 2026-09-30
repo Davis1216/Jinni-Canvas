@@ -6722,6 +6722,7 @@ async function addSmartPreviewToInspiration(){
             const detail = (await res.json()).detail || '保存失败';
             throw new Error(detail === 'Not Found' ? '灵感空间接口未加载，请重启本地服务后再试。' : detail);
         }
+        try { localStorage.setItem('inspiration-space-changed', `${Date.now()}-${Math.random()}`); } catch {}
         toast('已加入灵感空间');
     } catch(err) {
         alert(err.message || '保存失败');
@@ -16060,7 +16061,16 @@ shell.addEventListener('wheel', e => {
     const sx = e.clientX - rect.left;
     const sy = e.clientY - rect.top;
     const before = {x:(sx - viewport.x) / viewport.scale, y:(sy - viewport.y) / viewport.scale};
-    const factor = Math.exp(-e.deltaY * 0.001);
+    let dy = e.deltaY;
+    if(e.deltaMode === 1) dy *= 28;
+    else if(e.deltaMode === 2) dy *= 400;
+    const isPinch = e.ctrlKey || e.metaKey;
+    let factor;
+    if(isPinch && Math.abs(dy) < 50){
+        factor = Math.exp(-dy * 0.012);
+    } else {
+        factor = dy < 0 ? 1.12 : 0.88;
+    }
     viewport.scale = safeScale(viewport.scale * factor);
     viewport.x = sx - before.x * viewport.scale;
     viewport.y = sy - before.y * viewport.scale;

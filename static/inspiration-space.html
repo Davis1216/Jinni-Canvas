@@ -16,10 +16,10 @@
             } catch(e) {}
         })();
     </script>
-    <script src="/static/vendor/js/lucide.js?v=2026.07.4.2.1783154122"></script>
-    <script src="/static/js/theme.js?v=2026.07.4.2.1783154122"></script>
-    <link rel="stylesheet" href="/static/css/theme.css?v=2026.07.4.2.1783154122">
-    <link rel="stylesheet" href="/static/css/inspiration-space.css?v=2026.07.4.2.1784037001">
+    <script src="/static/vendor/js/lucide.js?v=2026.07.4.2.1790691011"></script>
+    <script src="/static/js/theme.js?v=2026.07.4.2.1790691011"></script>
+    <link rel="stylesheet" href="/static/css/theme.css?v=2026.07.4.2.1790691011">
+    <link rel="stylesheet" href="/static/css/inspiration-space.css?v=2026.07.4.2.1790695718">
 </head>
 <body>
     <main class="insp-shell">
@@ -139,6 +139,7 @@
                 </label>
                 <footer class="modal-actions">
                     <button id="deleteCategoryBtn" class="danger-btn" type="button" hidden><i data-lucide="trash-2"></i><span>删除分类</span></button>
+                    <button id="deleteItemFromEditBtn" class="danger-btn" type="button" hidden><i data-lucide="trash-2"></i><span>删除灵感</span></button>
                     <button class="ghost-btn" type="button" data-close-edit>取消</button>
                     <button class="primary-btn" type="submit"><i data-lucide="save"></i><span>保存</span></button>
                 </footer>
@@ -146,7 +147,28 @@
         </section>
     </div>
 
+    <!-- 内置轻量确认弹窗（彻底防止原生 confirm 被环境或 iframe 静默拦截） -->
+    <div id="confirmModal" class="modal" hidden>
+        <div class="modal-backdrop" id="confirmBackdrop"></div>
+        <section class="modal-panel" style="width:min(420px, 94vw); z-index:10;" role="dialog" aria-modal="true">
+            <header class="modal-head">
+                <div>
+                    <p>CONFIRM</p>
+                    <h2 id="confirmTitle" style="font-size:16px;font-weight:900">确认操作</h2>
+                </div>
+                <button type="button" class="icon-btn" id="confirmCloseXBtn"><i data-lucide="x"></i></button>
+            </header>
+            <div style="padding:20px;color:var(--insp-muted);font-size:13px;line-height:1.6" id="confirmMessage">
+                确定要执行此操作吗？
+            </div>
+            <footer class="modal-actions" style="padding:14px 18px;display:flex;justify-content:flex-end;gap:10px;border-top:1px solid var(--insp-line)">
+                <button id="confirmCancelBtn" class="ghost-btn" type="button">取消</button>
+                <button id="confirmOkBtn" class="danger-btn" type="button"><i data-lucide="trash-2"></i><span>确认删除</span></button>
+            </footer>
+        </section>
+    </div>
+
     <div id="toast" class="toast" hidden></div>
-    <script src="/static/js/inspiration-space.js?v=2026.07.4.2.1784036994"></script>
+    <script src="/static/js/inspiration-space.js?v=2026.07.4.2.1790747557"></script>
 </body>
 </html>

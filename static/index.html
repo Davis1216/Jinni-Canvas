@@ -19,20 +19,15 @@
                     document.documentElement.classList.add('studio-theme-dark');
                     document.documentElement.classList.add('theme-dark');
                 }
-                if(localStorage.getItem('studio_local_tools_visible') !== '1') {
-                    document.documentElement.classList.add('local-tools-hidden');
-                }
                 document.documentElement.classList.add('studio-route-booting');
-            } catch(e) {
-                document.documentElement.classList.add('local-tools-hidden');
-            }
+            } catch(e) {}
         })();
     </script>
-    <script src="/static/vendor/js/tailwindcss-cdn.js?v=2026.07.4.2.1783154122"></script>
-    <script src="/static/js/theme.js?v=2026.07.4.2.1783154122"></script>
-    <script src="/static/js/i18n.js?v=2026.07.4.2.1784104411"></script>
+    <script src="/static/vendor/js/tailwindcss-cdn.js?v=2026.07.4.2.1790691011"></script>
+    <script src="/static/js/theme.js?v=2026.07.4.2.1790691011"></script>
+    <script src="/static/js/i18n.js?v=2026.07.4.2.1790691011"></script>
     <style>
-        @import url('/static/vendor/css/fonts.css?v=2026.07.4.2.1783154122');
+        @import url('/static/vendor/css/fonts.css?v=2026.07.4.2.1790691011');
 
         /* 本地 Tailwind 工具类兜底：CDN 慢/未就绪时也能立刻给图标尺寸，避免首屏左侧栏空白 */
         .w-1\.5 { width: 0.375rem; }
@@ -347,12 +342,6 @@
             pointer-events: none;
         }
 
-        html.local-tools-hidden #local-nav-toggle,
-        html.local-tools-hidden #local-nav-group,
-        html.local-tools-hidden #local-nav-separator {
-            display: none !important;
-        }
-
         .sidebar nav {
             width: 100%;
             min-height: 0;
@@ -414,16 +403,15 @@
             height: 100%;
             border: none;
             opacity: 0;
-            transform: scale(1.02);
-            filter: blur(4px);
-            transition: all 0.5s var(--fluid-ease);
+            /* WebKit 仍可能将滚轮和右键投递到透明 iframe，隐藏非活动页面的命中区域。 */
+            visibility: hidden;
+            transition: opacity 0.25s ease;
             pointer-events: none;
         }
 
         iframe.active {
             opacity: 1;
-            transform: scale(1);
-            filter: blur(0);
+            visibility: visible;
             pointer-events: auto;
         }
 
@@ -1374,73 +1362,14 @@
             </button>
 
             <nav>
-                <button class="nav-fold-toggle" id="local-nav-toggle" type="button" onclick="toggleLocalNav()" aria-expanded="true" title="折叠本地功能">
-                    <svg class="nav-fold-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <polyline points="6 9 12 15 18 9"></polyline>
-                    </svg>
-                    <span class="nav-text" data-i18n="nav.localTools">本地功能</span>
-                </button>
-
-                <div class="nav-fold-group" id="local-nav-group">
-                    <div class="nav-item active" onclick="switchUI(this, 'zimage')">
-                        <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.587-1.587a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
-                        </svg>
-                        <span class="nav-text" data-i18n="nav.textToImage">文生图</span>
-                    </div>
-                    <div class="nav-item" onclick="switchUI(this, 'enhance')">
-                        <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path d="M13 10V3L4 14h7v7l9-11h-7z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
-                        </svg>
-                        <span class="nav-text" data-i18n="nav.enhance">细节增强</span>
-                    </div>
-                    <div class="nav-item" onclick="switchUI(this, 'klein')">
-                        <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
-                        </svg>
-                        <span class="nav-text" data-i18n="nav.imageEdit">图片编辑</span>
-                    </div>
-                    <div class="nav-item" onclick="switchUI(this, 'angle')">
-                        <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
-                            <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
-                            <line x1="12" y1="22.08" x2="12" y2="12"></line>
-                        </svg>
-                        <span class="nav-text" data-i18n="nav.angle">角度控制</span>
-                    </div>
-                </div>
-
-                <!-- 分隔线 -->
-                <div id="local-nav-separator" style="width:32px;height:1px;background:var(--border);margin:8px auto;transition:background 0.3s;"></div>
-
-                <div class="nav-item" onclick="switchUI(this, 'online')">
+                <div class="nav-item active" onclick="switchUI(this, 'canvas')">
                     <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2z"></path>
-                        <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+                        <rect x="3" y="3" width="7" height="7"></rect>
+                        <rect x="14" y="3" width="7" height="7"></rect>
+                        <rect x="14" y="14" width="7" height="7"></rect>
+                        <rect x="3" y="14" width="7" height="7"></rect>
                     </svg>
-                    <span class="nav-text" data-i18n="nav.online">在线生图</span>
-                </div>
-                <div class="nav-item" onclick="switchUI(this, 'gpt-chat')">
-                    <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-                    </svg>
-                    <span class="nav-text" data-i18n="nav.gpt">头脑风暴</span>
-                </div>
-                <div class="nav-item" onclick="switchUI(this, 'knowledge-base')">
-                    <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
-                        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
-                        <path d="M8 7h8M8 11h6"></path>
-                    </svg>
-                    <span class="nav-text" data-i18n="nav.knowledgeBase">知识库</span>
-                </div>
-                <div class="nav-item" onclick="switchUI(this, 'usage-dashboard')">
-                    <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M3 3v18h18"></path>
-                        <path d="M7 14l3-3 3 2 5-7"></path>
-                        <path d="M18 6h-4"></path>
-                    </svg>
-                    <span class="nav-text" data-i18n="nav.usageDashboard">仪表盘</span>
+                    <span class="nav-text" data-i18n="nav.canvas">无限画布</span>
                 </div>
                 <div class="nav-item" onclick="switchUI(this, 'inspiration-space')">
                     <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1450,15 +1379,6 @@
                     </svg>
                     <span class="nav-text" data-i18n="nav.inspirationSpace">灵感空间</span>
                 </div>
-                <div class="nav-item" onclick="switchUI(this, 'canvas')">
-                    <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <rect x="3" y="3" width="7" height="7"></rect>
-                        <rect x="14" y="3" width="7" height="7"></rect>
-                        <rect x="14" y="14" width="7" height="7"></rect>
-                        <rect x="3" y="14" width="7" height="7"></rect>
-                    </svg>
-                    <span class="nav-text" data-i18n="nav.canvas">无限画布</span>
-                </div>
                 <div class="nav-item" onclick="switchUI(this, 'asset-manager')">
                     <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M4 19.5V6.8A2.8 2.8 0 0 1 6.8 4h10.4A2.8 2.8 0 0 1 20 6.8v12.7"></path>
@@ -1467,6 +1387,14 @@
                         <path d="M7 16h6"></path>
                     </svg>
                     <span class="nav-text" data-i18n="nav.assetManager">素材库</span>
+                </div>
+                <div class="nav-item" onclick="switchUI(this, 'usage-dashboard')">
+                    <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M3 3v18h18"></path>
+                        <path d="M7 14l3-3 3 2 5-7"></path>
+                        <path d="M18 6h-4"></path>
+                    </svg>
+                    <span class="nav-text" data-i18n="nav.usageDashboard">仪表盘</span>
                 </div>
             </nav>
 
@@ -1479,77 +1407,23 @@
                     </svg>
                     <span class="side-pill-text" data-i18n="common.apiSettings">API 设置</span>
                 </button>
-                <button class="side-pill settings-fold-toggle" id="settings-fold-toggle" onclick="toggleSidebarSettings()" type="button" title="更多设置" aria-expanded="false">
-                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="12" cy="12" r="3"></circle>
-                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06A1.65 1.65 0 0 0 15 19.4a1.65 1.65 0 0 0-1 .6 1.65 1.65 0 0 0-.36 1.08V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-.6-1 1.65 1.65 0 0 0-1.08-.36H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-.6 1.65 1.65 0 0 0 .36-1.08V3a2 2 0 1 1 4 0v.09A1.65 1.65 0 0 0 15 4.6a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c.22.38.58.69 1 .86.2.08.42.13.65.14H21a2 2 0 1 1 0 4h-.09A1.65 1.65 0 0 0 19.4 15z"></path>
+                <button class="side-pill" onclick="toggleTheme()" id="theme-toggle-btn" type="button" title="切换夜间模式">
+                    <svg id="icon-moon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
                     </svg>
-                    <span class="side-pill-text" data-i18n="common.moreSettings">更多设置</span>
-                    <svg class="settings-fold-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <polyline points="6 9 12 15 18 9"></polyline>
+                    <svg id="icon-sun" style="display:none" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
                     </svg>
+                    <span class="side-pill-text" data-i18n="common.darkMode">黑夜模式</span>
                 </button>
-                <div class="settings-fold-group is-collapsed" id="settings-fold-group">
-                    <button class="side-pill" onclick="toggleLocalToolsVisibility()" id="local-tools-toggle-btn" type="button" title="显示本地功能">
-                        <svg id="icon-local-tools-show" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"></path>
-                            <circle cx="12" cy="12" r="3"></circle>
-                        </svg>
-                        <svg id="icon-local-tools-hide" style="display:none" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M17.94 17.94A10.94 10.94 0 0 1 12 19C5 19 1 12 1 12a20.29 20.29 0 0 1 5.06-5.94"></path>
-                            <path d="M9.9 4.24A10.65 10.65 0 0 1 12 4c7 0 11 8 11 8a20.2 20.2 0 0 1-3.05 4.31"></path>
-                            <path d="M14.12 14.12A3 3 0 0 1 9.88 9.88"></path>
-                            <line x1="1" y1="1" x2="23" y2="23"></line>
-                        </svg>
-                        <span class="side-pill-text" data-i18n="common.showLocalTools">显示本地功能</span>
-                    </button>
-                    <button class="side-pill" onclick="toggleTheme()" id="theme-toggle-btn" type="button" title="切换夜间模式">
-                        <svg id="icon-moon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
-                        </svg>
-                        <svg id="icon-sun" style="display:none" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <circle cx="12" cy="12" r="5"></circle>
-                            <line x1="12" y1="1" x2="12" y2="3"></line>
-                            <line x1="12" y1="21" x2="12" y2="23"></line>
-                            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
-                            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
-                            <line x1="1" y1="12" x2="3" y2="12"></line>
-                            <line x1="21" y1="12" x2="23" y2="12"></line>
-                            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
-                            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
-                        </svg>
-                        <span class="side-pill-text" data-i18n="common.darkMode">黑夜模式</span>
-                    </button>
-                    <button class="side-pill" onclick="toggleLanguage()" id="lang-toggle-btn" type="button" title="Language">
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <circle cx="12" cy="12" r="10"></circle>
-                            <path d="M2 12h20"></path>
-                            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
-                        </svg>
-                        <span class="side-pill-text" data-i18n="common.language">中文</span>
-                    </button>
-                    <button class="side-pill" onclick="toggleMarkdownRendering()" id="markdown-render-toggle-btn" type="button" title="关闭 Markdown 渲染" aria-pressed="true">
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                            <path d="M4 5h16v14H4z"></path><path d="M7 15V9l2.5 3L12 9v6"></path><path d="m14 12 2 2 2-2"></path>
-                        </svg>
-                        <span class="side-pill-text" id="markdown-render-toggle-text">Markdown 渲染：开</span>
-                    </button>
-                    <button class="side-pill" onclick="openDisplayNameModal()" id="display-name-btn" type="button" title="设置欢迎称呼">
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"></circle><path d="M4 21a8 8 0 0 1 16 0"></path></svg>
-                        <span class="side-pill-text">称呼设置</span>
-                    </button>
-                    <button class="side-pill" onclick="switchUI(this, 'comfyui-settings')" type="button" title="工作流设置">
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <rect x="3" y="3" width="7" height="7" rx="1"></rect>
-                            <rect x="14" y="3" width="7" height="7" rx="1"></rect>
-                            <rect x="3" y="14" width="7" height="7" rx="1"></rect>
-                            <path d="M14 14h7v7h-7z"></path>
-                            <line x1="10" y1="6.5" x2="14" y2="6.5"></line>
-                            <line x1="6.5" y1="10" x2="6.5" y2="14"></line>
-                        </svg>
-                        <span class="side-pill-text" data-i18n="common.comfyuiSettings">工作流设置</span>
-                    </button>
-                </div>
             </div>
 
         </aside>
@@ -1574,29 +1448,12 @@
         </script>
 
         <main class="stage">
-            <iframe id="frame-zimage" data-src="/static/zimage.html?v=2026.07.4.2.1784277153" class="active" scrolling="yes"></iframe>
-            <iframe id="frame-enhance" data-src="/static/enhance.html?v=2026.07.4.2.1784277153" scrolling="yes"></iframe>
-            <iframe id="frame-klein" data-src="/static/klein.html?v=2026.07.4.2.1784277153" scrolling="yes"></iframe>
-            <iframe id="frame-angle" data-src="/static/angle.html?v=2026.07.4.2.1784277153" scrolling="yes"></iframe>
-            <iframe id="frame-online" data-src="/static/online.html?v=2026.07.4.2.1784552870" scrolling="yes"></iframe>
-            <iframe id="frame-gpt-chat" data-src="/static/gpt-chat.html?v=2026.07.4.2.1784368939" scrolling="yes"></iframe>
-            <iframe id="frame-knowledge-base" data-src="/static/knowledge-base.html?v=2026.07.4.2.1784200348" scrolling="yes"></iframe>
-            <iframe id="frame-usage-dashboard" data-src="/static/usage-dashboard.html?v=2026.07.4.2.1784530647" scrolling="yes"></iframe>
-            <iframe id="frame-inspiration-space" data-src="/static/inspiration-space.html?v=2026.07.4.2.1784037058" scrolling="yes"></iframe>
-            <iframe id="frame-asset-manager" data-src="/static/asset-manager.html?v=2026.07.4.2.1784279096" scrolling="yes"></iframe>
-            <iframe id="frame-api-settings" data-src="/static/api-settings.html?v=2026.07.4.2.1784277153" scrolling="yes"></iframe>
-            <iframe id="frame-comfyui-settings" data-src="/static/comfyui-settings.html?v=2026.07.4.2.1784104431" scrolling="yes"></iframe>
-            <iframe id="frame-canvas" data-src="/static/canvas-list.html?v=2026.07.4.2.1784212408" scrolling="yes"></iframe>
-
+            <iframe id="frame-canvas" data-src="/static/canvas-list.html?v=2026.07.4.2.1790746525" class="active"></iframe>
+            <iframe id="frame-inspiration-space" data-src="/static/inspiration-space.html?v=2026.07.4.2.1790747846" scrolling="yes"></iframe>
+            <iframe id="frame-asset-manager" data-src="/static/asset-manager.html?v=2026.07.4.2.1790732367" scrolling="yes"></iframe>
+            <iframe id="frame-usage-dashboard" data-src="/static/usage-dashboard.html?v=2026.07.4.2.1790732367" scrolling="yes"></iframe>
+            <iframe id="frame-api-settings" data-src="/static/api-settings.html?v=2026.07.4.2.1790698546" scrolling="yes"></iframe>
         </main>
-    </div>
-
-    <div id="display-name-modal" class="studio-modal" hidden role="dialog" aria-modal="true" aria-labelledby="display-name-title" onclick="if(event.target===this) closeDisplayNameModal()">
-        <div class="studio-modal-panel" style="width:min(480px,100%)">
-            <div class="studio-modal-head"><div><div class="studio-modal-kicker">个性化</div><h2 id="display-name-title" class="studio-modal-title">设置欢迎称呼</h2></div><button class="studio-modal-close" type="button" onclick="closeDisplayNameModal()" aria-label="关闭"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="m18 6-12 12M6 6l12 12"></path></svg></button></div>
-            <div class="studio-modal-body"><p class="studio-modal-copy">称呼仅保存在当前浏览器，用于头脑风暴欢迎页，不会上传到模型服务。</p><input id="display-name-input" maxlength="40" placeholder="例如：daivs" style="width:100%;height:44px;padding:0 13px;border:1px solid var(--line,#d9e0e8);border-radius:12px;background:var(--panel,#fff);color:inherit;outline:none"></div>
-            <div class="studio-modal-actions"><button class="studio-modal-btn" type="button" onclick="clearDisplayName()">清除称呼</button><button class="studio-modal-btn" type="button" onclick="closeDisplayNameModal()">取消</button><button class="studio-modal-btn primary" type="button" onclick="saveDisplayName()">保存</button></div>
-        </div>
     </div>
 
     <div id="project-update-modal" class="studio-modal" hidden role="dialog" aria-modal="true" aria-labelledby="project-update-title">
@@ -1702,9 +1559,9 @@
         const LOCAL_TOOLS_VISIBLE_KEY = 'studio_local_tools_visible';
         const SIDEBAR_SETTINGS_COLLAPSED_KEY = 'studio_sidebar_settings_collapsed';
         const SIDEBAR_PINNED_KEY = 'studio_sidebar_pinned';
-        const DEFAULT_PAGE_ID = 'online';
-        const PAGE_IDS = ['zimage','enhance','klein','angle','online','gpt-chat','knowledge-base','usage-dashboard','inspiration-space','canvas','asset-manager','api-settings','comfyui-settings'];
-        const LOCAL_PAGE_IDS = ['zimage','enhance','klein','angle'];
+        const DEFAULT_PAGE_ID = 'canvas';
+        const PAGE_IDS = ['canvas','inspiration-space','asset-manager','usage-dashboard','api-settings'];
+        const LOCAL_PAGE_IDS = [];
         const PROJECT_URL = 'https://github.com/hero8152/Infinite-Canvas';
         let appInfo = { version:'', repo_url:PROJECT_URL, version_url:'https://raw.githubusercontent.com/hero8152/Infinite-Canvas/main/VERSION' };
         let updateConnectivityResult = null;
@@ -1743,68 +1600,6 @@
             setSidebarPinned(localStorage.getItem(SIDEBAR_PINNED_KEY) === '1', { skipRemember:true });
         }
 
-        function setLocalNavCollapsed(collapsed, options = {}) {
-            const group = document.getElementById('local-nav-group');
-            const toggle = document.getElementById('local-nav-toggle');
-            if(group) group.classList.toggle('is-collapsed', collapsed);
-            if(toggle) {
-                toggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
-                toggle.title = collapsed ? '展开本地功能' : '折叠本地功能';
-            }
-            if(!options.skipRemember) localStorage.setItem(LOCAL_NAV_COLLAPSED_KEY, collapsed ? '1' : '0');
-        }
-
-        function toggleLocalNav() {
-            const group = document.getElementById('local-nav-group');
-            setLocalNavCollapsed(!group?.classList.contains('is-collapsed'));
-        }
-
-        function restoreLocalNav(id) {
-            const savedCollapsed = localStorage.getItem(LOCAL_NAV_COLLAPSED_KEY) === '1';
-            setLocalNavCollapsed(savedCollapsed && !LOCAL_PAGE_IDS.includes(id), { skipRemember:true });
-        }
-
-        function isLocalToolsVisible() {
-            return localStorage.getItem(LOCAL_TOOLS_VISIBLE_KEY) === '1';
-        }
-
-        function updateLocalToolsToggle(visible = isLocalToolsVisible()) {
-            const btn = document.getElementById('local-tools-toggle-btn');
-            const label = btn?.querySelector('.side-pill-text');
-            const showIcon = document.getElementById('icon-local-tools-show');
-            const hideIcon = document.getElementById('icon-local-tools-hide');
-            const key = visible ? 'common.hideLocalTools' : 'common.showLocalTools';
-            const translated = window.StudioI18n ? window.StudioI18n.t(key) : '';
-            const text = translated && translated !== key ? translated : (visible ? '隐藏本地功能' : '显示本地功能');
-            if(label) {
-                label.dataset.i18n = key;
-                label.textContent = text;
-            }
-            if(btn) btn.title = text;
-            if(showIcon) showIcon.style.display = visible ? 'none' : 'block';
-            if(hideIcon) hideIcon.style.display = visible ? 'block' : 'none';
-        }
-
-        function setLocalToolsVisible(visible, options = {}) {
-            document.documentElement.classList.toggle('local-tools-hidden', !visible);
-            updateLocalToolsToggle(visible);
-            if(!options.skipRemember) localStorage.setItem(LOCAL_TOOLS_VISIBLE_KEY, visible ? '1' : '0');
-            document.querySelectorAll('iframe').forEach(frame => {
-                try { frame.contentWindow?.postMessage({type:'studio-local-tools-visibility', visible:Boolean(visible)}, '*'); } catch(e) {}
-            });
-            const activeId = localStorage.getItem(ACTIVE_PAGE_KEY);
-            if(!visible && LOCAL_PAGE_IDS.includes(activeId)) {
-                const trigger = document.querySelector(`[onclick*="'online'"],[onclick*='"online"']`);
-                switchUI(trigger, 'online');
-            }
-        }
-
-        function toggleLocalToolsVisibility() {
-            setLocalToolsVisible(!isLocalToolsVisible());
-        }
-
-        window.toggleLocalToolsVisibility = toggleLocalToolsVisibility;
-
         function setSidebarSettingsCollapsed(collapsed, options = {}) {
             const group = document.getElementById('settings-fold-group');
             const toggle = document.getElementById('settings-fold-toggle');
@@ -1823,7 +1618,7 @@
 
         function restoreSidebarSettings(id) {
             const savedCollapsed = localStorage.getItem(SIDEBAR_SETTINGS_COLLAPSED_KEY) !== '0';
-            setSidebarSettingsCollapsed(savedCollapsed && id !== 'comfyui-settings', { skipRemember:true });
+            setSidebarSettingsCollapsed(savedCollapsed, { skipRemember:true });
         }
 
         function resetStudioRootScroll() {
@@ -1837,11 +1632,8 @@
         function switchUI(el, id, options = {}) {
             resetStudioRootScroll();
             if(!PAGE_IDS.includes(id)) id = DEFAULT_PAGE_ID;
-            if(!isLocalToolsVisible() && LOCAL_PAGE_IDS.includes(id)) {
-                id = DEFAULT_PAGE_ID;
-                el = document.querySelector(`[onclick*="'${id}'"],[onclick*='"${id}"']`);
-            }
             document.querySelectorAll('.nav-item,.side-pill').forEach(n => n.classList.remove('active'));
+            if(!el) el = document.querySelector(`[onclick*="'${id}'"],[onclick*='"${id}"']`);
             if(el) el.classList.add('active');
             document.querySelectorAll('iframe').forEach(f => f.classList.remove('active'));
             const target = document.getElementById('frame-' + id);
@@ -1849,73 +1641,17 @@
             target.classList.add('active');
             if (!target.src) target.src = target.dataset.src;
             if(!options.skipRemember) localStorage.setItem(ACTIVE_PAGE_KEY, id);
-            // sync theme to newly activated iframe
             syncThemeToFrame(target);
             syncLanguageToFrame(target);
             syncScaleToFrame(target);
-            if(id === 'gpt-chat') {
-                try { target.contentWindow?.postMessage({ type:'brainstorm-new-chat' }, '*'); } catch(e) {}
-                syncDisplayNameToFrame(target);
-                syncMarkdownRenderingToFrame(target);
+            if (id === 'inspiration-space') {
+                try { target.contentWindow?.postMessage({ type: 'inspiration-focus' }, location.origin); } catch(e) {}
             }
-            if(LOCAL_PAGE_IDS.includes(id)) {
-                setLocalNavCollapsed(false, { skipRemember:true });
-            } else {
-                setLocalNavCollapsed(localStorage.getItem(LOCAL_NAV_COLLAPSED_KEY) === '1', { skipRemember:true });
-            }
-            if(id === 'comfyui-settings') {
-                setSidebarSettingsCollapsed(false, { skipRemember:true });
-            }
-            // 切换到画布时通知刷新工作流列表（防止在 comfyui-settings 修改后画布未及时更新）
+            // 切换到画布时通知刷新工作流列表
             if (id === 'canvas' && target.src) {
                 try { target.contentWindow?.postMessage({ type: 'canvas-focus' }, '*'); } catch(e) {}
             }
             resetStudioRootScroll();
-        }
-
-        function syncDisplayNameToFrame(frame) {
-            try { frame?.contentWindow?.postMessage({type:'studio-display-name',value:localStorage.getItem('studio_display_name')||''},'*'); } catch(e) {}
-        }
-
-        const CHAT_MARKDOWN_KEY='studio_chat_markdown_enabled';
-        function isMarkdownRenderingEnabled(){ return localStorage.getItem(CHAT_MARKDOWN_KEY)!=='0'; }
-        function syncMarkdownRenderingToFrame(frame){
-            try { frame?.contentWindow?.postMessage({type:'studio-chat-markdown',enabled:isMarkdownRenderingEnabled()},'*'); } catch(e) {}
-        }
-        function updateMarkdownRenderButton(){
-            const enabled=isMarkdownRenderingEnabled();
-            const button=document.getElementById('markdown-render-toggle-btn');
-            const label=document.getElementById('markdown-render-toggle-text');
-            if(button){
-                button.setAttribute('aria-pressed',enabled?'true':'false');
-                button.title=enabled?'关闭 Markdown 渲染':'开启 Markdown 渲染';
-                button.classList.toggle('is-disabled',!enabled);
-            }
-            if(label) label.textContent=`Markdown 渲染：${enabled?'开':'关'}`;
-        }
-        function toggleMarkdownRendering(){
-            localStorage.setItem(CHAT_MARKDOWN_KEY,isMarkdownRenderingEnabled()?'0':'1');
-            updateMarkdownRenderButton();
-            document.querySelectorAll('iframe').forEach(syncMarkdownRenderingToFrame);
-        }
-
-        function openDisplayNameModal(){
-            const modal=document.getElementById('display-name-modal');
-            const input=document.getElementById('display-name-input');
-            if(input) input.value=localStorage.getItem('studio_display_name')||'';
-            if(modal) modal.hidden=false;
-            requestAnimationFrame(()=>input?.focus());
-        }
-        function closeDisplayNameModal(){ const modal=document.getElementById('display-name-modal'); if(modal) modal.hidden=true; }
-        function saveDisplayName(){
-            const value=String(document.getElementById('display-name-input')?.value||'').trim().slice(0,40);
-            if(value) localStorage.setItem('studio_display_name',value); else localStorage.removeItem('studio_display_name');
-            document.querySelectorAll('iframe').forEach(syncDisplayNameToFrame); closeDisplayNameModal();
-        }
-        function clearDisplayName(){
-            localStorage.removeItem('studio_display_name');
-            const input=document.getElementById('display-name-input'); if(input) input.value='';
-            document.querySelectorAll('iframe').forEach(syncDisplayNameToFrame); closeDisplayNameModal();
         }
 
         function forwardStudioApiChange(data) {
@@ -1940,9 +1676,6 @@
         function restoreActivePage() {
             restoreSidebarPinned();
             let id = PAGE_IDS.includes(localStorage.getItem(ACTIVE_PAGE_KEY)) ? localStorage.getItem(ACTIVE_PAGE_KEY) : DEFAULT_PAGE_ID;
-            if(!isLocalToolsVisible() && LOCAL_PAGE_IDS.includes(id)) id = DEFAULT_PAGE_ID;
-            setLocalToolsVisible(isLocalToolsVisible(), { skipRemember:true });
-            restoreLocalNav(id);
             restoreSidebarSettings(id);
             const trigger = document.querySelector(`[onclick*="'${id}'"],[onclick*='"${id}"']`);
             switchUI(trigger, id, { skipRemember:true });
@@ -2068,16 +1801,6 @@
             broadcastTheme(current === 'dark' ? 'light' : 'dark');
         }
 
-        function toggleLanguage() {
-            if(!window.StudioI18n) return;
-            window.StudioI18n.toggle();
-            document.querySelectorAll('iframe').forEach(frame => syncLanguageToFrame(frame));
-            updateLocalToolsToggle();
-            updateProjectUpdateTitle();
-            refreshUpdateButtonText();
-            refreshProjectUpdateModalText();
-        }
-
         function syncLanguageToFrame(frame) {
             if(!window.StudioI18n) return;
             try {
@@ -2107,8 +1830,6 @@
             const theme = window.StudioTheme ? window.StudioTheme.get() : 'light';
             updateThemeIcon(theme);
             if(window.StudioI18n) window.StudioI18n.apply();
-            setLocalToolsVisible(isLocalToolsVisible(), { skipRemember:true });
-            updateMarkdownRenderButton();
             broadcastLanguage();
             const sidebar = document.getElementById('studioSidebar');
             if(sidebar) {
@@ -2124,11 +1845,6 @@
                 syncThemeToFrame(f);
                 syncLanguageToFrame(f);
                 syncScaleToFrame(f);
-                syncDisplayNameToFrame(f);
-                syncMarkdownRenderingToFrame(f);
-                if(f.id === 'frame-gpt-chat' && f.classList.contains('active')) {
-                    try { f.contentWindow?.postMessage({type:'brainstorm-new-chat'},'*'); } catch(e) {}
-                }
             });
         });
 

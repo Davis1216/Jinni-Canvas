@@ -16,13 +16,13 @@
             } catch(e) {}
         })();
     </script>
-    <script src="/static/vendor/js/tailwindcss-cdn.js?v=2026.07.4.2.1783154122"></script>
-    <script src="/static/vendor/js/lucide.js?v=2026.07.4.2.1783154122"></script>
-    <script src="/static/js/theme.js?v=2026.07.4.2.1783154122"></script>
-    <script src="/static/js/touch-mouse.js?v=2026.07.4.2.1783154122"></script>
-    <script src="/static/js/i18n.js?v=2026.07.4.2.1784104411"></script>
-    <link rel="stylesheet" href="/static/css/canvas-list.css?v=2026.07.4.2.1783154122">
-    <link rel="stylesheet" href="/static/css/theme.css?v=2026.07.4.2.1783154122">
+    <script src="/static/vendor/js/tailwindcss-cdn.js?v=2026.07.4.2.1790691011"></script>
+    <script src="/static/vendor/js/lucide.js?v=2026.07.4.2.1790691011"></script>
+    <script src="/static/js/theme.js?v=2026.07.4.2.1790691011"></script>
+    <script src="/static/js/touch-mouse.js?v=2026.07.4.2.1790691011"></script>
+    <script src="/static/js/i18n.js?v=2026.07.4.2.1790691011"></script>
+    <link rel="stylesheet" href="/static/css/canvas-list.css?v=2026.07.4.2.1790745924">
+    <link rel="stylesheet" href="/static/css/theme.css?v=2026.07.4.2.1790691011">
 </head>
 <body>
     <div id="workspace" class="workspace">
@@ -58,7 +58,7 @@
                 </div>
                 <div class="ws-topbar-right">
                     <button id="pasteCanvasBtn" class="ws-paste-btn" type="button" title="粘贴到此项目" style="display:none"><i data-lucide="clipboard-paste" class="w-4 h-4"></i><span>粘贴到此项目</span></button>
-                    <button id="boardResetView" class="ws-icon-btn" type="button" title="重置视图" aria-label="重置视图"><i data-lucide="locate-fixed" class="w-4 h-4"></i></button>
+                    <button id="boardResetView" class="ws-icon-btn" type="button" title="画面自适应" aria-label="画面自适应"><i data-lucide="locate-fixed" class="w-4 h-4"></i></button>
                     <button id="boardRefresh" class="ws-icon-btn" type="button" title="刷新" aria-label="刷新"><i data-lucide="refresh-cw" class="w-4 h-4"></i></button>
                     <button id="newCanvasBtn" class="ws-primary-btn" type="button"><i data-lucide="plus" class="w-4 h-4"></i><span>新建画布</span></button>
                 </div>
@@ -67,6 +67,19 @@
             <!-- Board (pan/zoom) -->
             <div id="board" class="ws-board">
                 <div id="boardWorld" class="ws-board-world"></div>
+                <div id="boardNavigator" class="ws-board-navigator">
+                    <svg id="boardMinimap" class="ws-board-minimap" tabindex="0" role="group" aria-label="画板小地图：点击或拖动定位，方向键平移" preserveAspectRatio="none">
+                        <g id="boardMinimapCards"></g>
+                        <rect id="boardMinimapViewport" class="ws-minimap-viewport"></rect>
+                    </svg>
+                    <button id="boardFitView" class="ws-fit-button" type="button"><i data-lucide="scan" class="w-4 h-4"></i><span>画面自适应</span></button>
+                </div>
+                <div class="ws-view-controls" role="toolbar" aria-label="画板视图控制">
+                    <span class="ws-view-hint">拖动平移 · 滚轮缩放 · 右键新建</span>
+                    <button id="boardZoomOut" class="ws-icon-btn" type="button" aria-label="缩小画板">−</button>
+                    <button id="boardZoomValue" class="ws-icon-btn ws-zoom-value" type="button" title="恢复 100%">100%</button>
+                    <button id="boardZoomIn" class="ws-icon-btn" type="button" aria-label="放大画板">+</button>
+                </div>
                 <div id="boardEmptyHint" class="ws-board-empty">
                     <div class="ws-board-empty-icon"><i data-lucide="mouse-pointer-click" class="w-7 h-7"></i></div>
                     <div class="ws-board-empty-text">暂无画布</div>
@@ -90,6 +103,6 @@
             <div id="boardStatus" class="ws-status"></div>
         </main>
     </div>
-    <script src="/static/js/canvas-list.js?v=2026.07.4.2.1784210531"></script>
+    <script src="/static/js/canvas-list.js?v=2026.07.4.2.1790745973"></script>
 </body>
 </html>

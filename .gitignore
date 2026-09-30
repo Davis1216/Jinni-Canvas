@@ -20,3 +20,14 @@ history.json
 output/
 python/Lib/
 python/Scripts/
+.venv/
+build/
+dist/
+*.dmg
+
+# Desktop distribution and local runtime files
+*.app/
+.DS_Store
+.playwright-cli/
+data/api.env
+tools/windows_app/payload.zip

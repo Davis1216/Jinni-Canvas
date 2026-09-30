@@ -1,0 +1,56 @@
+name: Windows desktop
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'main.py'
+      - 'static/**'
+      - 'knowledge_base/**'
+      - 'tools/desktop/**'
+      - 'tools/windows_app/**'
+      - '.github/workflows/windows-desktop.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-smoke:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25.6'
+          cache-dependency-path: tools/windows_app/go.sum
+      - uses: astral-sh/setup-uv@v6
+      - name: Build standalone EXE
+        shell: bash
+        run: bash tools/windows_app/build.sh
+      - name: Verify bundled backend
+        run: python tools/desktop/smoke_backend.py --python build/windows_app/python/python.exe --app build/windows_app/app
+      - name: Verify native WebView window
+        shell: pwsh
+        run: |
+          $env:JINNI_DESKTOP_HOME = Join-Path $env:RUNNER_TEMP 'jinni-desktop-smoke'
+          $process = Start-Process -FilePath 'dist/Jinni Canvas-Windows-x64.exe' -ArgumentList '--smoke-test' -PassThru
+          if (-not $process.WaitForExit(120000)) {
+            Stop-Process -Id $process.Id -Force
+            throw 'Desktop smoke test timed out'
+          }
+          if ($process.ExitCode -ne 0) { throw "Desktop smoke test failed: $($process.ExitCode)" }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Jinni-Canvas-Windows-x64
+          path: dist/Jinni Canvas-Windows-x64.exe
+      - name: Upload diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-smoke-logs
+          path: ${{ runner.temp }}/jinni-desktop-smoke/server.log

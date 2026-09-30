@@ -28,23 +28,83 @@
         toast.timer = setTimeout(() => { el.hidden = true; }, 2200);
     }
 
+    const CHANGE_KEY = 'inspiration-space-changed';
+    let spaceRevision = 0;
+    let pendingWrites = 0;
+    let loadPromise = null;
+    let refreshQueued = false;
+    let refreshTimer = 0;
+    let hasLoadedSpace = false;
+    const emptyMessage = $('emptyState').querySelector('p').textContent;
+    function spaceIsVisible(){
+        if(document.hidden) return false;
+        try { return !window.frameElement || getComputedStyle(window.frameElement).visibility !== 'hidden'; }
+        catch { return true; }
+    }
+    function requestRefresh(){
+        if(!spaceIsVisible()) return;
+        clearTimeout(refreshTimer);
+        refreshTimer = setTimeout(() => {
+            loadSpace().catch(() => {}); // Retain the current gallery on a temporary network failure.
+        }, 0);
+    }
     async function api(path, options={}){
-        const res = await fetch(path, {
-            ...options,
-            headers: {'Content-Type':'application/json', ...(options.headers || {})},
-        });
-        if(!res.ok){
-            let detail = '';
-            try { detail = (await res.json()).detail || ''; } catch {}
-            throw new Error(detail || `请求失败：${res.status}`);
+        const writing = options.method && options.method !== 'GET';
+        if(writing){ spaceRevision++; pendingWrites++; }
+        try {
+            const res = await fetch(path, {
+                cache:'no-store',
+                ...options,
+                headers: {'Content-Type':'application/json', ...(options.headers || {})},
+            });
+            if(!res.ok){
+                let detail = '';
+                try { detail = (await res.json()).detail || ''; } catch {}
+                throw new Error(detail || `请求失败：${res.status}`);
+            }
+            const data = await res.json();
+            if(writing){
+                try { localStorage.setItem(CHANGE_KEY, `${Date.now()}-${Math.random()}`); } catch {}
+            }
+            return data;
+        } finally {
+            if(writing){
+                pendingWrites--;
+                requestRefresh();
+            }
         }
-        return res.json();
     }
 
     async function loadSpace(){
-        const data = await api('/api/inspiration-space');
-        state.space = data.space || {categories:[], items:[]};
-        render();
+        if(pendingWrites){ refreshQueued = true; return; }
+        if(loadPromise){ refreshQueued = true; return loadPromise; }
+        const revision = spaceRevision;
+        loadPromise = (async () => {
+            const data = await api('/api/inspiration-space');
+            // A GET started before a local edit must never restore its older snapshot.
+            if(revision !== spaceRevision || pendingWrites) return;
+            const next = data.space || {categories:[], items:[]};
+            if(hasLoadedSpace && JSON.stringify(next) === JSON.stringify(state.space)) return;
+            hasLoadedSpace = true;
+            $('emptyState').querySelector('p').textContent = emptyMessage;
+            state.space = next;
+            if(state.activeCategory !== 'all' && !next.categories.some(cat => cat.id === state.activeCategory)){
+                state.activeCategory = 'all';
+            }
+            render();
+            if(state.selectedItemId){
+                if(next.items.some(item => item.id === state.selectedItemId)) openDetail(state.selectedItemId);
+                else closeDetail();
+            }
+        })();
+        try { await loadPromise; }
+        finally {
+            loadPromise = null;
+            if(refreshQueued){
+                refreshQueued = false;
+                requestRefresh();
+            }
+        }
     }
 
     function itemMatches(item){
@@ -79,15 +139,25 @@
             ...(state.space.categories || []).map(cat => ({...cat, count:counts.get(cat.id) || 0}))
         ];
         $('categoryList').innerHTML = cats.map(cat => `
-            <button class="category-item ${state.activeCategory === cat.id ? 'active' : ''}" type="button" data-category-id="${escapeHtml(cat.id)}" style="--cat-color:${escapeHtml(cat.color || '#2563eb')}">
+            <div class="category-item ${state.activeCategory === cat.id ? 'active' : ''}" data-category-id="${escapeHtml(cat.id)}" style="--cat-color:${escapeHtml(cat.color || '#2563eb')}">
                 <span class="category-dot"></span>
                 <span class="category-name">${escapeHtml(cat.name)}</span>
                 <span class="category-count">${cat.count}</span>
-                ${cat.id !== 'all' ? `<button class="category-edit" data-edit-category="${escapeHtml(cat.id)}" type="button" title="编辑"><i data-lucide="pencil"></i></button>` : '<span></span>'}
-            </button>
+                <div class="category-actions">
+                    ${cat.id !== 'all' ? `<button class="category-btn category-edit" data-edit-category="${escapeHtml(cat.id)}" type="button" title="编辑分类"><i data-lucide="pencil"></i></button>` : ''}
+                    ${cat.id !== 'all' ? `<button class="category-btn category-delete" data-delete-category="${escapeHtml(cat.id)}" type="button" title="删除分类"><i data-lucide="trash-2"></i></button>` : ''}
+                </div>
+            </div>
         `).join('');
-        $('categoryList').querySelectorAll('[data-category-id]').forEach(btn => {
+        $('categoryList').querySelectorAll('.category-item').forEach(btn => {
             btn.addEventListener('click', event => {
+                const del = event.target.closest('[data-delete-category]');
+                if(del){
+                    event.preventDefault();
+                    event.stopPropagation();
+                    deleteCategoryById(del.dataset.deleteCategory);
+                    return;
+                }
                 const edit = event.target.closest('[data-edit-category]');
                 if(edit){
                     event.preventDefault();
@@ -123,7 +193,8 @@
                     <div class="card-overlay">
                         <button type="button" data-copy-prompt="${escapeHtml(item.id)}" title="复制提示词"><i data-lucide="copy"></i></button>
                         <button type="button" data-edit-item="${escapeHtml(item.id)}" title="编辑"><i data-lucide="pencil"></i></button>
-                        <button type="button" data-open-item="${escapeHtml(item.id)}" title="预览"><i data-lucide="maximize-2"></i></button>
+                        <button type="button" data-open-item="${escapeHtml(item.id)}" title="详情"><i data-lucide="maximize-2"></i></button>
+                        <button type="button" class="btn-delete-card" data-delete-item="${escapeHtml(item.id)}" title="删除灵感"><i data-lucide="trash-2"></i></button>
                     </div>
                 </div>
                 <div class="card-body">
@@ -142,6 +213,11 @@
         grid.querySelectorAll('[data-open-item]').forEach(btn => btn.addEventListener('click', () => openDetail(btn.dataset.openItem)));
         grid.querySelectorAll('[data-edit-item]').forEach(btn => btn.addEventListener('click', () => openItemModal(btn.dataset.editItem)));
         grid.querySelectorAll('[data-copy-prompt]').forEach(btn => btn.addEventListener('click', () => copyPrompt(btn.dataset.copyPrompt)));
+        grid.querySelectorAll('[data-delete-item]').forEach(btn => btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            deleteItemById(btn.dataset.deleteItem);
+        }));
     }
 
     function render(){
@@ -212,7 +288,8 @@
         $('tagsField').hidden = true;
         $('promptField').hidden = true;
         $('colorField').hidden = false;
-        $('deleteCategoryBtn').hidden = !cat || cat.id === 'uncategorized';
+        $('deleteCategoryBtn').hidden = !cat;
+        $('deleteItemFromEditBtn').hidden = true;
         $('titleField').querySelector('span').textContent = '名称';
         $('editModal').hidden = false;
         lucide.createIcons();
@@ -235,6 +312,7 @@
         $('promptField').hidden = false;
         $('colorField').hidden = true;
         $('deleteCategoryBtn').hidden = true;
+        $('deleteItemFromEditBtn').hidden = false;
         $('titleField').querySelector('span').textContent = '标题';
         $('editModal').hidden = false;
         lucide.createIcons();
@@ -242,6 +320,8 @@
 
     function closeEdit(){
         $('editModal').hidden = true;
+        $('deleteCategoryBtn').hidden = true;
+        $('deleteItemFromEditBtn').hidden = true;
         $('editForm').reset();
     }
 
@@ -251,13 +331,17 @@
         const id = $('editingId').value;
         if(kind === 'category'){
             const payload = {name:$('titleInput').value.trim() || '新分类', description:$('notesInput').value.trim(), color:$('colorInput').value};
-            const data = id
-                ? await api(`/api/inspiration-space/categories/${encodeURIComponent(id)}`, {method:'PATCH', body:JSON.stringify(payload)})
-                : await api('/api/inspiration-space/categories', {method:'POST', body:JSON.stringify(payload)});
-            state.space = data.space;
-            closeEdit();
-            render();
-            toast(id ? '分类已更新' : '分类已创建');
+            try {
+                const data = id
+                    ? await api(`/api/inspiration-space/categories/${encodeURIComponent(id)}`, {method:'PATCH', body:JSON.stringify(payload)})
+                    : await api('/api/inspiration-space/categories', {method:'POST', body:JSON.stringify(payload)});
+                state.space = data.space;
+                closeEdit();
+                render();
+                toast(id ? '分类已更新' : '分类已创建');
+            } catch(e) {
+                toast(e.message || '操作失败');
+            }
             return;
         }
         if(kind === 'item' && id){
@@ -270,71 +354,141 @@
                 notes:$('notesInput').value,
                 params:item?.params || {},
             };
-            const data = await api(`/api/inspiration-space/items/${encodeURIComponent(id)}`, {method:'PATCH', body:JSON.stringify(payload)});
-            state.space = data.space;
-            closeEdit();
-            render();
-            if(!$('detailDrawer').hidden) openDetail(id);
-            toast('灵感已更新');
+            try {
+                const data = await api(`/api/inspiration-space/items/${encodeURIComponent(id)}`, {method:'PATCH', body:JSON.stringify(payload)});
+                state.space = data.space;
+                closeEdit();
+                render();
+                if(!$('detailDrawer').hidden) openDetail(id);
+                toast('灵感已更新');
+            } catch(e) {
+                toast(e.message || '更新失败');
+            }
         }
     }
 
-    async function deleteCurrentItem(){
-        const item = selectedItem();
-        if(!item || !confirm('删除这条灵感？只会删除灵感空间副本，不影响原图。')) return;
-        const data = await api(`/api/inspiration-space/items/${encodeURIComponent(item.id)}`, {method:'DELETE'});
-        state.space = data.space;
-        closeDetail();
-        render();
-        toast('已删除灵感');
+    function uiConfirm(message, title = '确认操作') {
+        const modal = $('confirmModal');
+        if (!modal) return Promise.resolve(window.confirm(message));
+        return new Promise(resolve => {
+            $('confirmTitle').textContent = title;
+            $('confirmMessage').innerHTML = escapeHtml(message).replace(/\n/g, '<br>');
+            modal.hidden = false;
+            lucide.createIcons();
+
+            const cleanup = (result) => {
+                modal.hidden = true;
+                $('confirmOkBtn')?.removeEventListener('click', onOk);
+                $('confirmCancelBtn')?.removeEventListener('click', onCancel);
+                $('confirmCloseXBtn')?.removeEventListener('click', onCancel);
+                $('confirmBackdrop')?.removeEventListener('click', onCancel);
+                resolve(result);
+            };
+
+            const onOk = () => cleanup(true);
+            const onCancel = () => cleanup(false);
+
+            $('confirmOkBtn')?.addEventListener('click', onOk);
+            $('confirmCancelBtn')?.addEventListener('click', onCancel);
+            $('confirmCloseXBtn')?.addEventListener('click', onCancel);
+            $('confirmBackdrop')?.addEventListener('click', onCancel);
+        });
     }
 
-    async function deleteCurrentCategory(){
-        const id = $('editingId').value;
-        if(!id || id === 'uncategorized') return;
-        if(!confirm('删除这个分类？分类下的灵感会移动到「未分类」。')) return;
-        const data = await api(`/api/inspiration-space/categories/${encodeURIComponent(id)}`, {method:'DELETE'});
-        state.space = data.space;
+    async function deleteItemById(id){
+        if(!id) return;
+        const item = state.space.items.find(entry => entry.id === id);
+        if(!item) return;
+        const ok = await uiConfirm(`确定删除灵感「${item.title || '此图片'}」？\n只会删除灵感空间副本，不影响画布原图。`, '确认删除灵感');
+        if(!ok) return;
+
+        // 乐观更新：瞬间从本地列表剔除并从界面消除，彻底消灭延迟感！
+        const backupItems = [...state.space.items];
+        state.space.items = state.space.items.filter(entry => entry.id !== id);
+        if(state.selectedItemId === id) closeDetail();
+        if(!$('editModal').hidden && $('editingId').value === id) closeEdit();
+        render();
+        toast('已删除灵感');
+
+        try {
+            const data = await api(`/api/inspiration-space/items/${encodeURIComponent(id)}`, {method:'DELETE'});
+            state.space = data.space;
+            render();
+        } catch(err) {
+            state.space.items = backupItems;
+            render();
+            toast('删除失败: ' + err.message);
+        }
+    }
+
+    async function deleteCategoryById(id){
+        if(!id || id === 'all') return;
+        const cat = state.space.categories.find(c => c.id === id);
+        const name = cat ? cat.name : '该分类';
+        const ok = await uiConfirm(`确定删除分类「${name}」？\n分类下的灵感图像不会被删除，将保留在全部灵感中。`, '确认删除分类');
+        if(!ok) return;
+
+        // 乐观更新：立即移除分类并把该分类下的条目归整
+        const backupCategories = [...state.space.categories];
+        const backupItems = state.space.items.map(it => ({...it}));
+        const remainingCats = state.space.categories.filter(c => c.id !== id);
+        const fallbackId = remainingCats[0]?.id || '';
+        state.space.categories = remainingCats;
+        state.space.items.forEach(it => {
+            if(it.category_id === id) it.category_id = fallbackId;
+        });
         if(state.activeCategory === id) state.activeCategory = 'all';
-        closeEdit();
+        if(!$('editModal').hidden && $('editingId').value === id) closeEdit();
         render();
         toast('分类已删除');
+
+        try {
+            const data = await api(`/api/inspiration-space/categories/${encodeURIComponent(id)}`, {method:'DELETE'});
+            state.space = data.space;
+            render();
+        } catch(err) {
+            state.space.categories = backupCategories;
+            state.space.items = backupItems;
+            render();
+            toast('删除分类失败: ' + err.message);
+        }
     }
 
     function bindEvents(){
-        $('searchInput').addEventListener('input', event => {
+        $('searchInput')?.addEventListener('input', event => {
             state.query = event.target.value;
             renderGallery();
             lucide.createIcons();
         });
-        $('sortSelect').addEventListener('change', event => {
+        $('sortSelect')?.addEventListener('change', event => {
             state.sort = event.target.value;
             renderGallery();
             lucide.createIcons();
         });
-        $('gridViewBtn').addEventListener('click', () => {
+        $('gridViewBtn')?.addEventListener('click', () => {
             state.view = 'grid';
             localStorage.setItem('inspiration_space_view', state.view);
             renderGallery();
             lucide.createIcons();
         });
-        $('masonryViewBtn').addEventListener('click', () => {
+        $('masonryViewBtn')?.addEventListener('click', () => {
             state.view = 'masonry';
             localStorage.setItem('inspiration_space_view', state.view);
             renderGallery();
             lucide.createIcons();
         });
-        $('addCategoryBtn').addEventListener('click', () => openCategoryModal());
+        $('addCategoryBtn')?.addEventListener('click', () => openCategoryModal());
         document.querySelectorAll('[data-close-detail]').forEach(el => el.addEventListener('click', closeDetail));
         document.querySelectorAll('[data-close-edit]').forEach(el => el.addEventListener('click', closeEdit));
-        $('editForm').addEventListener('submit', saveEdit);
-        $('copyPromptBtn').addEventListener('click', () => copyPrompt());
-        $('editItemBtn').addEventListener('click', () => {
+        $('editForm')?.addEventListener('submit', saveEdit);
+        $('copyPromptBtn')?.addEventListener('click', () => copyPrompt());
+        $('editItemBtn')?.addEventListener('click', () => {
             const item = selectedItem();
             if(item) openItemModal(item.id);
         });
-        $('deleteItemBtn').addEventListener('click', deleteCurrentItem);
-        $('deleteCategoryBtn').addEventListener('click', deleteCurrentCategory);
+        $('deleteItemBtn')?.addEventListener('click', () => deleteItemById(state.selectedItemId));
+        $('deleteCategoryBtn')?.addEventListener('click', () => deleteCategoryById($('editingId').value));
+        $('deleteItemFromEditBtn')?.addEventListener('click', () => deleteItemById($('editingId').value));
         document.addEventListener('keydown', event => {
             if(event.key === 'Escape'){
                 if(!$('editModal').hidden) closeEdit();
@@ -343,7 +497,17 @@
         });
     }
 
+    window.addEventListener('message', event => {
+        if(event.origin !== location.origin || event.source !== window.parent) return;
+        if(event.data?.type === 'inspiration-focus') requestRefresh();
+    });
+    window.addEventListener('focus', requestRefresh);
+    window.addEventListener('pageshow', requestRefresh);
+    document.addEventListener('visibilitychange', requestRefresh);
+    // Fallback for updates from another window or a client without notifications.
+    setInterval(requestRefresh, 5000);
     window.addEventListener('storage', event => {
+        if(event.key === CHANGE_KEY) requestRefresh();
         if(event.key === 'studio_theme' || event.key === 'canvas_theme') {
             const dark = event.newValue === 'dark';
             document.documentElement.classList.toggle('studio-theme-dark', dark);

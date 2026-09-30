@@ -10,6 +10,40 @@
     function candidateKey(item){
         return String(item?.key || item?.sourceId || item?.source_id || item?.url || '');
     }
+    function findMatchingCandidate(part, candidates){
+        if(!part || !candidates || !candidates.length) return null;
+        const norm = normalizeCandidates(candidates);
+        const key = candidateKey(part);
+        // 1. 精确 key 匹配
+        let found = norm.find(item => item.key === key || item.sourceId === key);
+        if(found) return found;
+
+        // 2. node id 前缀匹配
+        const partNodeId = String(part.sourceId || part.key || '').split(':')[0];
+        if(partNodeId){
+            found = norm.find(item => {
+                const itemNodeId = String(item.linkSourceId || item.sourceId || item.key || '').split(':')[0];
+                return itemNodeId === partNodeId;
+            });
+            if(found) return found;
+        }
+
+        // 3. 图片 URL 精确匹配（导入工作流资源、替换资源后的强力兼容）
+        if(part.url){
+            const partCleanUrl = String(part.url).split('?')[0];
+            found = norm.find(item => item.url && String(item.url).split('?')[0] === partCleanUrl);
+            if(found) return found;
+        }
+
+        // 4. 图片标签名匹配（如“图片1”，“图片2”）
+        const partLabel = String(part.name || part.label || '').trim();
+        if(partLabel){
+            found = norm.find(item => item.label === partLabel || item.name === partLabel);
+            if(found) return found;
+        }
+
+        return null;
+    }
     function normalizeCandidates(items){
         return (items || []).filter(item => item?.url).map((item, index) => ({
             ...item,
@@ -32,7 +66,7 @@
         token.title = candidate ? `${item.label || item.name} · ${item.name || ''}` : `引用已失效：${item.name || '图片'}`;
         const label = candidate ? (item.label || item.name) : `${item.name || '图片'}（失效）`;
         token.innerHTML = item.url
-            ? `<img src="${escapeHtml(item.url)}" alt=""><span class="image-mention-label">${escapeHtml(label)}</span>`
+            ? `<img decoding="async" src="${escapeHtml(item.thumbnailUrl || item.url)}" alt=""><span class="image-mention-label">${escapeHtml(label)}</span>`
             : `<span class="image-mention-missing">!</span><span class="image-mention-label">${escapeHtml(label)}</span>`;
         const remove = document.createElement('button');
         remove.type = 'button';
@@ -115,10 +149,12 @@
     }
     function renderParts(editor, parts, candidates=[]){
         if(!editor) return;
-        const map = new Map(normalizeCandidates(candidates).map(item => [item.key, item]));
         editor.replaceChildren();
         (parts || []).forEach(part => {
-            if(part?.type === 'image') editor.appendChild(tokenElement(part, map.get(candidateKey(part)) || null));
+            if(part?.type === 'image') {
+                const matched = findMatchingCandidate(part, candidates);
+                editor.appendChild(tokenElement(part, matched));
+            }
             else appendText(editor, part?.text || '');
         });
     }
@@ -246,7 +282,7 @@
             if(!picker) return;
             openItems = getCandidates();
             picker.innerHTML = openItems.length
-                ? `<div class="image-mention-picker-title">选择参考图</div><div class="image-mention-options">${openItems.map((item, i) => `<button type="button" data-mention-option="${i}"><span class="image-mention-option-index">${item.index}</span><img src="${escapeHtml(item.url)}" alt=""><span>${escapeHtml(item.label)}</span></button>`).join('')}</div>`
+                ? `<div class="image-mention-picker-title">选择参考图</div><div class="image-mention-options">${openItems.map((item, i) => `<button type="button" data-mention-option="${i}"><span class="image-mention-option-index">${item.index}</span><img decoding="async" src="${escapeHtml(item.thumbnailUrl || item.url)}" alt=""><span>${escapeHtml(item.label)}</span></button>`).join('')}</div>`
                 : '<div class="image-mention-empty">请先上传或连接参考图</div>';
             activeIndex = 0;
             picker.classList.add('open');
@@ -351,5 +387,5 @@
         };
     }
 
-    window.StudioImageMentions = {create, compile, serialize, plainText, renderParts, setPlainText, partsFromText, normalizeCandidates, candidateKey};
+    window.StudioImageMentions = {create, compile, serialize, plainText, renderParts, setPlainText, partsFromText, normalizeCandidates, candidateKey, findMatchingCandidate};
 })();
