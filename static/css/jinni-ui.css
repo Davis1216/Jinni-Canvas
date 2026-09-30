@@ -1,0 +1,148 @@
+/* Shared rounded controls, independent of page-specific themes. */
+html body input[type="range"]{appearance:none!important;-webkit-appearance:none!important;border:0!important;border-radius:999px!important;height:20px!important;background:transparent!important;box-shadow:none!important;accent-color:#7775e7;cursor:pointer}
+html body input[type="range"]::-webkit-slider-runnable-track{height:6px!important;border-radius:999px!important;background:linear-gradient(to right,#7775e7 var(--range-progress,0%),#d6dce8 var(--range-progress,0%))!important;border:0!important}
+html body input[type="range"]::-webkit-slider-thumb{appearance:none!important;-webkit-appearance:none!important;width:16px!important;height:16px!important;margin-top:-5px!important;border-radius:50%!important;background:#fff!important;border:2px solid #7775e7!important;box-shadow:0 2px 5px #1d245333!important;transition:box-shadow .15s,transform .15s}
+html body input[type="range"]::-moz-range-track{height:6px;border-radius:999px;background:#d6dce8}
+html body input[type="range"]::-moz-range-progress{height:6px;border-radius:999px;background:#7775e7}
+html body input[type="range"]::-moz-range-thumb{width:12px;height:12px;border-radius:50%;border:2px solid #7775e7;background:white}
+html body input[type="range"]:hover::-webkit-slider-thumb{box-shadow:0 0 0 4px #7775e722!important}
+html body input[type="range"]:active::-webkit-slider-thumb{transform:scale(1.12)}
+html body input[type="range"]:focus-visible{outline:2px solid #7775e7!important;outline-offset:3px}
+html body input[type="range"]:disabled{opacity:.45;cursor:not-allowed}
+/* Settings and library dialogs share typography and action sizing. */
+.jinni-dialog {
+    --ju-bg:#f8faff; --ju-panel:#eef1f7; --ju-card:#fff; --ju-line:#dce2ef;
+    --ju-text:#20283c; --ju-muted:#64718a; --ju-accent:#5457cd; --ju-active:#e5e7ff; --ju-danger:#b43c52;
+    box-sizing:border-box; width:min(960px,calc(100vw - 32px)); height:min(680px,calc(100dvh - 32px));
+    margin:auto; padding:0; border:1px solid var(--ju-line); border-radius:22px;
+    background:var(--ju-bg); color:var(--ju-text); box-shadow:0 24px 100px #0004;
+    font:14px/1.55 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    writing-mode:horizontal-tb; text-align:left; overflow:hidden;
+}
+:is(.theme-dark,.studio-theme-dark) .jinni-dialog {
+    --ju-bg:#1b2130; --ju-panel:#171d2a; --ju-card:#252d40; --ju-line:#374156;
+    --ju-text:#e6ebf5; --ju-muted:#a0adc5; --ju-accent:#b4b5ff; --ju-active:#34385c; --ju-danger:#ffacb6;
+}
+.jinni-dialog *, .jinni-dialog *::before, .jinni-dialog *::after {box-sizing:border-box}
+.jinni-dialog::backdrop {background:#10182766;backdrop-filter:blur(5px)}
+.jinni-dialog button {
+    flex-shrink:0; min-height:38px; padding:8px 14px; border:1px solid var(--ju-line); border-radius:10px;
+    font:inherit; font-weight:500; line-height:20px; color:var(--ju-text); background:var(--ju-card);
+    white-space:nowrap; word-break:keep-all; overflow-wrap:normal; writing-mode:horizontal-tb;
+    cursor:pointer; transition:background .15s,border-color .15s,box-shadow .15s;
+}
+.jinni-dialog button:hover {background:var(--ju-active);border-color:var(--ju-accent)}
+.jinni-dialog button:disabled {opacity:.45;cursor:not-allowed}
+.jinni-dialog :is(button,input,select):focus-visible {outline:2px solid var(--ju-accent);outline-offset:3px}
+.jinni-dialog .jinni-primary {background:#595bd6;color:#fff;border-color:#595bd6;font-weight:600}
+.jinni-dialog .jinni-primary:hover {background:#484bc0;border-color:#484bc0}
+.jinni-dialog .jinni-description {font-size:13px;line-height:1.65;color:var(--ju-muted);margin:6px 0 0;overflow-wrap:break-word}
+.jinni-settings-layout {display:flex;height:100%;min-height:0}
+.jinni-settings-nav {width:180px;flex-shrink:0;padding:26px 12px 18px;display:flex;flex-direction:column;gap:8px;background:var(--ju-panel);border-right:1px solid var(--ju-line)}
+.jinni-settings-nav strong {margin:0 12px 20px;font-size:20px;letter-spacing:.02em}
+.jinni-settings-nav button {border-color:transparent;text-align:left;background:transparent;min-height:42px}
+.jinni-settings-nav button.active {background:var(--ju-active);color:var(--ju-accent);font-weight:650}
+.jinni-settings-nav [data-page="about"] {margin-top:auto;border-top:1px solid var(--ju-line)}
+.jinni-settings-main {min-width:0;min-height:0;flex:1;display:flex;flex-direction:column}
+.jinni-settings-head {display:flex;flex-shrink:0;align-items:center;justify-content:space-between;gap:16px;padding:18px 26px;border-bottom:1px solid var(--ju-line)}
+.jinni-settings-head h2 {font-size:19px;font-weight:650;line-height:1.4;margin:0;white-space:nowrap}
+.jinni-dialog :is([data-close],[data-close-picker]) {width:36px;height:36px;min-height:36px;padding:0;border-color:transparent;background:transparent}
+.jinni-settings-page {padding:28px;min-height:0;overflow:auto;flex:1}
+.jinni-settings-page[hidden] {display:none!important}
+.jinni-settings-page.providers {padding:0;overflow:hidden}
+.jinni-settings-page iframe {display:block!important;width:100%!important;height:100%!important;position:static!important;border:0;opacity:1!important;visibility:visible!important;pointer-events:auto!important}
+.jinni-dialog:not([open]) iframe {visibility:hidden!important;pointer-events:none!important}
+.jinni-shortcuts-page {display:flex;flex-direction:column;padding:0;overflow:hidden}
+.jinni-shortcuts-intro {padding:20px 26px 14px;flex-shrink:0;border-bottom:1px solid var(--ju-line)}
+.jinni-toggle-row {display:flex;align-items:center;justify-content:space-between;gap:20px}
+.jinni-toggle-row strong {display:block;font-size:15px;font-weight:650}
+.jinni-toggle-row small {display:block;margin-top:2px;font-size:12px;color:var(--ju-muted)}
+.jinni-toggle-row input {appearance:none!important;flex:0 0 40px;width:40px!important;height:24px!important;min-height:24px!important;border:1px solid var(--ju-line)!important;border-radius:99px!important;padding:0!important;background:var(--ju-line)!important;position:relative;cursor:pointer}
+.jinni-toggle-row input::after {content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 3px #0003;transition:transform .15s}
+.jinni-toggle-row input:checked {background:#6567dd!important;border-color:#6567dd!important}
+.jinni-toggle-row input:checked::after {transform:translateX(16px)}
+#jinniKeyRows {flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;padding:0 26px;scrollbar-gutter:stable}
+.jinni-shortcut-row {display:grid;grid-template-columns:minmax(0,1fr) minmax(132px,max-content) auto;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid var(--ju-line)}
+.jinni-shortcut-row:last-child {border-bottom:0}
+.jinni-shortcut-info {min-width:0}
+.jinni-shortcut-info span {display:block;font-weight:550;line-height:1.5}
+.jinni-shortcut-info small {display:block;font-size:12px;line-height:1.5;margin-top:3px;color:var(--ju-muted);white-space:nowrap}
+.jinni-shortcut-row .binding {font-size:13px;font-variant-numeric:tabular-nums;min-width:132px}
+.jinni-shortcut-row .binding[aria-pressed="true"] {color:var(--ju-accent);border-color:var(--ju-accent);background:var(--ju-active);box-shadow:0 0 0 2px var(--ju-active)}
+.jinni-shortcut-row .jinni-clear-key {color:var(--ju-muted);border-color:transparent;background:transparent;padding:8px 10px}
+.jinni-settings-footer {flex-shrink:0;border-top:1px solid var(--ju-line);padding:12px 26px 18px;background:var(--ju-bg)}
+.jinni-message {font-size:13px;line-height:1.6;min-height:21px;color:var(--ju-muted);margin:0;overflow-wrap:anywhere}
+.jinni-message.jinni-error {color:var(--ju-danger)}
+.jinni-actions,.jinni-action-end {display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.jinni-settings-footer .jinni-actions {justify-content:space-between;margin-top:10px}
+.jinni-about-heading {display:flex;align-items:center;gap:18px;margin:8px 0 32px}
+.jinni-app-mark {display:grid;place-items:center;flex:0 0 58px;width:58px;height:58px;border-radius:18px;background:var(--ju-active);color:var(--ju-accent);font-size:23px;font-weight:750}
+.jinni-about-heading h3 {font-size:24px;line-height:1.25;font-weight:700;margin:0}
+.jinni-about-details {margin:0;border:1px solid var(--ju-line);border-radius:16px;background:var(--ju-card);overflow:hidden}
+.jinni-about-details>div {display:grid;grid-template-columns:100px minmax(0,1fr);gap:20px;padding:18px 20px;border-bottom:1px solid var(--ju-line)}
+.jinni-about-details>div:last-child {border-bottom:0}
+.jinni-about-details dt {color:var(--ju-muted);white-space:nowrap}
+.jinni-about-details dd {margin:0;font-weight:550;overflow-wrap:anywhere}
+.jinni-library-picker {width:min(520px,calc(100vw - 32px));height:fit-content;max-height:calc(100dvh - 32px);padding:0;overflow:auto}
+.jinni-picker-head {display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding:24px 26px 18px}
+.jinni-picker-head h2 {font-size:21px;font-weight:650;line-height:1.4;margin:0}
+.jinni-picker-body {padding:0 26px 18px}
+.jinni-library-picker label {display:block;font-weight:550;margin:0 0 16px}
+.jinni-library-picker :is(select,input) {box-sizing:border-box;width:100%;min-width:0;min-height:42px;padding:10px 12px;border:1px solid var(--ju-line);border-radius:10px;background:var(--ju-card);color:var(--ju-text);font:14px/20px system-ui;margin:8px 0 0}
+.jinni-library-picker select {text-overflow:ellipsis}
+.jinni-library-picker .jinni-danger-link {color:var(--ju-danger);border:0;background:transparent;padding:0;min-height:30px;margin-top:-6px;font-size:12px}
+.jinni-create-category {margin-top:18px;border-top:1px solid var(--ju-line);padding-top:18px}
+.jinni-create-category label {margin:0;font-size:13px}
+.jinni-create-category .jinni-actions {flex-wrap:nowrap;margin-top:8px}
+.jinni-create-category input {flex:1;width:0;margin:0}
+.jinni-picker-footer {padding:16px 26px 22px;border-top:1px solid var(--ju-line);background:var(--ju-panel)}
+.jinni-picker-footer .jinni-actions {justify-content:flex-end;margin-top:14px}
+#outputLibraryBtn,#imageEditorLibraryBtn {flex-shrink:0;white-space:nowrap;word-break:keep-all}
+/* Embedded provider configuration uses the settings title and a single action row. */
+.jinni-embedded-providers .page {padding:20px!important}
+.jinni-embedded-providers .layout {grid-template-columns:minmax(0,1fr)!important;gap:20px!important}
+.jinni-embedded-providers .sidebar {position:static!important;max-height:none!important;padding:14px!important;gap:10px!important}
+.jinni-embedded-providers .provider-list {display:grid!important;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));min-height:0!important;max-height:180px!important;gap:8px!important;padding-bottom:10px!important}
+.jinni-embedded-providers :is(.form,.model-grid) {grid-template-columns:minmax(0,1fr)!important;min-width:0}
+.jinni-embedded-providers .page-head .title {display:none}
+.jinni-embedded-providers .page-head {margin-bottom:16px!important;gap:8px!important;flex-wrap:wrap}
+.jinni-embedded-providers .page-head .sub {font-size:13px!important;margin:0!important}
+.jinni-embedded-providers .content-head {gap:12px!important;flex-wrap:wrap}
+.jinni-embedded-providers .content-actions {display:flex!important;flex-wrap:wrap!important;gap:8px!important;max-width:100%}
+.jinni-embedded-providers :is(button,.action-btn) {white-space:nowrap!important;word-break:keep-all!important;flex-shrink:0}
+.jinni-embedded-providers .content-actions .action-btn {width:auto!important;min-width:max-content!important;padding:8px 12px!important}
+.jinni-embedded-providers .jinni-provider-cancel {color:var(--muted);background:var(--soft);border:1px solid var(--line)}
+@media(max-width:680px) {
+    .jinni-dialog {border-radius:18px}
+    .jinni-settings-layout {flex-direction:column}
+    .jinni-settings-nav {width:100%;flex-direction:row;gap:4px;padding:10px;border-right:0;border-bottom:1px solid var(--ju-line)}
+    .jinni-settings-nav strong {display:none}
+    .jinni-settings-nav button {padding:8px 10px;min-height:38px;font-size:13px}
+    .jinni-settings-nav [data-page="about"] {margin-top:0;margin-left:auto;border-top:0}
+    .jinni-settings-head {padding:12px 18px}
+    .jinni-settings-head h2 {font-size:18px}
+    .jinni-settings-page:not(.providers):not(.jinni-shortcuts-page) {padding:22px 18px}
+    .jinni-shortcuts-intro {padding:16px 18px 12px}
+    #jinniKeyRows {padding:0 18px}
+    .jinni-shortcut-row {grid-template-columns:minmax(0,1fr) auto;gap:8px;padding:12px 0}
+    .jinni-shortcut-info {grid-column:1/-1}
+    .jinni-shortcut-row .binding {min-width:0;width:100%}
+    .jinni-settings-footer {padding:12px 18px 16px}
+    .jinni-settings-footer .jinni-actions {gap:8px}
+    .jinni-settings-footer button {padding:8px 10px;font-size:13px}
+    .jinni-action-end {gap:8px;margin-left:auto}
+    .jinni-about-heading {gap:12px;margin-bottom:24px}
+    .jinni-about-heading h3 {font-size:22px}
+    .jinni-about-details>div {grid-template-columns:76px minmax(0,1fr);gap:12px;padding:16px}
+    .jinni-picker-head {padding:22px 20px 18px}
+    .jinni-picker-body {padding:0 20px 18px}
+    .jinni-picker-footer {padding:16px 20px 20px}
+    .jinni-embedded-providers .page {padding:16px 12px!important}
+}
+@media(prefers-reduced-motion:reduce) {.jinni-dialog *{transition:none!important}}
+
+#quickToolbar.bottom-dock{gap:10px;overflow:visible}#quickToolbar.bottom-dock .toolbar-items,#quickToolbar.bottom-dock .toolbar-fixed,#quickToolbar.bottom-dock .dock-action-group{gap:10px}#quickToolbar button{transform-origin:center bottom}#quickToolbar button>svg{transform:none!important}#quickToolbar.bottom-dock .tool-btn:hover{transform:var(--dock-transform,none)!important}#quickToolbar.bottom-dock .tool-btn{transform:var(--dock-transform,none)!important}
+
+#quickToolbar.bottom-dock .dock-icon-btn{transform:var(--dock-transform,none)!important}#quickToolbar.bottom-dock .dock-icon-btn:hover{transform:var(--dock-transform,none)!important}.link.jinni-cut-pending{stroke:#ef476f!important;stroke-dasharray:7 4!important;opacity:.65}#outputLibraryBtn{width:auto;padding:8px 12px;border-radius:12px;font-size:13px}
+
+html.studio-theme-dark body input[type="range"]::-webkit-slider-runnable-track,html.theme-dark body input[type="range"]::-webkit-slider-runnable-track{background:linear-gradient(to right,#9a98ff var(--range-progress,0%),#344055 var(--range-progress,0%))!important}html.studio-theme-dark body input[type="range"]::-webkit-slider-thumb,html.theme-dark body input[type="range"]::-webkit-slider-thumb{border-color:#9a98ff!important;background:#20283a!important}.jinni-embedded-providers .header{position:static}button:focus-visible{outline-offset:3px}

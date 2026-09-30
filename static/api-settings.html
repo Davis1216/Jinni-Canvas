@@ -8,6 +8,7 @@
         (function(){
             try {
                 document.documentElement.dataset.studioFitScale = 'off';
+                if(new URLSearchParams(location.search).has('embedded')) document.documentElement.dataset.studioScale = 'off';
                 var theme = localStorage.getItem('studio_theme') || localStorage.getItem('canvas_theme') || 'light';
                 if(theme === 'dark') {
                     document.documentElement.classList.add('studio-theme-dark');
@@ -22,6 +23,7 @@
     <script src="/static/js/i18n.js?v=2026.07.4.2.1784104411"></script>
     <link rel="stylesheet" href="/static/css/theme.css?v=2026.07.4.2.1783154122">
     <link rel="stylesheet" href="/static/css/api-settings.css?v=2026.07.4.2.1784275157">
+<link rel="stylesheet" href="/static/css/jinni-ui.css?v=2026.07.4.2">
 </head>
 <body>
     <div class="page">
@@ -530,5 +532,6 @@
     </div>
 
     <script src="/static/js/api-settings.js?v=2026.07.4.2.1784275157"></script>
+<script src="/static/js/jinni-ui.js?v=2026.07.4.2"></script>
 </body>
 </html>

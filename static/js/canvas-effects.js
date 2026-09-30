@@ -37,7 +37,18 @@
     const visible = () => !document.hidden && !shell.classList.contains('no-canvas') &&
         (!frameElement || (getComputedStyle(frameElement).visibility !== 'hidden' && getComputedStyle(frameElement).display !== 'none'));
     const motionEnabled = () => prefs.motion && !reduced.matches;
-    const save = () => { try { localStorage.setItem(key,JSON.stringify(prefs)); } catch(_) {} };
+    let preferenceEdits = 0, preferenceTimer = 0, preferenceWrites = Promise.resolve();
+    const save = () => {
+        preferenceEdits++;
+        try { localStorage.setItem(key,JSON.stringify(prefs)); } catch(_) {}
+        clearTimeout(preferenceTimer);
+        preferenceTimer = setTimeout(() => {
+            const value = JSON.stringify(prefs);
+            preferenceWrites = preferenceWrites.then(() => fetch('/api/canvas-appearance', {method:'PUT',headers:{'Content-Type':'application/json'},body:value}))
+                .then(response => { if(!response.ok) throw Error('背景偏好保存失败'); })
+                .catch(() => { panel.querySelector('.canvas-effects-status').textContent = '背景偏好保存失败，请检查数据目录权限。'; });
+        }, 200);
+    };
 
     // Own all resources, including partially initialized or failed renderers.
     function createRuntime(onError){
@@ -189,17 +200,17 @@
     const outside = event => { if(!panel.hidden && !panel.contains(event.target) && !toggle.contains(event.target)) closePanel(); };
     document.addEventListener('pointerdown',outside,true);
 
-    // Spring-mass Dock inspired by the reference. Animate icons inside fixed hit areas.
+    // Scale complete buttons around their untransformed layout centers.
     let dockFrame = 0, dockLast = 0, tiles = [], pointer = null;
     function captureDock(){
         tiles = [...dock.querySelectorAll('button')].filter(button => button.offsetWidth > 0).map(button => {
             const rect = button.getBoundingClientRect();
-            return {icon:button.querySelector('svg'),x:rect.left+rect.width/2,y:rect.top+rect.height/2,size:1,velocity:0};
+            return {icon:button,x:rect.left+rect.width/2,y:rect.top+rect.height/2,size:1,velocity:0};
         });
     }
     function resetDock(){
         cancelAnimationFrame(dockFrame); dockFrame = 0;
-        tiles.forEach(tile => tile.icon?.style.removeProperty('transform'));
+        tiles.forEach(tile => tile.icon?.style.removeProperty('--dock-transform'));
         dock.querySelectorAll('.canvas-dock-ripple').forEach(ring => { ring.getAnimations().forEach(animation => animation.cancel()); ring.remove(); });
         pointer = null;
     }
@@ -209,13 +220,13 @@
         let settled = true;
         for(const tile of tiles){
             const distance = pointer ? Math.hypot(pointer.x-tile.x,(pointer.y-tile.y)*2) : Infinity;
-            const target = 1 + .42*Math.max(0,1-distance/110);
+            const target = 1 + (tile.icon.disabled ? 0 : .16*Math.max(0,1-distance/90));
             tile.velocity += ((170*(target-tile.size)-16*tile.velocity)/.5)*dt;
             tile.velocity = Math.max(-5,Math.min(5,tile.velocity));
             tile.size = Math.max(.98,Math.min(1.48,tile.size+tile.velocity*dt));
             if(Math.abs(target-tile.size)>.002 || Math.abs(tile.velocity)>.015) settled = false;
             else { tile.size = target; tile.velocity = 0; }
-            if(tile.icon) tile.icon.style.transform = `translateY(${-(tile.size-1)*10}px) scale(${tile.size})`;
+            if(tile.icon) tile.icon.style.setProperty('--dock-transform', `translateY(${-(tile.size-1)*10}px) scale(${tile.size})`);
         }
         dockFrame = settled ? 0 : requestAnimationFrame(dockStep);
     }
@@ -256,7 +267,7 @@
         setMode:choose,
         getState:() => ({...prefs,renderMode:layer.dataset.renderMode,active:Boolean(active),visible:visible(),reduced:reduced.matches,resources:active?.runtime.counts() || {frames:0,listeners:0,observers:0},dockAnimating:Boolean(dockFrame)}),
         destroy(){
-            destroyed = true; stopBackground(); resetDock(); observer.disconnect();
+            destroyed = true; clearTimeout(preferenceTimer); stopBackground(); resetDock(); observer.disconnect();
             document.removeEventListener('visibilitychange',refresh);
             document.removeEventListener('pointerdown',outside,true);
             window.removeEventListener('studio-theme-change',theme);
@@ -269,4 +280,17 @@
         }
     };
     sync();
+    fetch('/api/canvas-appearance').then(response => { if(!response.ok) throw Error('load'); return response.json(); }).then(value => {
+        if(destroyed || preferenceEdits) return;
+        if(!value.mode){save();return;}
+        if(!modes.some(item => item[0] === value.mode)) return;
+        prefs = {mode:value.mode,intensity:Number.isFinite(value.intensity)?Math.max(.25,Math.min(1,value.intensity)):.7,motion:value.motion!==false};
+        try { localStorage.setItem(key,JSON.stringify(prefs)); } catch(_) {}
+        intensity.value = String(prefs.intensity*100);
+        panel.querySelector('output').value = `${Math.round(prefs.intensity*100)}%`;
+        panel.querySelector('#canvasEffectMotion').checked = prefs.motion;
+        panel.querySelectorAll('[data-effect-mode]').forEach(button => button.setAttribute('aria-pressed',String(button.dataset.effectMode===prefs.mode)));
+        window.JinniRange?.update(intensity);
+        sync(true);
+    }).catch(() => {});
 })();

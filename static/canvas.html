@@ -25,6 +25,7 @@
     <link rel="stylesheet" href="/static/css/image-mentions.css?v=2026.07.4.2.1790691011">
     <link rel="stylesheet" href="/static/css/theme.css?v=2026.07.4.2.1790691011">
     <link rel="stylesheet" href="/static/css/canvas-effects.css?v=2026.07.4.2.1790778018">
+<link rel="stylesheet" href="/static/css/jinni-ui.css?v=2026.07.4.2">
 </head>
 <body>
     <div id="shell" class="shell no-canvas">
@@ -91,11 +92,6 @@
 
             <!-- 现代化底部居中 Dock 工具栏 -->
             <div id="quickToolbar" class="panel toolbar bottom-dock editor-only" data-canvas-no-zoom="" role="toolbar" aria-label="画布工具栏">
-                <div class="dock-mode-group">
-                    <button id="toolSelectBtn" class="dock-mode-btn active" type="button" onclick="setCanvasTool('select')" title="选择模式 (V)" data-label="选择模式"><i data-lucide="mouse-pointer-2" class="w-4 h-4"></i></button>
-                    <button id="toolPanBtn" class="dock-mode-btn" type="button" onclick="setCanvasTool('pan')" title="抓手平移模式 (H / 空格键)" data-label="抓手模式"><i data-lucide="hand" class="w-4 h-4"></i></button>
-                </div>
-                <span class="dock-divider"></span>
                 <div class="toolbar-items">
                     <button class="tool-btn" onclick="addImageNode()" data-label="上传图片"><i data-lucide="image-plus" class="w-4 h-4"></i><span data-i18n="canvas.image">图片</span></button>
                     <button class="tool-btn" onclick="addPromptNode()" data-label="提示词"><i data-lucide="text-cursor-input" class="w-4 h-4"></i><span data-i18n="canvas.prompt">提示词</span></button>
@@ -385,5 +381,9 @@
     <script src="/static/js/canvas.js?v=2026.07.4.2.1790778143"></script>
     <script src="/static/js/canvas-backgrounds.js?v=2026.07.4.2.1790777965"></script>
     <script src="/static/js/canvas-effects.js?v=2026.07.4.2.1790778143"></script>
+<script src="/static/js/jinni-ui.js?v=2026.07.4.2"></script>
+<script src="/static/js/jinni-shortcuts.js?v=2026.07.4.2"></script>
+<script src="/static/js/jinni-canvas-commands.js?v=2026.07.4.2"></script>
+<script src="/static/js/jinni-library-picker.js?v=2026.07.4.2"></script>
 </body>
 </html>

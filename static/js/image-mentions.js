@@ -111,6 +111,7 @@
         activePreview?.classList.remove('open');
     }
     function removeToken(token){
+        if(!confirm('确认移除这张图片引用？')) return;
         const editor = token?.closest?.('.image-mention-editor');
         if(!editor) return;
         let caretNode = token.nextSibling;

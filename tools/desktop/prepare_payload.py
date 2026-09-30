@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[2]
 def stage(destination):
     destination = Path(destination)
     destination.mkdir(parents=True, exist_ok=False)
-    for name in ("main.py", "VERSION", "LICENSE", "requirements.txt"):
+    for name in ("main.py", "jinni_storage.py", "jinni_preferences.py", "VERSION", "LICENSE", "requirements.txt"):
         shutil.copy2(ROOT / name, destination / name)
     for name in ("static", "knowledge_base", "workflows", "CLI"):
         shutil.copytree(ROOT / name, destination / name, dirs_exist_ok=True,

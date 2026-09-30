@@ -46,6 +46,11 @@ PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
+if __name__ == "__main__":
+    from pathlib import Path as _StoragePath
+    from jinni_storage import ensure_storage
+    ensure_storage(_StoragePath(PROJECT_ROOT))
+
 if sys.platform == "darwin":
     _extra_mac_paths = [
         "/opt/homebrew/bin",
@@ -1368,6 +1373,9 @@ os.makedirs(STATIC_DIR, exist_ok=True)
 os.makedirs(WORKFLOW_DIR, exist_ok=True)
 os.makedirs(CONVERSATION_DIR, exist_ok=True)
 os.makedirs(CANVAS_DIR, exist_ok=True)
+
+from jinni_preferences import install_preferences_api
+install_preferences_api(app, DATA_DIR)
 
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 app.mount("/output", StaticFiles(directory=OUTPUT_DIR), name="output")
@@ -16444,15 +16452,20 @@ async def create_asset_library_category(payload: AssetLibraryCategoryRequest):
     library = find_asset_library(lib, payload.library_id)
     if not library:
         raise HTTPException(status_code=404, detail="资产库不存在")
+    name = str(payload.name or "").strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="分类名称不能为空")
+    if any(str(cat.get("name", "")).strip().casefold() == name.casefold() for cat in library.get("categories", [])):
+        raise HTTPException(status_code=409, detail="该素材库已存在同名分类")
     cat_type = "workflow" if str(payload.type or "").lower() == "workflow" else "image"
-    category = {"id": f"cat_{uuid.uuid4().hex[:12]}", "name": sanitize_asset_name(payload.name, "新文件夹"), "type": cat_type, "items": []}
+    category = {"id": f"cat_{uuid.uuid4().hex[:12]}", "name": name, "type": cat_type, "items": []}
     if cat_type == "image":
         # 图片分组在 library/ 下建一个真实文件夹，之后该分组的资产都存进这个文件夹，便于在磁盘上管理。
         category["dir"] = unique_asset_category_dir(library, payload.name)
         try:
             os.makedirs(os.path.join(ASSET_LIBRARY_DIR, category["dir"]), exist_ok=True)
         except Exception as exc:
-            print(f"创建分组文件夹失败: {exc}")
+            raise HTTPException(status_code=500, detail="创建分类文件夹失败，请检查目录权限") from exc
     library.setdefault("categories", []).append(category)
     lib["active_library_id"] = library.get("id") or lib.get("active_library_id")
     save_asset_library(lib)

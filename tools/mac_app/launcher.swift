@@ -27,7 +27,7 @@ class CanvasWebView: WKWebView {
 }
 
 @available(macOS 11.3, *)
-class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigationDelegate, WKUIDelegate, WKDownloadDelegate {
+class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigationDelegate, WKUIDelegate, WKDownloadDelegate, WKScriptMessageHandler {
     var window: NSWindow!
     var webView: CanvasWebView!
     var loadingView: NSView!
@@ -114,13 +114,13 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigati
         mainMenu.addItem(editMenuItem)
         let editMenu = NSMenu(title: "编辑")
         editMenuItem.submenu = editMenu
-        editMenu.addItem(withTitle: "撤销", action: Selector(("undo:")), keyEquivalent: "z")
-        editMenu.addItem(withTitle: "重做", action: Selector(("redo:")), keyEquivalent: "Z")
-        editMenu.addItem(NSMenuItem.separator())
-        editMenu.addItem(withTitle: "剪切", action: #selector(NSText.cut(_:)), keyEquivalent: "x")
-        editMenu.addItem(withTitle: "复制", action: #selector(NSText.copy(_:)), keyEquivalent: "c")
-        editMenu.addItem(withTitle: "粘贴", action: #selector(NSText.paste(_:)), keyEquivalent: "v")
-        editMenu.addItem(withTitle: "全选", action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
+        for (title, selector, key) in [("撤销", "undo:", "z"), ("重做", "redo:", "Z"),
+                                      ("剪切", "cut:", "x"), ("复制", "copy:", "c"),
+                                      ("粘贴", "paste:", "v"), ("全选", "selectAll:", "a")] {
+            let item = editMenu.addItem(withTitle: title, action: #selector(routeCanvasEdit(_:)), keyEquivalent: key)
+            item.target = self
+            item.representedObject = selector
+        }
 
         // View Menu
         let viewMenuItem = NSMenuItem()
@@ -129,9 +129,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigati
         viewMenuItem.submenu = viewMenu
         viewMenu.addItem(withTitle: "刷新画布", action: #selector(reloadWebUI), keyEquivalent: "r")
         viewMenu.addItem(NSMenuItem.separator())
-        viewMenu.addItem(withTitle: "放大", action: #selector(zoomIn), keyEquivalent: "+")
-        viewMenu.addItem(withTitle: "缩小", action: #selector(zoomOut), keyEquivalent: "-")
-        viewMenu.addItem(withTitle: "实际大小", action: #selector(zoomReset), keyEquivalent: "0")
+        for (title, selector, key) in [("放大", "zoomIn", "+"), ("缩小", "zoomOut", "-"), ("实际大小", "zoomReset", "0")] {
+            let item = viewMenu.addItem(withTitle: title, action: #selector(routeCanvasEdit(_:)), keyEquivalent: key)
+            item.target = self
+            item.representedObject = selector
+        }
         viewMenu.addItem(NSMenuItem.separator())
         viewMenu.addItem(withTitle: "进入全屏幕", action: #selector(NSWindow.toggleFullScreen(_:)), keyEquivalent: "f")
 
@@ -180,6 +182,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigati
 
         // WKWebView 配置
         let config = WKWebViewConfiguration()
+        config.userContentController.add(self, name: "chooseDataDirectory")
         let prefs = config.preferences
         prefs.setValue(false, forKey: "developerExtrasEnabled")
         config.defaultWebpagePreferences.allowsContentJavaScript = true
@@ -266,6 +269,23 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigati
                     self.loadingView.isHidden = true
                 })
             }
+        }
+    }
+
+    func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
+        guard message.name == "chooseDataDirectory", message.frameInfo.isMainFrame,
+              let url = message.frameInfo.request.url, url.host == "127.0.0.1",
+              url.port == serverURL.port else { return }
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        panel.canCreateDirectories = true
+        panel.allowsMultipleSelection = false
+        panel.beginSheetModal(for: window) { response in
+            guard response == .OK, let path = panel.url?.path,
+                  let data = try? JSONSerialization.data(withJSONObject: [path]),
+                  let literal = String(data: data, encoding: .utf8) else { return }
+            self.webView.evaluateJavaScript("window.jinniDirectorySelected?.(\(literal)[0])", completionHandler: nil)
         }
     }
 
@@ -394,11 +414,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigati
         env["PYTHONDONTWRITEBYTECODE"] = "1"
         env["JINNI_HOST"] = "127.0.0.1"
         env["JINNI_PORT"] = String(serverURL.port ?? 3000)
+        if let legacy = UserDefaults.standard.string(forKey: "jinni_project_dir") {
+            env["JINNI_LEGACY_PROJECT"] = legacy
+        }
         if let home = desktopHome {
             env["JINNI_DESKTOP_BUNDLE"] = "1"
-            env["JINNI_DATA_DIR"] = home.appendingPathComponent("data").path
-            env["JINNI_ASSETS_DIR"] = home.appendingPathComponent("assets").path
-            env["JINNI_KB_DATA_DIR"] = home.appendingPathComponent("data/knowledge_base").path
+            env["JINNI_LEGACY_ROOT"] = home.path
         }
         let extraPaths = [
             "/opt/homebrew/bin",
@@ -515,8 +536,30 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigati
         NSWorkspace.shared.open(serverURL)
     }
 
+    @objc func routeCanvasEdit(_ sender: NSMenuItem) {
+        let key = sender.keyEquivalent.lowercased()
+        let shift = sender.keyEquivalent != key
+        guard let data = try? JSONSerialization.data(withJSONObject: [key]),
+              let literal = String(data: data, encoding: .utf8),
+              let fallback = sender.representedObject as? String else { return }
+        webView.evaluateJavaScript("window.JinniNativeKey?.(\(literal)[0], \(shift)) === true") { value, _ in
+            if value as? Bool != true { NSApp.sendAction(Selector(fallback), to: nil, from: sender) }
+        }
+    }
+
+    func selectedDataRoot() -> URL {
+        let env = ProcessInfo.processInfo.environment
+        if let override = env["JINNI_DESKTOP_HOME"] { return URL(fileURLWithPath: override) }
+        let config = env["JINNI_STORAGE_CONFIG"].map { URL(fileURLWithPath: $0) }
+            ?? FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support/Jinni Canvas/storage.json")
+        if let data = try? Data(contentsOf: config),
+           let value = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+           let root = value["root"] as? String { return URL(fileURLWithPath: root) }
+        return FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".jinni-canvas")
+    }
+
     @objc func openOutputFolder() {
-        let outputDir = desktopHome?.appendingPathComponent("assets/output") ?? projectDir.appendingPathComponent("assets/output")
+        let outputDir = selectedDataRoot().appendingPathComponent("assets/output")
         if !FileManager.default.fileExists(atPath: outputDir.path) {
             try? FileManager.default.createDirectory(at: outputDir, withIntermediateDirectories: true)
         }
@@ -524,8 +567,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigati
     }
 
     @objc func openDataFolder() {
-        let appSupport = desktopHome ?? projectDir.appendingPathComponent("data")
-        let target = FileManager.default.fileExists(atPath: appSupport.path) ? appSupport : projectDir.appendingPathComponent("data")
+        let target = selectedDataRoot()
         NSWorkspace.shared.open(target)
     }
 

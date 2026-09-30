@@ -1743,6 +1743,7 @@ class TimelineEditor {
   }
 
   deleteSelectedSegment() {
+    if (this.selectedIndex === -1 || !confirm("确认删除选中的时间线片段？")) return;
     if (this.selectionType === "audio") {
       if (this.timeline.audioSegments.length === 0 || this.selectedIndex === -1) return;
       this.timeline.audioSegments.splice(this.selectedIndex, 1);

@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>欢迎使用 Jinni Canvas</title>
+<style>
+:root{color-scheme:light;--bg:#f1f4fa;--card:#fff;--text:#20283c;--muted:#657189;--line:#dde3ef;--soft:#f5f7fc;--accent:#575ad3;--error:#b52f49}
+*{box-sizing:border-box}
+body{margin:0;padding:32px 16px;background:var(--bg);color:var(--text);font:14px/1.6 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;display:grid;place-items:center;min-height:100dvh}
+main{width:min(620px,100%);padding:36px;border:1px solid var(--line);border-radius:24px;background:var(--card);box-shadow:0 20px 70px #23334e12}
+.brand{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:28px;color:var(--muted);font-size:12px;font-weight:650;letter-spacing:.1em}
+.version{border:1px solid var(--line);border-radius:99px;padding:3px 10px;font-size:11px;letter-spacing:0;white-space:nowrap}
+h1{font-size:26px;line-height:1.35;font-weight:700;margin:0 0 10px;letter-spacing:-.02em}
+p{margin:0;color:var(--muted);overflow-wrap:break-word}
+section{margin-top:28px}
+label{display:flex;align-items:center;gap:10px;margin-bottom:10px;font-weight:650;font-size:14px}
+.step{display:inline-grid;place-items:center;width:24px;height:24px;flex-shrink:0;background:var(--soft);border:1px solid var(--line);border-radius:8px;font-size:11px;color:var(--muted)}
+input,select,button{font:inherit;line-height:22px;min-height:44px;border:1px solid var(--line);border-radius:11px;padding:10px 12px}
+input,select{min-width:0;width:100%;background:var(--soft);color:var(--text)}
+select{text-overflow:ellipsis}
+button{flex-shrink:0;white-space:nowrap;word-break:keep-all;writing-mode:horizontal-tb;cursor:pointer;background:var(--card);color:var(--text);font-weight:550}
+button:hover{border-color:var(--accent);background:var(--soft)}
+button:disabled{opacity:.55;cursor:wait}
+:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.row{display:flex;align-items:center;gap:10px}.row input{min-width:0;flex:1}
+.hint{font-size:12px;line-height:1.7;margin-top:10px}
+footer{margin-top:28px;padding-top:22px;border-top:1px solid var(--line)}
+.primary{width:100%;background:var(--accent);border-color:var(--accent);color:#fff;font-weight:650}.primary:hover{background:#494cc1;color:#fff}
+#error,#progress{margin-bottom:14px;font-size:13px;white-space:pre-wrap;overflow-wrap:anywhere}
+#error:empty,#progress:empty{display:none}#error{color:var(--error)}#progress{color:var(--accent)}
+@media(max-width:480px){body{padding:16px}main{padding:24px 20px;border-radius:20px}.brand{margin-bottom:24px}h1{font-size:23px}.row{flex-direction:column;align-items:stretch}.row button{align-self:flex-end;padding:8px 14px}section{margin-top:24px}}
+@media(prefers-color-scheme:dark){:root{color-scheme:dark;--bg:#111725;--card:#1b2232;--text:#e6ebf5;--muted:#a3aec4;--line:#364157;--soft:#242d41;--accent:#888af4;--error:#ffabb8}.primary{background:#5b5ed5;border-color:#5b5ed5}}
+</style>
+<main>
+    <header><div class="brand"><span>JINNI CANVAS</span><span class="version">v1.0.0</span></div><h1>设置你的创作空间</h1><p>选择一个文件夹，统一存放项目、图片和应用设置。</p></header>
+    <section><label for="root"><span class="step" aria-hidden="true">01</span>数据存放位置</label><div class="row"><input id="root" spellcheck="false" autocomplete="off" aria-describedby="rootHint"><button id="browse" type="button">选择文件夹</button></div><p id="rootHint" class="hint">默认保存在用户目录下的 .jinni-canvas，也可以选择其他位置。</p></section>
+    <section><label for="source"><span class="step" aria-hidden="true">02</span>导入已有数据</label><select id="source" aria-describedby="sourceHint"><option value="">使用所选目录，不导入</option></select><p id="sourceHint" class="hint">所选目录已有数据时会继续使用。导入旧目录时会复制并校验文件，保留来源文件。</p></section>
+    <footer><p id="error" role="alert"></p><p id="progress" role="status"></p><button class="primary" id="start">开始使用</button></footer>
+</main>
+<script>
+const token='__SETUP_TOKEN__', $=id=>document.getElementById(id);let loaded=false,finished=false;
+window.jinniDirectorySelected=path=>{if(path)$('root').value=path};
+$('browse').onclick=async()=>{try{if(window.webkit?.messageHandlers?.chooseDataDirectory){window.webkit.messageHandlers.chooseDataDirectory.postMessage({});}else if(window.chooseDataDirectory){window.jinniDirectorySelected(await window.chooseDataDirectory(token));}else{$('error').textContent='当前浏览器请直接输入完整目录路径。';$('root').focus();}}catch(e){$('error').textContent=String(e)}};
+$('start').onclick=async()=>{try{$('start').disabled=true;const response=await fetch('/api/setup/initialize',{method:'POST',headers:{'Content-Type':'application/json','X-Setup-Token':token},body:JSON.stringify({root:$('root').value,source:$('source').value})});const result=await response.json();if(!response.ok)throw Error(result.error);finished=true;$('error').textContent='';}catch(e){$('error').textContent=e.message;$('start').disabled=false}};
+async function poll(){try{const response=await fetch('/api/setup/status',{cache:'no-store'});if(!response.ok){if(finished){const ready=await fetch('/api/projects');if(ready.ok){location.replace('/');return}}}else{const s=await response.json();if(!loaded){$('root').value=s.root;s.sources.forEach(path=>{const o=new Option(path,path);$('source').add(o)});if(!s.hasData){if(s.sources.length===1)$('source').value=s.sources[0];else if(s.sources.length>1){$('source').add(new Option('请选择旧数据来源，或选择全新开始','__choose__'),0);$('source').value='__choose__';}}loaded=true;}finished ||= s.complete;$('error').textContent=s.error;$('progress').textContent=s.progress;$('start').disabled=s.busy;$('start').textContent=s.busy?'正在准备…':'开始使用';['root','source','browse'].forEach(id=>$(id).disabled=s.busy);}}catch(e){}setTimeout(poll,650)}poll();
+</script></html>

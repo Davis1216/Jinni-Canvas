@@ -609,6 +609,7 @@ async function registerSharedFolder(){
     }
 }
 async function unregisterSharedFolder(folderId){
+    if(!confirm('确认移除这个共享文件夹记录？')) return;
     if(!folderId) return;
     try {
         await apiJson(`/api/shared-folders/${encodeURIComponent(folderId)}`, {method:'DELETE'});
@@ -2204,6 +2205,9 @@ function resetPromptModalState(){
     pendingDeletePromptId = '';
 }
 function closePromptModal(){
+    const fields = ['promptEditName','promptEditScene','promptEditPositive','promptEditNegative'];
+    const changed = fields.some(id => { const input=document.getElementById(id); return input && input.value !== input.defaultValue; });
+    if(changed && !confirm('确认丢弃未保存的提示词修改？')) return;
     resetPromptModalState();
     render();
 }
@@ -2635,6 +2639,7 @@ async function deleteWorkflowItem(id){
     setStatus('已删除工作流');
 }
 async function deleteSelectedWorkflows(){
+    if(!confirm('确认删除所选工作流？')) return;
     const ids = [...selectedWorkflowIds];
     if(!ids.length) return;
     const data = await apiJson('/api/asset-library/items/delete', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({library_id:activeWorkflowLibraryId, ids})});
@@ -4037,6 +4042,7 @@ function scheduleAvatarPoll(id, providerId){
     }, 6000);
 }
 async function deleteAssetItem(id){
+    if(!confirm('确认删除这个素材文件？此操作无法撤销。')) return;
     const item = findAssetItem(id);
     if(!item) return;
     const data = await apiJson(`/api/asset-library/items/${encodeURIComponent(id)}`, {method:'DELETE'});
@@ -4048,6 +4054,7 @@ async function deleteAssetItem(id){
     setStatus('素材已删除');
 }
 async function deleteSelectedAssets(){
+    if(!confirm('确认删除所有选中的素材文件？此操作无法撤销。')) return;
     if(!selectedAssetIds.size) return;
     const ids = [...selectedAssetIds];
     const data = await apiJson('/api/asset-library/items/delete', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({library_id:activeAssetLibraryId, ids})});
@@ -4442,6 +4449,7 @@ async function moveSelectedPrompts(){
     setStatus(`已将 ${data.moved || ids.length} 条提示词移动到「${categoryName}」`);
 }
 async function deletePromptItem(id){
+    if(!confirm('确认删除这条提示词？')) return;
     const item = findPromptItem(id);
     if(!item) return;
     const data = await apiJson(`/api/prompt-libraries/items/${encodeURIComponent(id)}`, {method:'DELETE'});

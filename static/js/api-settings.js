@@ -1,3 +1,13 @@
+let jinniProviderBaseline = '';
+let jinniProviderInputDirty = false;
+let jinniRhDraftDirty = false;
+window.JinniProviderDraft = {
+    get dirty(){ if(jinniRhDraftDirty) return true; if(!jinniProviderBaseline) return false; syncEditor(); return JSON.stringify(providers) !== jinniProviderBaseline; },
+    discard(){ jinniProviderInputDirty = false; jinniRhDraftDirty = false; if(rhWorkflowEditorState.open) closeRhWorkflowEditor(true); if(jinniProviderBaseline){ providers = JSON.parse(jinniProviderBaseline); renderEditor(); } }
+};
+document.addEventListener('input', event => { if(event.target.matches('input,textarea,select')) jinniProviderInputDirty = true; });
+function markJinniProvidersSaved(){ jinniProviderBaseline = JSON.stringify(providers); jinniProviderInputDirty = false; }
+
 let providers = [];
 let selectedId = '';
 const providerList = document.getElementById('providerList');
@@ -872,6 +882,7 @@ function isStaticRunningHubEntry(kind, entry){
     return Array.isArray(entry?.fields) || (entry?.workflowJson && typeof entry.workflowJson === 'object') || (entry?.raw && typeof entry.raw === 'object');
 }
 function removeRhEntry(kind, index){
+    if(!confirm('确认删除此配置项目？保存后生效。')) return;
     const item = provider();
     if(!item || item.id !== 'runninghub') return;
     const listKey = kind === 'app' ? 'rh_apps' : 'rh_workflows';
@@ -978,7 +989,9 @@ async function openRhAppEditor(index){
         renderRhWorkflowEditorLoading(e.message || '应用参数加载失败');
     }
 }
-function closeRhWorkflowEditor(){
+function closeRhWorkflowEditor(discard=false){
+    if(!discard && jinniRhDraftDirty && !confirm('确认丢弃未保存的工作流参数？')) return;
+    jinniRhDraftDirty = false;
     if(rhWorkflowEditorOverlay) rhWorkflowEditorOverlay.classList.remove('open');
     rhWorkflowEditorState.open = false;
 }
@@ -1296,6 +1309,7 @@ function updateRhWorkflowEditorField(key, prop, value){
     }
 }
 function setRhWorkflowSaveButtonState(state, text){
+    if(state === 'saved') jinniRhDraftDirty = false;
     if(!rhWorkflowSaveBtn) return;
     const label = rhWorkflowSaveBtn.querySelector('span');
     rhWorkflowSaveBtn.classList.toggle('is-saved', state === 'saved');
@@ -3342,6 +3356,7 @@ function updateMsLora(index, field, value){
     else lora[field] = value;
 }
 function removeMsLora(index){
+    if(!confirm('确认删除此配置项目？保存后生效。')) return;
     const item = provider();
     if(!item || item.id !== 'modelscope') return;
     item.ms_loras = Array.isArray(item.ms_loras) ? item.ms_loras : [];
@@ -3428,6 +3443,7 @@ function deleteProvider(){
     if(!item) return;
     if(isFixedProvider(item)){ alert(tr('api.defaultNoDelete') || '默认平台不能删除'); return; }
     if(providers.length <= 1){ alert(tr('api.keepOne')); return; }
+    if(!confirm(`确认删除供应商「${item.name || item.id}」及其配置？`)) return;
     providers = providers.filter(p => p.id !== item.id);
     selectedId = providers[0]?.id || '';
     renderEditor();
@@ -3529,6 +3545,7 @@ function updateModelProtocol(kind, index, value){
     }
 }
 function removeModel(kind, index){
+    if(!confirm('确认删除此配置项目？保存后生效。')) return;
     const item = provider();
     const key = kind === 'image' ? 'image_models' : kind === 'video' ? 'video_models' : 'chat_models';
     const removed = String(item[key][index] || '').trim();
@@ -3548,6 +3565,7 @@ async function loadProviders(){
         selectedId = sortedProviders()[0]?.id || '';
         renderEditor();
         setStatus('');
+        markJinniProvidersSaved();
     } catch(err) {
         setStatus(tr('api.loadFailed'));
     }
@@ -3652,6 +3670,7 @@ async function saveProviders(){
         selectedId = provider()?.id || sortedProviders()[0]?.id || '';
         renderEditor();
         setStatus(tr('api.saved'));
+        markJinniProvidersSaved();
         // 广播变更，画布等其他 iframe 立即重新拉取最新平台/模型列表
         broadcastStudioApiChange('providers-changed');
         return true;
@@ -3725,3 +3744,23 @@ window.onload = () => {
         });
     });
 };
+
+if(new URLSearchParams(location.search).has('embedded')){
+    document.documentElement.classList.add('jinni-embedded-providers');
+    const title=document.querySelector('[data-i18n="api.title"]');
+    if(title){title.removeAttribute('data-i18n');title.textContent='供应商配置'}
+    const cancel=document.createElement('button');cancel.type='button';cancel.textContent='取消修改';cancel.className='action-btn jinni-provider-cancel';
+    cancel.onclick=()=>{if(!JinniProviderDraft.dirty||confirm('确认丢弃未保存的供应商修改？')){JinniProviderDraft.discard();setStatus('修改已取消')}};
+    document.querySelector('.content-actions')?.prepend(cancel);
+    const subtitle=document.querySelector('[data-i18n="api.subtitle"]');
+    if(subtitle){subtitle.removeAttribute('data-i18n');subtitle.textContent='管理供应商、连接信息与可用模型。'}
+}
+
+window.addEventListener('keydown',event=>{
+    if(event.key==='Escape' && parent!==window && new URLSearchParams(location.search).has('embedded')){
+        if(document.querySelector('.modal.open,.overlay.open'))return;
+        event.preventDefault();parent.postMessage({type:'jinni-close-settings'},location.origin);
+    }
+});
+
+rhWorkflowEditorOverlay?.addEventListener('input', () => { jinniRhDraftDirty = true; });

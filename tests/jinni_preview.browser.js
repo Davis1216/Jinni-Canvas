@@ -1,0 +1,34 @@
+async page => {
+ const assert=(value,message)=>{if(!value)throw Error(message)};
+ const fixture={id:'preview-test',title:'图片归档验收',nodes:[{id:'upload',type:'image',url:'/assets/input/upload.png',name:'上传原图',x:50,y:100,w:300,h:280},{id:'output',type:'output',images:['/assets/output/generated.png'],x:550,y:100,w:360,h:340}],connections:[],viewport:{x:0,y:0,scale:1}};
+ const library={active_library_id:'lib',libraries:[{id:'lib',name:'验收素材库',categories:[{id:'cat',name:'产品图片',type:'image',items:[]}]}]};
+ let saves=[],deletes=0;
+ const svg='<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400"><defs><linearGradient id="a"><stop stop-color="#5c57d8"/><stop offset="1" stop-color="#80c7e9"/></linearGradient></defs><rect width="600" height="400" fill="url(#a)"/><circle cx="300" cy="190" r="90" fill="#ffffff80"/></svg>';
+ await page.route('**/assets/**',r=>r.fulfill({contentType:'image/svg+xml',body:svg}));
+ await page.route('**/api/**',route=>{const r=route.request(),p=new URL(r.url()).pathname;if(p==='/api/media-preview')return route.fulfill({contentType:'image/svg+xml',body:svg});let result={};if(p==='/api/canvases/preview-test')result={canvas:fixture};if(p==='/api/asset-library')result={library};if(p==='/api/asset-library/items'){saves.push(r.postDataJSON());result={library}}if(r.method()==='DELETE')deletes++;return route.fulfill({json:result})});
+ await page.setViewportSize({width:1440,height:900});await page.goto('http://127.0.0.1:8766/static/canvas.html?id=preview-test');await page.locator('[data-command="selectAll"]').waitFor();
+ await page.locator('.node[data-id="upload"] .node-body img').first().dblclick();
+ await page.locator('#imageEditModal.open').waitFor();
+ assert(await page.evaluate(()=>nodes.find(n=>n.id===cropState.nodeId).url)==='/assets/input/upload.png','Uploaded original preview');
+ await page.locator('#imageEditorLibraryBtn').click();await page.locator('.jinni-library-picker[open]').waitFor();
+ await page.keyboard.press('Tab');assert(await page.evaluate(()=>!!document.activeElement.closest('.jinni-library-picker')),'Picker retains keyboard focus');
+ await page.keyboard.press('Escape');assert(await page.locator('.jinni-library-picker[open]').count()===0,'Escape closes picker');assert(await page.locator('#imageEditModal.open').count()===1,'Escape preserves underlying preview');
+ await page.locator('#imageEditModal button[aria-label="关闭"]').click();
+ await page.locator('.node[data-id="output"] .output-img-wrap img').first().dblclick();await page.locator('#outputLightbox.open').waitFor();
+ assert(await page.evaluate(()=>currentOutputLightboxUrl)==='/assets/output/generated.png','Generated original preview');
+ await page.locator('#outputLibraryBtn').click();await page.locator('.jinni-library-picker select[data-category]').waitFor();
+ await page.evaluate(()=>{window.confirm=()=>false;window.alert=()=>{}});await page.locator('.jinni-library-picker [data-delete]').click();assert(deletes===0,'Cancelled category deletion sends no request');
+ await page.screenshot({path:'output/playwright/jinni-image-library.png'});
+ const picker=page.locator('.jinni-library-picker');
+ assert((await picker.boundingBox()).height<650,'Picker uses content height');
+ await page.evaluate(()=>StudioTheme.apply('dark'));
+ await page.screenshot({path:'output/playwright/jinni-image-library-dark.png'});
+ await page.setViewportSize({width:390,height:650});
+ const rect=await picker.boundingBox();
+ assert(rect.x>=15&&rect.x+rect.width<=375&&rect.height<=618,'Picker fits a narrow window');
+ assert(await picker.evaluate(el=>el.scrollWidth<=el.clientWidth),'Picker has no horizontal overflow');
+ await page.screenshot({path:'output/playwright/jinni-image-library-narrow.png'});
+ await page.locator('.jinni-library-picker [data-save]').click();
+ assert(saves.length===1&&saves[0].url==='/assets/output/generated.png','Saves original URL, not thumbnail');
+ return {uploadedDoubleClick:true,generatedDoubleClick:true,pickerFocus:true,nestedEscape:true,cancelCategoryDelete:true,originalImageSaved:true};
+}

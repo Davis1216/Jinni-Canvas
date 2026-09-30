@@ -14,6 +14,7 @@ async (page) => {
     await page.setViewportSize({width:1440,height:900});
     await page.goto('http://127.0.0.1:8766/static/canvas.html?id=effects-test');
     await page.locator('#shell:not(.no-canvas)').waitFor();
+    await page.waitForFunction(() => !!window.JinniCanvasEffects);
     await page.emulateMedia({reducedMotion:'no-preference'});
     await page.evaluate(() => { StudioTheme.apply('dark'); localStorage.removeItem('jinni_canvas_appearance_v1'); });
     const modes = ['flow','liquid','floatingLines','galaxy','silk','waves','dotField','dotGrid','shapeGrid','faultyTerminal'];
@@ -48,6 +49,7 @@ async (page) => {
     check(await page.locator('#canvasEffectsPanel').isHidden(),'Escape must close the settings');
     await page.reload();
     await page.locator('#shell:not(.no-canvas)').waitFor();
+    await page.waitForFunction(() => !!window.JinniCanvasEffects);
     check((await page.evaluate(() => JinniCanvasEffects.getState())).mode === 'dotGrid','Appearance must persist across reloads');
     await page.emulateMedia({reducedMotion:'reduce'});
     await page.waitForTimeout(250); // Media-query changes are delivered asynchronously.
@@ -60,9 +62,10 @@ async (page) => {
     const buttonBefore = await target.boundingBox();
     await target.hover();
     await page.waitForTimeout(300);
-    const spring = await target.locator('svg').evaluate(el => getComputedStyle(el).transform);
+    const spring = await target.evaluate(el => getComputedStyle(el).transform);
+    const iconTransform = await target.locator('svg').evaluate(el => getComputedStyle(el).transform);
     const buttonAfter = await target.boundingBox();
-    check(spring !== 'none' && JSON.stringify(buttonBefore) === JSON.stringify(buttonAfter),'Spring must move icons without moving hit areas');
+    check(spring !== 'none' && iconTransform === 'none' && buttonAfter.width > buttonBefore.width,'Spring must scale button border, background and icon together');
     await page.mouse.move(200,120);
     await page.waitForTimeout(1000);
     check(!(await page.evaluate(() => JinniCanvasEffects.getState())).dockAnimating,'Spring must stop when settled');
@@ -92,5 +95,5 @@ async (page) => {
     await page.waitForTimeout(150);
     check((await editor.locator('#board').evaluate(() => JinniCanvasEffects.getState())).active,'Visible iframe must resume');
     check(errors.length === 0,errors.join('\n'));
-    return {animatedModes:results,settingsIsolation:true,persistence:true,reducedMotion:true,dockHitAreas:true,springSettles:true,contextLossFallback:true,resize:true,hiddenFrameCleanup:true,runtimeErrors:errors};
+    return {animatedModes:results,settingsIsolation:true,persistence:true,reducedMotion:true,dockWholeButton:true,springSettles:true,contextLossFallback:true,resize:true,hiddenFrameCleanup:true,runtimeErrors:errors};
 }

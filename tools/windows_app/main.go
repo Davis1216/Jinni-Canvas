@@ -151,9 +151,20 @@ func run() error {
 		"JINNI_DESKTOP_BUNDLE=1",
 		"PYTHONUNBUFFERED=1", "PYTHONDONTWRITEBYTECODE=1",
 		"JINNI_HOST=127.0.0.1", fmt.Sprintf("JINNI_PORT=%d", port),
-		"JINNI_DATA_DIR="+filepath.Join(root, "data"),
-		"JINNI_ASSETS_DIR="+filepath.Join(root, "assets"),
-		"JINNI_KB_DATA_DIR="+filepath.Join(root, "data", "knowledge_base"))
+		"JINNI_LEGACY_ROOT="+root)
+	if smokeTest {
+		// CI checks the normal WebView with disposable data; interactive setup
+		// has its own acceptance test and must not block this unattended check.
+		dataRoot, err := os.MkdirTemp("", "jinni-desktop-smoke-")
+		if err != nil {
+			return err
+		}
+		defer os.RemoveAll(dataRoot)
+		command.Env = append(command.Env,
+			"JINNI_DATA_DIR="+filepath.Join(dataRoot, "data"),
+			"JINNI_ASSETS_DIR="+filepath.Join(dataRoot, "assets"),
+			"JINNI_KB_DATA_DIR="+filepath.Join(dataRoot, "data", "knowledge_base"))
+	}
 	command.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
 	command.Stdout, command.Stderr = log, log
 	if err := command.Start(); err != nil {
@@ -191,6 +202,31 @@ func run() error {
 		return fmt.Errorf("无法创建窗口。请安装 Microsoft Edge WebView2 Runtime：https://developer.microsoft.com/microsoft-edge/webview2/")
 	}
 	defer view.Destroy()
+	if err := view.Bind("chooseDataDirectory", func(token string) (string, error) {
+		// Only the local setup document knows this per-start nonce. The endpoint
+		// disappears once initialization hands control to the normal backend.
+		request, err := http.NewRequest(http.MethodPost, address+"api/setup/directory-picker", nil)
+		if err != nil {
+			return "", err
+		}
+		request.Header.Set("Origin", strings.TrimSuffix(address, "/"))
+		request.Header.Set("X-Setup-Token", token)
+		response, err := (&http.Client{Timeout: 3 * time.Second}).Do(request)
+		if err != nil {
+			return "", fmt.Errorf("目录选择仅在初始化页面可用")
+		}
+		response.Body.Close()
+		if response.StatusCode != http.StatusOK {
+			return "", fmt.Errorf("目录选择仅在初始化页面可用")
+		}
+		picker := exec.Command("powershell.exe", "-NoProfile", "-STA", "-Command", `[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; Add-Type -AssemblyName System.Windows.Forms; $picker = New-Object System.Windows.Forms.FolderBrowserDialog; $picker.Description = 'Jinni Canvas data folder'; if ($picker.ShowDialog() -eq 'OK') { [Console]::Write($picker.SelectedPath) }`)
+		picker.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+		output, err := picker.Output()
+		return strings.TrimSpace(strings.TrimPrefix(string(output), "\ufeff")), err
+	}); err != nil {
+		return err
+	}
+
 	var smokeResult chan error
 	if smokeTest {
 		smokeResult = make(chan error, 1)

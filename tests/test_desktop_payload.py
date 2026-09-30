@@ -11,7 +11,7 @@ def test_distribution_excludes_user_state_and_requires_fresh_destination(tmp_pat
     spec.loader.exec_module(module)
     source = tmp_path / "source"
     source.mkdir()
-    for name in ("main.py", "VERSION", "LICENSE", "requirements.txt"):
+    for name in ("main.py", "jinni_storage.py", "jinni_preferences.py", "VERSION", "LICENSE", "requirements.txt"):
         (source / name).write_text("test")
     for name in ("static", "knowledge_base", "workflows", "CLI", "tools", "data", "assets", "API"):
         (source / name).mkdir()

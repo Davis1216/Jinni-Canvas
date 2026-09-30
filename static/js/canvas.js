@@ -383,6 +383,7 @@ function focusCanvasDialog(dialog){
     (focusable[0] || dialog).focus?.({preventScroll:true});
 }
 function trapCanvasDialogFocus(event){
+    if(document.querySelector('dialog[open]')) return false;
     if(event.key !== 'Tab') return false;
     const dialog = activeCanvasDialog();
     if(!dialog) return false;
@@ -433,6 +434,8 @@ let resizeNode = null;
 let llmPaneDrag = null;
 let tempLink = null;
 let keyboardLinkOrigin = null;
+let isKnifeKeyDown = false;
+let pendingKnifeConnections = new Set();
 let knifeActive = false;
 let knifePoint = null;
 let knifeTrail = [];
@@ -541,6 +544,7 @@ let cropAspectPreset = 'free';
 let cropAspectRatio = null;
 let imageEditMode = 'crop';
 let imageEditModeTouched = false;
+let jinniImageEditDirty = false;
 let imageResizeScale = 0.5;
 let editDrawState = null;
 let editTextItems = [];
@@ -1497,19 +1501,9 @@ function scheduleViewportWheelRender(){
 function safeViewportScale(value){
     return CanvasInteractionRules.clampViewportScale(value, 1);
 }
-let canvasToolMode = 'select'; // 'select' | 'pan'
 let isSpaceDown = false;
 let redoStack = [];
 let minimapVisible = true;
-
-function setCanvasTool(mode){
-    canvasToolMode = mode;
-    const selectBtn = document.getElementById('toolSelectBtn');
-    const panBtn = document.getElementById('toolPanBtn');
-    selectBtn?.classList.toggle('active', mode === 'select');
-    panBtn?.classList.toggle('active', mode === 'pan');
-    document.body.classList.toggle('canvas-tool-pan', mode === 'pan' || isSpaceDown);
-}
 
 function updateZoomControlUI(){
     const pct = Math.round((viewport.scale || 1) * 100);
@@ -1518,6 +1512,7 @@ function updateZoomControlUI(){
     if(zoomText && zoomText.textContent !== `${pct}%`) zoomText.textContent = `${pct}%`;
     if(slider && document.activeElement !== slider) {
         slider.value = String(Math.max(10, Math.min(300, pct)));
+        window.JinniRange?.update(slider);
     }
 }
 
@@ -4676,6 +4671,7 @@ function clearImageNode(nodeId, event=null){
     }
     const node = nodes.find(n => n.id === nodeId);
     if(!node || node.type !== 'image') return;
+    if(!confirm('确认移除此图片？')) return;
     pushUndo();
     node.url = '';
     node.mediaKind = 'image';
@@ -5862,6 +5858,7 @@ function openImageEditor(nodeId, initialMode='crop'){
     if(!node?.url) return;
     if(mediaKindForNode(node) !== 'image') return;
     if(!['preview','crop','outpaint','mask','brush','resize','grid'].includes(initialMode)) initialMode = 'crop';
+    jinniImageEditDirty = false;
     cropState = {nodeId, x:0, y:0, w:0, h:0};
     // 重置自定义宫格状态
     gridCustomMode = false;
@@ -5933,7 +5930,9 @@ function openImageEditor(nodeId, initialMode='crop'){
     setImageEditMode(initialMode);
     refreshIcons();
 }
-function closeImageEditor(){
+function closeImageEditor(saved=false){
+    if(!saved && (jinniImageEditDirty || editDrawUndoStack.length || editTextDirty) && !confirm('确认丢弃未保存的图片编辑？')) return;
+    jinniImageEditDirty = false;
     document.getElementById('imageEditModal').classList.remove('open');
     const img = document.getElementById('cropImage');
     img.onload = null;
@@ -5982,6 +5981,7 @@ function beginCropDrag(event, mode){
     event.preventDefault();
     event.stopPropagation();
     if(imageEditMode === 'outpaint' && mode === 'move') return;
+    jinniImageEditDirty = true;
     cropDrag = {mode, sx:event.clientX, sy:event.clientY, start:{...cropState}};
 }
 function resizeOutpaintFromDrag(dx, dy){
@@ -6142,7 +6142,7 @@ async function applyImageCrop(){
     if(file){
         node.url = file.url;
         node.name = file.name;
-        closeImageEditor();
+        closeImageEditor(true);
         render();
         scheduleSave();
     }
@@ -6176,7 +6176,7 @@ async function applyImageOutpaint(){
         node.mediaKind = 'image';
         node.natural_w = outW;
         node.natural_h = outH;
-        closeImageEditor();
+        closeImageEditor(true);
         render();
         scheduleSave();
     }
@@ -6192,7 +6192,7 @@ async function applyImageMask(){
     const file = await uploadCroppedBlob(blob, `${base}_mask.png`);
     if(file){
         addGeneratedImageNode(file, node, 'mask', 28, {role:'mask'});
-        closeImageEditor();
+        closeImageEditor(true);
         render();
         scheduleSave();
     }
@@ -6236,7 +6236,7 @@ async function applyImageBrush(){
     if(file){
         node.url = file.url;
         node.name = file.name;
-        closeImageEditor();
+        closeImageEditor(true);
         render();
         scheduleSave();
     }
@@ -6269,7 +6269,7 @@ async function applyImageGridSplit(){
             run:{prompt:'宫格切分', refs:[{url:node.url, name:node.name || 'source image'}]},
             grid:{...layout, row:rects[i]?.row || 0, col:rects[i]?.col || 0, w:rects[i]?.w || 1, h:rects[i]?.h || 1}
         })), layout);
-        closeImageEditor();
+        closeImageEditor(true);
         render();
         scheduleSave();
     }
@@ -6295,7 +6295,7 @@ async function applyImageResize(){
     node.mediaKind = 'image';
     node.natural_w = resized.targetW;
     node.natural_h = resized.targetH;
-    closeImageEditor();
+    closeImageEditor(true);
     render();
     scheduleSave();
 }
@@ -6903,7 +6903,8 @@ function bindOutputWrap(wrap, node){
             e.dataTransfer.setData('text/uri-list', img.dataset.url);
         };
         img.ondragend = () => setTimeout(() => { delete img.dataset.dragging; }, 0);
-        img.onclick = e => {
+        img.onclick = e => e.stopPropagation();
+        img.ondblclick = e => {
             e.stopPropagation();
             if(img.dataset.dragging) return;
             openOutputLightbox(img.dataset.url, node);
@@ -6944,6 +6945,7 @@ function bindOutputWrap(wrap, node){
     if(del){
         del.onmousedown = e => e.stopPropagation();
         del.onclick = e => {
+            if(!confirm('确认移除此输出内容？')) { e.stopPropagation(); return; }
             e.stopPropagation();
             const pid = wrap.dataset.pendingId;
             if(pid){
@@ -12845,6 +12847,7 @@ async function runLLMChat(nodeId){
 
 function deleteNode(id, event){
     event?.stopPropagation();
+    if(!nodes.some(n => n.id === id) || !confirm('确认删除这个节点及其连线？')) return;
     pushUndo();
     destroyLTXEditor(nodes.find(n => n.id === id));
     nodes = nodes.filter(n => n.id !== id);
@@ -12857,6 +12860,7 @@ function clearNodeContentBeforeDelete(id){
     const node = nodes.find(n => n.id === id);
     if(!node) return false;
     if(node.type === 'image' && node.url){
+        if(!confirm('确认清空该节点的图片？')) return true;
         pushUndo();
         node.url = '';
         node.mediaKind = 'image';
@@ -12866,6 +12870,7 @@ function clearNodeContentBeforeDelete(id){
         return true;
     }
     if(node.type === 'output' && ((node.images || []).length || (node.texts || []).length || (node._pending || []).length)){
+        if(!confirm('确认清空该节点的全部输出？')) return true;
         pushUndo();
         node.images = [];
         node.roundCandidates = [];
@@ -12893,6 +12898,7 @@ function deleteNodeFromButton(id, event){
 function deleteConnection(id, event){
     event?.preventDefault();
     event?.stopPropagation();
+    if(!connections.some(c => c.id === id) || !confirm('确认删除这条连线？')) return;
     pushUndo();
     connections = connections.filter(c => c.id !== id);
     if(hoveredConnectionId === id) hoveredConnectionId = '';
@@ -15459,6 +15465,19 @@ function sanitizeConnections(){
     return normalized || connections.length !== before;
 }
 function endDrag(event=null){
+    if(pendingKnifeConnections.size){
+        const ids = new Set(pendingKnifeConnections);
+        pendingKnifeConnections.clear();
+        if(confirm(`确认切断 ${ids.size} 条连线？`)){
+            pushUndo();
+            connections = connections.filter(c => !ids.has(c.id));
+            syncGeneratorInputs();
+            refreshGeneratorInputViews();
+            knifeChanged = true;
+            knifeNeedsRender = true;
+        }
+        renderLinks();
+    }
     flushNodeDrag();
     const hadContentDrag = Boolean(dragNode || resizeNode || llmPaneDrag || knifeChanged || tempLink);
     const hadViewportDrag = Boolean(dragBoard || minimapDrag);
@@ -15478,7 +15497,7 @@ function endDrag(event=null){
     const shouldRenderKnife = knifeNeedsRender;
     knifeChanged = false;
     knifeNeedsRender = false;
-    if(!event?.shiftKey) setKnifeMode(false);
+    if(!isKnifeKeyDown) setKnifeMode(false);
     if(textSelectionGuard) textSelectionGuard.active = false;
     document.body.classList.remove('canvas-node-drag', 'canvas-node-resize', 'canvas-selecting', 'canvas-board-pan');
     window.onmousemove = null;
@@ -15735,7 +15754,7 @@ function renderLinks(){
     let runningLinkPulseCount = 0;
     let flowCount = 0;
     segments.forEach(({c, a, b}) => {
-        const relClass = isConnectionSelected(c) ? ' link-active' : '';
+        const relClass = (isConnectionSelected(c) ? ' link-active' : '') + (pendingKnifeConnections.has(c.id) ? ' jinni-cut-pending' : '');
         linksEl.appendChild(pathEl(a.x, a.y, b.x, b.y, `link${relClass}`));
         const runState = connectionRunState(c, nodeById, pendingNodeIds);
         if(!motionReduced && !runState && flowCount < 24){
@@ -15903,21 +15922,16 @@ function applyKnifeCut(from, to){
         const r = nodeRect(n);
         if(segmentIntersectsRect(from, to, r)) nodeHits.add(n.id);
     });
-    const next = connections.filter(c => !nodeHits.has(c.from) && !nodeHits.has(c.to) && !knifeHitsConnection(from, to, c));
-    if(next.length === connections.length) return;
-    if(!knifeChanged) pushUndo();
-    knifeChanged = true;
-    connections = next;
-    syncGeneratorInputs();
-    refreshGeneratorInputViews();
-    knifeNeedsRender = true;
+    connections.forEach(c => {
+        if(nodeHits.has(c.from) || nodeHits.has(c.to) || knifeHitsConnection(from, to, c)) pendingKnifeConnections.add(c.id);
+    });
     renderLinks();
-    renderSelectionHub();
-    scheduleSave();
+
 }
 function setKnifeMode(active){
     document.body.classList.toggle('canvas-knife', Boolean(active && canvas));
     if(!active){
+        pendingKnifeConnections.clear();
         knifeActive = false;
         knifePoint = null;
         knifeTrail = [];
@@ -15927,7 +15941,7 @@ function setKnifeMode(active){
     }
 }
 function startKnifeDrag(e){
-    if(!canvas || e.button !== 0 || !e.shiftKey || e.altKey || isEditableTarget(e.target)) return false;
+    if(!canvas || e.button !== 0 || !isKnifeKeyDown || e.altKey || isEditableTarget(e.target)) return false;
     e.preventDefault();
     e.stopPropagation();
     e.stopImmediatePropagation?.();
@@ -15945,7 +15959,8 @@ function startKnifeDrag(e){
 }
 function continueKnifeDrag(e){
     if(!canvas || !knifeActive) return;
-    if(!e.shiftKey){
+    if(!isKnifeKeyDown){
+        endDrag(e);
         setKnifeMode(false);
         return;
     }
@@ -16030,7 +16045,7 @@ function startBoardPan(e, opts={}){
 
 board.onmousedown = e => {
     if(!canvas) return;
-    if(e.button === 1 || isSpaceDown || canvasToolMode === 'pan'){
+    if(e.button === 1 || isSpaceDown){
         if(!isEditableTarget(e.target) && !e.target.closest?.('button, a, select, [contenteditable="true"]')){
             startBoardPan(e);
             return;
@@ -16042,7 +16057,7 @@ board.onmousedown = e => {
     if(document.activeElement && document.activeElement !== document.body) document.activeElement.blur();
     if(e.target !== board && e.target !== world && e.target !== nodesEl && e.target !== linksEl) return;
     closeCreateMenu();
-    if(isRKeyDown){
+    if(isRKeyDown || e.shiftKey){
         e.preventDefault();
         startSelection(e);
         return;
@@ -16060,7 +16075,7 @@ board.addEventListener('mousemove', e => {
     if(!e.target.closest?.('.link-hit,.link-delete')) setHoveredConnection('');
     if(canvas && knifeActive && !isEditableTarget(e.target) && !dragNode && !dragBoard && !resizeNode && !tempLink){
         continueKnifeDrag(e);
-    } else if(!e.shiftKey) {
+    } else if(!isKnifeKeyDown) {
         setKnifeMode(false);
     }
 });
@@ -16223,7 +16238,7 @@ board.addEventListener('drop', async e => {
 window.addEventListener('dragend', () => dropOverlay.classList.remove('active'));
 window.addEventListener('drop', () => dropOverlay.classList.remove('active'));
 window.addEventListener('paste', e => {
-    if(!canvas) return;
+    if(!canvas || isEditableTarget(e.target) || (window.JinniShortcuts && (!JinniShortcuts.state.enabled || window.jinniCanvasKeyboardBlocked?.()))) return;
     const files = [...(e.clipboardData?.items || [])].filter(x => x.kind === 'file' && /^(image|video|audio)\//.test(String(x.type || ''))).map(x => x.getAsFile());
     if(!files.length) return;
     e.preventDefault();
@@ -16234,15 +16249,13 @@ window.addEventListener('paste', e => {
     else uploadImages(files);
 });
 window.addEventListener('keydown', e => {
-    if(!canvas) return;
-    const key = String(e.key || '').toLowerCase();
+    if(!canvas || document.querySelector('dialog[open]')) return;
+    if(window.JinniShortcuts?.handlesCanvasKeys && !['Escape','ArrowLeft','ArrowRight'].includes(e.key)) return;
     if(e.key === 'Escape' && keyboardLinkOrigin){ e.preventDefault(); clearKeyboardLinkOrigin(); return; }
     if(e.key === 'Escape' && errorModal?.classList.contains('open')) { closeErrorModal(); return; }
     if(e.key === 'Escape' && assetManagerModal?.classList.contains('open')) { closeAssetManager(); return; }
     if(e.key === 'Escape' && logModal?.classList.contains('open')) { closeCanvasLog(); return; }
     if(e.key === 'Escape' && workflowTransferModal?.classList.contains('open')) { closeWorkflowTransferModal(); return; }
-    if(key === 'r' && !isEditableTarget(e.target)) isRKeyDown = true;
-    if(e.key === 'Shift' && !e.altKey && !isEditableTarget(document.activeElement)) setKnifeMode(true);
     if(e.key === 'Escape' && document.getElementById('imageEditModal').classList.contains('open')) { closeImageEditor(); return; }
     if(e.key === 'Escape' && promptTemplateModal?.classList.contains('open')) { closePromptTemplateModal(); return; }
     if(outputLightbox.classList.contains('open') && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')){
@@ -16253,121 +16266,12 @@ window.addEventListener('keydown', e => {
         return;
     }
     if(e.key === 'Escape' && outputLightbox.classList.contains('open')) { closeOutputLightbox(); return; }
-    if(!e.ctrlKey && !e.metaKey && !e.altKey && key === 'z' && !isEditableTarget(e.target)
-        && !document.getElementById('imageEditModal')?.classList.contains('open')
-        && !promptTemplateModal?.classList.contains('open')
-        && !outputLightbox.classList.contains('open')
-        && !assetManagerModal?.classList.contains('open')
-        && !workflowTransferModal?.classList.contains('open')
-        && !logModal?.classList.contains('open')){
-        if(e.repeat) return;
-        e.preventDefault();
-        toggleZoomPreview();
-        return;
-    }
-    if((e.ctrlKey || e.metaKey) && key === 'g') { e.preventDefault(); groupSelectedImages(); }
-    if((e.ctrlKey || e.metaKey) && key === 'c') {
-        // 在输入框/可编辑元素里时，让浏览器原生 Ctrl+C 工作
-        const tag = document.activeElement?.tagName;
-        if(tag === 'INPUT' || tag === 'TEXTAREA' || document.activeElement?.isContentEditable) return;
-        // 用户在页面任意位置选中了文本时，也不要拦截
-        const sel = window.getSelection && window.getSelection();
-        if(sel && sel.toString().length > 0) return;
-        e.preventDefault();
-        copySelectedNodes();
-    }
-    if((e.ctrlKey || e.metaKey) && key === 'v') {
-        const tag = document.activeElement?.tagName;
-        if(tag === 'INPUT' || tag === 'TEXTAREA' || document.activeElement?.isContentEditable) return;
-        if(clipboardNodeCount()) {
-            const pasteRequestedAt = Date.now();
-            setTimeout(() => {
-                if(!canvas) return;
-                if(lastImagePasteAt >= pasteRequestedAt) return;
-                pasteNodes();
-            }, 90);
-        }
-    }
-    if((e.ctrlKey || e.metaKey) && key === 'z') {
-        const tag = document.activeElement?.tagName;
-        if(tag === 'INPUT' || tag === 'TEXTAREA' || document.activeElement?.isContentEditable) return;
-        e.preventDefault();
-        if(e.shiftKey) performRedo();
-        else performUndo();
-        return;
-    }
-    if((e.ctrlKey || e.metaKey) && key === 'y') {
-        const tag = document.activeElement?.tagName;
-        if(tag === 'INPUT' || tag === 'TEXTAREA' || document.activeElement?.isContentEditable) return;
-        e.preventDefault();
-        performRedo();
-        return;
-    }
-    // 缩放快捷键：Ctrl/Cmd + [+] / [-] / [0]
-    if((e.ctrlKey || e.metaKey) && (e.key === '=' || e.key === '+')) {
-        const tag = document.activeElement?.tagName;
-        if(tag === 'INPUT' || tag === 'TEXTAREA' || document.activeElement?.isContentEditable) return;
-        e.preventDefault();
-        zoomStep(1);
-        return;
-    }
-    if((e.ctrlKey || e.metaKey) && (e.key === '-' || e.key === '_')) {
-        const tag = document.activeElement?.tagName;
-        if(tag === 'INPUT' || tag === 'TEXTAREA' || document.activeElement?.isContentEditable) return;
-        e.preventDefault();
-        zoomStep(-1);
-        return;
-    }
-    if((e.ctrlKey || e.metaKey) && e.key === '0') {
-        const tag = document.activeElement?.tagName;
-        if(tag === 'INPUT' || tag === 'TEXTAREA' || document.activeElement?.isContentEditable) return;
-        e.preventDefault();
-        resetZoomTo100();
-        return;
-    }
-    // 自适应全部节点：F 键 或 Shift + 1
-    if((!e.ctrlKey && !e.metaKey && !e.altKey && key === 'f') || (e.shiftKey && e.key === '!')) {
-        const tag = document.activeElement?.tagName;
-        if(tag === 'INPUT' || tag === 'TEXTAREA' || document.activeElement?.isContentEditable) return;
-        e.preventDefault();
-        fitAllNodesViewportSmooth(true);
-        return;
-    }
-    // 模式切换快捷键：V = 选择模式，H = 抓手平移模式
-    if(!e.ctrlKey && !e.metaKey && !e.altKey && key === 'v') {
-        const tag = document.activeElement?.tagName;
-        if(tag === 'INPUT' || tag === 'TEXTAREA' || document.activeElement?.isContentEditable) return;
-        setCanvasTool('select');
-        return;
-    }
-    if(!e.ctrlKey && !e.metaKey && !e.altKey && key === 'h') {
-        const tag = document.activeElement?.tagName;
-        if(tag === 'INPUT' || tag === 'TEXTAREA' || document.activeElement?.isContentEditable) return;
-        setCanvasTool('pan');
-        return;
-    }
-    // 空格键临时平移抓手
-    if(e.code === 'Space' && !isSpaceDown) {
-        const tag = document.activeElement?.tagName;
-        if(tag === 'INPUT' || tag === 'TEXTAREA' || document.activeElement?.isContentEditable) return;
-        isSpaceDown = true;
-        document.body.classList.add('canvas-tool-pan');
-    }
-    if(e.key === 'Delete' || e.key === 'Backspace') {
-        const tag = document.activeElement?.tagName;
-        if(tag === 'INPUT' || tag === 'TEXTAREA' || document.activeElement?.isContentEditable) return;
-        if(selected.size === 0) return;
-        e.preventDefault();
-        deleteSelectedNodes();
-    }
 });
 window.addEventListener('keyup', e => {
     if(e.code === 'Space') {
         isSpaceDown = false;
-        if(canvasToolMode !== 'pan') document.body.classList.remove('canvas-tool-pan');
+        document.body.classList.remove('canvas-tool-pan');
     }
-    if(String(e.key || '').toLowerCase() === 'r') isRKeyDown = false;
-    if(e.key === 'Shift') setKnifeMode(false);
 });
 window.addEventListener('blur', () => { isRKeyDown = false; setKnifeMode(false); });
 window.addEventListener('blur', () => {
@@ -16381,6 +16285,7 @@ window.addEventListener('blur', () => {
 });
 function deleteSelectedNodes(){
     if(!canvas || selected.size === 0) return;
+    if(!confirm(`确认删除选中的 ${selected.size} 个节点及其分组成员和连线？`)) return;
     pushUndo();
     // 收集所有需要删除的 id（含 group 的 items 一并删除）
     const toDelete = new Set();
@@ -16443,7 +16348,6 @@ window.onload = async () => {
     }
 };
 
-window.setCanvasTool = setCanvasTool;
 window.toggleMinimap = toggleMinimap;
 window.fitAllNodesViewportSmooth = fitAllNodesViewportSmooth;
 window.zoomStep = zoomStep;
