@@ -21,9 +21,10 @@
     <script src="/static/js/theme.js?v=2026.07.4.2.1790691011"></script>
     <script src="/static/js/touch-mouse.js?v=2026.07.4.2.1790691011"></script>
     <script src="/static/js/i18n.js?v=2026.07.4.2.1790691011"></script>
-    <link rel="stylesheet" href="/static/css/canvas.css?v=2026.07.4.2.1790746825">
+    <link rel="stylesheet" href="/static/css/canvas.css?v=2026.07.4.2.1790775674">
     <link rel="stylesheet" href="/static/css/image-mentions.css?v=2026.07.4.2.1790691011">
     <link rel="stylesheet" href="/static/css/theme.css?v=2026.07.4.2.1790691011">
+    <link rel="stylesheet" href="/static/css/canvas-effects.css?v=2026.07.4.2.1790778018">
 </head>
 <body>
     <div id="shell" class="shell no-canvas">
@@ -41,6 +42,7 @@
         <!-- 选画布 gate 已拆分到独立页面 static/canvas-list.html（更轻量）。本页只负责编辑器，通过 ?id 打开。 -->
 
         <div id="board" class="board editor-only">
+            <div id="canvasBackdrop" class="canvas-backdrop" aria-hidden="true"></div>
             <div id="dropOverlay" class="drop-overlay" data-i18n="canvas.dropImage">拖放图片到画布</div>
             <div id="selectionBox" class="selection-box"></div>
             <div id="selectionHub" class="selection-hub"></div>
@@ -106,6 +108,7 @@
                 </div>
                 <span class="dock-divider"></span>
                 <div class="toolbar-fixed">
+                    <button id="canvasEffectsToggle" class="tool-btn" type="button" title="背景与动效" aria-label="背景与动效" aria-haspopup="dialog" aria-expanded="false" aria-controls="canvasEffectsPanel" data-label="背景与动效"><i data-lucide="sparkles" class="w-4 h-4"></i></button>
                     <button id="workflowTransferToggle" class="tool-btn toolbar-workflow" type="button" title="导入导出工作流" aria-label="导入导出工作流" data-label="工作流"><i data-lucide="package-open" class="w-4 h-4"></i><span>工作流</span></button>
                     <button id="canvasAssetToggle" class="tool-btn toolbar-asset canvas-asset-toggle" type="button" title="资产库" aria-label="资产库" data-label="资产库"><i data-lucide="library" class="w-4 h-4"></i><span>资产库</span></button>
                     <button id="canvasLogToggle" class="tool-btn toolbar-log" type="button" onclick="openCanvasLog(event)" title="日志" aria-label="日志" data-i18n-title="canvas.logs" data-label="日志"><i data-lucide="list-todo" class="w-4 h-4"></i><span data-i18n="canvas.logs">日志</span></button>
@@ -117,6 +120,7 @@
                     <button id="dockDeleteBtn" class="dock-icon-btn danger" type="button" onclick="deleteSelectedNodes()" title="删除选中节点 (Delete)" data-label="删除"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
                 </div>
             </div>
+            <section id="canvasEffectsPanel" class="canvas-effects-panel" role="dialog" aria-label="背景与动效" data-canvas-no-zoom="" hidden></section>
             <aside id="canvasAssetPanel" class="canvas-asset-panel">
                 <div class="canvas-asset-head">
                     <strong><i data-lucide="library" class="w-4 h-4"></i><span>资产库</span></strong>
@@ -378,6 +382,8 @@
     <script src="/static/js/ltx-director-timeline.js?v=2026.07.4.2.1790691011"></script>
     <script src="/static/js/image-mentions.js?v=2026.07.4.2.1790746825"></script>
     <script src="/static/js/canvas-interaction-rules.js?v=2026.07.4.2.1790691011"></script>
-    <script src="/static/js/canvas.js?v=2026.07.4.2.1790747473"></script>
+    <script src="/static/js/canvas.js?v=2026.07.4.2.1790778143"></script>
+    <script src="/static/js/canvas-backgrounds.js?v=2026.07.4.2.1790777965"></script>
+    <script src="/static/js/canvas-effects.js?v=2026.07.4.2.1790778143"></script>
 </body>
 </html>

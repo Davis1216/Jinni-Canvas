@@ -277,6 +277,7 @@ window.addEventListener('studio-ui-scale-change', applyQuickToolbarState);
 const shell = document.getElementById('shell');
 const canvasGate = document.getElementById('canvasGate');
 const board = document.getElementById('board');
+const canvasBackdrop = document.getElementById('canvasBackdrop');
 const world = document.getElementById('world');
 const nodesEl = document.getElementById('nodes');
 const minimap = document.getElementById('minimap');
@@ -1344,8 +1345,26 @@ function screenToWorld(clientX, clientY){
 }
 function applyViewport(){
     world.style.transform = `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.scale})`;
+    updateCanvasBackdrop();
     scheduleMinimapRender(false);
     updateZoomControlUI();
+}
+function updateCanvasBackdrop(){
+    if(!canvasBackdrop) return;
+    // Blend adjacent world-grid levels continuously; dots stay readable at 6–300%.
+    // Reuse the viewport render, with no independent animation loop or layout reads.
+    const scale = safeViewportScale(viewport.scale);
+    const level = Math.floor(Math.log2(1 / scale));
+    const spacing = 32 * scale * Math.pow(2, level);
+    const blend = Math.log2(32 / spacing);
+    const wrap = (value, period) => ((value % period) + period) % period;
+    const style = canvasBackdrop.style;
+    style.setProperty('--grid-fine-size', `${spacing}px`);
+    style.setProperty('--grid-coarse-size', `${spacing * 2}px`);
+    style.setProperty('--grid-fine-position', `${wrap(viewport.x, spacing)}px ${wrap(viewport.y, spacing)}px`);
+    style.setProperty('--grid-coarse-position', `${wrap(viewport.x, spacing * 2)}px ${wrap(viewport.y, spacing * 2)}px`);
+    style.setProperty('--grid-fine-opacity', String(1 - blend));
+    style.setProperty('--grid-coarse-opacity', String(blend));
 }
 function estimatedNodeRect(n){
     const el = nodesEl?.querySelector?.(`.node[data-id="${CSS.escape(n.id)}"]`);
@@ -6375,6 +6394,7 @@ function measureCanvasOriginalImageNodes(root=nodesEl){
 }
 
 function render(){
+    const previousNodeIds = new Set([...nodesEl.children].map(el => el.dataset.id));
     const outputScrolls = captureOutputScrolls();
     const mediaStates = captureMediaPlaybackStates();
     const reusableMediaNodes = new Map();
@@ -6392,6 +6412,10 @@ function render(){
         try {
             const fresh = renderNode(node);
             const old = reusableMediaNodes.get(node.id);
+            if(!previousNodeIds.has(node.id)){
+                fresh.classList.add('canvas-node-enter');
+                setTimeout(() => fresh.classList.remove('canvas-node-enter'), 260);
+            }
             nodesEl.appendChild(fresh);
             if(old){
                 transplantNodeMediaElement(old, fresh);
@@ -15709,10 +15733,15 @@ function renderLinks(){
     const motionReduced = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches === true;
     const maxRunningLinkPulses = motionReduced ? 0 : Math.max(4, Math.min(12, Number(navigator.hardwareConcurrency || 8)));
     let runningLinkPulseCount = 0;
+    let flowCount = 0;
     segments.forEach(({c, a, b}) => {
         const relClass = isConnectionSelected(c) ? ' link-active' : '';
         linksEl.appendChild(pathEl(a.x, a.y, b.x, b.y, `link${relClass}`));
         const runState = connectionRunState(c, nodeById, pendingNodeIds);
+        if(!motionReduced && !runState && flowCount < 24){
+            linksEl.appendChild(pathEl(a.x, a.y, b.x, b.y, `canvas-link-flow${relClass}`));
+            flowCount += 1;
+        }
         if(runState){
             const feedback = pathEl(a.x, a.y, b.x, b.y, `link link-feedback link-${runState}`);
             feedback.dataset.connectionId = c.id;
@@ -15955,7 +15984,7 @@ canvasArrangeBtn?.addEventListener('click', e => {
     arrangeSelectedCanvasNodes();
 });
 function isZoomPreviewIgnoredTarget(target){
-    return !!target?.closest?.('#createMenu, #linkCreateMenu, #nodeInputMenu, #nodeOutputMenu, #imageNodeMenu, .minimap, #canvasAssetPanel, #assetManagerModal, #workflowTransferModal, #logModal, #promptTemplateModal, #imageEditModal, #outputLightbox');
+    return !!target?.closest?.('#createMenu, #linkCreateMenu, #nodeInputMenu, #nodeOutputMenu, #imageNodeMenu, .minimap, #canvasEffectsPanel, #canvasEffectsToggle, #canvasAssetPanel, #assetManagerModal, #workflowTransferModal, #logModal, #promptTemplateModal, #imageEditModal, #outputLightbox');
 }
 board.addEventListener('mousedown', e => {
     if(!zoomPreviewState || e.button !== 0) return;

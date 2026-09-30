@@ -207,6 +207,46 @@ body.theme-dark .board {
     background-color: #0b0f19;
     background-image: radial-gradient(rgba(148, 163, 184, 0.16) 1.25px, transparent 1.25px);
 }
+/* Opaque, non-interactive surface isolates the editor from shared theme backgrounds. */
+.canvas-backdrop {
+    --surface-base:#f6f8fc;
+    --surface-glow:rgba(99,102,241,.075);
+    --surface-accent:rgba(14,165,233,.045);
+    --surface-dot:rgba(100,116,139,.25);
+    position:absolute;
+    inset:0;
+    overflow:hidden;
+    pointer-events:none;
+    contain:strict;
+    background:
+        radial-gradient(ellipse at 48% 0%, var(--surface-glow), transparent 65%),
+        radial-gradient(ellipse at 100% 100%, var(--surface-accent), transparent 60%),
+        var(--surface-base);
+}
+:is(html,body):is(.theme-dark,.studio-theme-dark) .canvas-backdrop {
+    --surface-base:#10151f;
+    --surface-glow:rgba(99,102,241,.12);
+    --surface-accent:rgba(14,165,233,.055);
+    --surface-dot:rgba(148,163,184,.23);
+}
+.canvas-backdrop::before,
+.canvas-backdrop::after {
+    content:"";
+    position:absolute;
+    inset:0;
+    pointer-events:none;
+    background-image:radial-gradient(circle at 1px 1px, var(--surface-dot) 1px, transparent 1.4px);
+}
+.canvas-backdrop::before {
+    background-size:var(--grid-fine-size,32px) var(--grid-fine-size,32px);
+    background-position:var(--grid-fine-position,0 0);
+    opacity:var(--grid-fine-opacity,1);
+}
+.canvas-backdrop::after {
+    background-size:var(--grid-coarse-size,64px) var(--grid-coarse-size,64px);
+    background-position:var(--grid-coarse-position,0 0);
+    opacity:var(--grid-coarse-opacity,0);
+}
 body.canvas-tool-pan .board {
     cursor: grab !important;
 }
@@ -251,8 +291,9 @@ body.canvas-board-pan,
 body.canvas-board-pan * { cursor:grabbing !important; user-select:none !important; }
 .world { position:absolute; left:0; top:0; width:6000px; height:4000px; transform-origin:0 0; }
 .links { position:absolute; inset:0; width:6000px; height:4000px; overflow:visible; pointer-events:none; z-index:1; }
-.link { stroke:var(--faint); stroke-width:2.5; fill:none; opacity:.82; pointer-events:none; }
-.link.link-active { stroke:var(--strong); opacity:1; }
+.link { stroke:var(--faint); stroke-width:2.5; fill:none; opacity:.72; pointer-events:none; stroke-linecap:round; }
+.link.link-active { stroke:#3b82f6; opacity:1; }
+:is(html,body):is(.theme-dark,.studio-theme-dark) .link.link-active { stroke:#60a5fa; }
 .link.temp { stroke:var(--strong); stroke-dasharray:6 6; }
 .link-feedback { vector-effect:non-scaling-stroke; stroke-linecap:round; opacity:.96; }
 .link-feedback.link-queued { stroke:#f59e0b; stroke-width:2.7; stroke-dasharray:3 8; opacity:.72; }
@@ -269,7 +310,10 @@ body.canvas-board-pan * { cursor:grabbing !important; user-select:none !importan
 .link-delete { position:absolute; width:22px; height:22px; border-radius:999px; display:flex; align-items:center; justify-content:center; transform:translate(-50%,-50%); color:#64748b; background:rgba(255,255,255,.94); border:1px solid #e2e8f0; box-shadow:0 8px 20px rgba(15,23,42,.12); opacity:0; pointer-events:none; transition:opacity .14s var(--ease), color .14s var(--ease), border-color .14s var(--ease), background .14s var(--ease); }
 .link-delete.visible,.link-delete.hover { opacity:1; pointer-events:auto; }
 .link-delete.hover { color:#dc2626; border-color:#fecaca; background:#fff5f5; }
-.node { position:absolute; min-width:220px; min-height:96px; border:1px solid var(--line); border-radius:20px; background:var(--card); box-shadow:0 4px 14px var(--shadow); overflow:visible; user-select:none; z-index:2; transition:box-shadow .18s var(--ease), border-color .18s var(--ease); }
+.node { position:absolute; min-width:220px; min-height:96px; border:1px solid var(--line); border-radius:20px; background:var(--card); box-shadow:0 2px 4px var(--shadow), 0 12px 30px var(--shadow); overflow:visible; user-select:none; z-index:2; transition:box-shadow .18s var(--ease), border-color .18s var(--ease); }
+@media (hover:hover) {
+    .node:hover:not(.selected) { border-color:var(--line-2); box-shadow:0 3px 6px var(--shadow), 0 18px 40px var(--shadow); }
+}
 .node.node-run-queued .port::after { border-color:#f59e0b; box-shadow:0 0 0 2px rgba(245,158,11,.14); }
 .node.node-run-running .port::after { border-color:#bae6fd; background:#0ea5e9; box-shadow:0 0 0 4px rgba(56,189,248,.14); animation:canvasPortPulse 1.15s ease-in-out infinite; }
 .node.node-run-done .port::after { border-color:#bbf7d0; background:#16a34a; box-shadow:0 0 0 3px rgba(34,197,94,.12); }
@@ -282,8 +326,8 @@ body.canvas-board-pan * { cursor:grabbing !important; user-select:none !importan
 }
 .node::before { content:""; position:absolute; inset:0; border-radius:inherit; background:var(--card); pointer-events:none; z-index:-1; overflow:hidden; }
 .node.sized { display:flex; flex-direction:column; }
-.node.selected { outline:none !important; border-color:#3b82f6 !important; box-shadow:0 0 0 2px #3b82f6, 0 16px 42px var(--shadow) !important; }
-body.theme-dark .node.selected { border-color:#60a5fa !important; box-shadow:0 0 0 2px #60a5fa, 0 20px 48px rgba(59, 130, 246, 0.22) !important; }
+#board .node.selected { outline:none !important; border-color:#3b82f6 !important; box-shadow:0 0 0 1px #3b82f6, 0 0 0 4px rgba(59,130,246,.12), 0 16px 42px var(--shadow) !important; }
+:is(html,body):is(.theme-dark,.studio-theme-dark) #board .node.selected { border-color:#60a5fa !important; box-shadow:0 0 0 1px #60a5fa, 0 0 0 4px rgba(96,165,250,.14), 0 20px 48px rgba(0,0,0,.28) !important; }
 .node:focus-visible { outline:3px solid color-mix(in srgb, var(--strong) 42%, transparent); outline-offset:4px; }
 .node-head { height:42px; flex:0 0 42px; display:flex; align-items:center; justify-content:space-between; gap:10px; padding:0 12px; border-bottom:1px solid var(--line); border-radius:21px 21px 0 0; overflow:hidden; cursor:move; }
 .node-head:active { cursor:grabbing; }
@@ -1326,7 +1370,7 @@ body.theme-dark .dock-icon-btn.danger:hover {
     border: 1px solid transparent;
     background: transparent;
     color: var(--muted);
-    transition: background .15s var(--ease), color .15s var(--ease);
+    transition: background .15s var(--ease), color .15s var(--ease), transform .18s var(--ease), box-shadow .18s var(--ease);
 }
 #quickToolbar .dock-mode-btn.active {
     background: var(--card-solid);
