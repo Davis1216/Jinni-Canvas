@@ -146,3 +146,15 @@ html body input[type="range"]:disabled{opacity:.45;cursor:not-allowed}
 #quickToolbar.bottom-dock .dock-icon-btn{transform:var(--dock-transform,none)!important}#quickToolbar.bottom-dock .dock-icon-btn:hover{transform:var(--dock-transform,none)!important}.link.jinni-cut-pending{stroke:#ef476f!important;stroke-dasharray:7 4!important;opacity:.65}#outputLibraryBtn{width:auto;padding:8px 12px;border-radius:12px;font-size:13px}
 
 html.studio-theme-dark body input[type="range"]::-webkit-slider-runnable-track,html.theme-dark body input[type="range"]::-webkit-slider-runnable-track{background:linear-gradient(to right,#9a98ff var(--range-progress,0%),#344055 var(--range-progress,0%))!important}html.studio-theme-dark body input[type="range"]::-webkit-slider-thumb,html.theme-dark body input[type="range"]::-webkit-slider-thumb{border-color:#9a98ff!important;background:#20283a!important}.jinni-embedded-providers .header{position:static}button:focus-visible{outline-offset:3px}
+
+/* Built-in provider remains first, with a separate keyboard-accessible website link. */
+.provider-pinned {min-width:0;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--card)}
+.provider-pinned .provider-card {width:100%;margin:0;border:0;border-radius:0;min-width:0;gap:10px;padding:12px}
+.provider-pinned .provider-info {display:flex;flex-direction:column;min-width:0;text-align:left}
+.provider-pinned .provider-name {white-space:nowrap}
+.provider-pinned .provider-meta {font-size:11px;line-height:1.5;white-space:normal;word-break:normal}
+.provider-builtin-badge {flex-shrink:0;font-size:10px;white-space:nowrap;color:var(--muted);padding:2px 6px;border-radius:6px;background:var(--soft)}
+.provider-website {display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 12px;font-size:12px;color:var(--muted);border-top:1px solid var(--line);text-decoration:none}
+.provider-website:hover {background:var(--soft);color:var(--text)}
+.provider-website:focus-visible {outline:2px solid #7775e7;outline-offset:-3px}
+input[readonly] {cursor:default;color:var(--muted)}

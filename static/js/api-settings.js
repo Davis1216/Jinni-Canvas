@@ -87,6 +87,7 @@ const MS_BUILTIN_IMAGE_MODELS = [
     'Qwen/Qwen-Image-Edit-2511',
     'black-forest-labs/FLUX.2-klein-9B'
 ];
+const YZSTUDIO_BASE_URL = 'https://yzstudio.vip/v1';
 const MS_DEFAULT_BASE_URL = 'https://api-inference.modelscope.cn/v1';
 const RH_DEFAULT_BASE_URL = 'https://www.runninghub.cn';
 const LINGJING_DEFAULT_BASE_URL = 'https://apistudio.vip';
@@ -389,7 +390,11 @@ function visibleProviders(){
 function isFixedProvider(itemOrId){
     const id = typeof itemOrId === 'string' ? itemOrId : itemOrId?.id;
     // 即梦 CLI 不再是固定平台：可删除、可排序，未添加则不存在。
-    return id === 'modelscope' || id === 'runninghub' || id === 'volcengine';
+    return id === 'yzstudio' || id === 'modelscope' || id === 'runninghub' || id === 'volcengine';
+}
+function applyYzstudioDefaults(item){
+    if(item?.id !== 'yzstudio') return;
+    item.name = 'yzstudio'; item.base_url = YZSTUDIO_BASE_URL; item.protocol = 'openai';
 }
 function unique(values){
     const seen = new Set();
@@ -574,6 +579,12 @@ function updateApimartDomesticHint(item=provider()){
 }
 function renderProviderOnboarding(item){
     if(!providerOnboardingCard) return;
+    if(item?.id === 'yzstudio'){
+        providerOnboardingCard.hidden = false;
+        document.body.classList.remove('show-provider-onboarding');
+        providerOnboardingCard.innerHTML = `<div class="onboarding-head"><div><div class="onboarding-title">连接 yzstudio</div><div class="onboarding-desc">请求地址已内置。输入并保存 API Key，系统会自动读取可用模型。</div></div><a class="onboarding-key-btn" href="https://yzstudio.vip" target="_blank" rel="noopener noreferrer">访问官网 ↗</a></div>`;
+        return;
+    }
     const guide = ONBOARDING_GUIDES[item?.id];
     const visible = Boolean(!recommendInlineOpen && guide && isNewUserProvider(item));
     providerOnboardingCard.hidden = !visible;
@@ -2303,7 +2314,7 @@ async function saveRecommendedApi(index){
     if(ok) setStatus(trf('api.recommendSaved', {name:api.name}));
 }
 function sortedProviders(){
-    const order = ['volcengine'];
+    const order = ['yzstudio', 'volcengine'];
     return visibleProviders().sort((a, b) => {
         const ai = order.indexOf(a.id);
         const bi = order.indexOf(b.id);
@@ -2325,6 +2336,16 @@ function renderProviderList(){
         const itemProtocol = String(item.protocol || 'openai').toLowerCase();
         const stateClass = item.enabled === false ? 'is-disabled' : (item.has_key || item.has_wallet_key || CLI_PROTOCOLS.has(itemProtocol) ? 'has-key' : 'missing-key');
         const protocolLabel = item.id === 'runninghub' ? 'RH' : String(item.protocol || 'openai').toUpperCase();
+        if(item.id === 'yzstudio'){
+            return `<div class="provider-pinned">
+                <button class="provider-card ${active} ${stateClass}" type="button" onclick="selectProvider('yzstudio')">
+                    <span class="provider-mark"><i data-lucide="pin" class="w-4 h-4"></i></span>
+                    <span class="provider-info"><span class="provider-name">yzstudio</span><span class="provider-meta">${item.has_key ? '已配置 API Key' : '输入 API Key 即可连接'}</span></span>
+                    <span class="provider-builtin-badge">内置</span>
+                </button>
+                <a class="provider-website" href="https://yzstudio.vip" target="_blank" rel="noopener noreferrer">yzstudio.vip <i data-lucide="arrow-up-right" class="w-3.5 h-3.5"></i></a>
+            </div>`;
+        }
         if(item.id === 'modelscope'){
             return `
                 <button class="provider-card provider-card-banner ${active} ${stateClass}" type="button" onclick="selectProvider('${escapeHtml(item.id)}')">
@@ -2431,6 +2452,7 @@ function renderEditor(){
         return;
     }
     if(settingsContent) settingsContent.hidden = false;
+    applyYzstudioDefaults(item);
     editorTitle.textContent = item.name || item.id;
     nameInput.value = item.name || '';
     idInput.value = item.id || '';
@@ -2438,6 +2460,8 @@ function renderEditor(){
     clearVerifyResult();
     baseInput.placeholder = EXAMPLE_BASE_URL;
     baseInput.value = item.base_url || '';
+    nameInput.readOnly = item.id === 'yzstudio';
+    baseInput.readOnly = item.id === 'yzstudio';
     const lockedApi = lockedRecommendedApi(item);
     if(lockedApi) applyLockedRecommendedProtocol(item);
     if(protocolInput){
@@ -3257,7 +3281,7 @@ async function clearKeyOnly(){
     const ok = await saveProviders();
     if(ok) keyInput.value = '';
 }
-const FIXED_PROTOCOL_PROVIDER_IDS = new Set(['modelscope', 'volcengine', 'runninghub']);
+const FIXED_PROTOCOL_PROVIDER_IDS = new Set(['yzstudio', 'modelscope', 'volcengine', 'runninghub']);
 function providerSupportsModelProtocol(item){
     return Boolean(item) && !FIXED_PROTOCOL_PROVIDER_IDS.has(item.id);
 }
@@ -3570,9 +3594,12 @@ async function loadProviders(){
         setStatus(tr('api.loadFailed'));
     }
 }
-async function saveProviders(){
+async function saveProviders(autoImport = true){
     syncEditor();
+    const yz = providers.find(item => item.id === 'yzstudio');
+    const importModels = autoImport && yz?.api_key && !['image_models','chat_models','video_models'].some(key => yz[key]?.length);
     providers.forEach(item => {
+        applyYzstudioDefaults(item);
         item.id = normalizeId(item.id);
         applyLockedRecommendedProtocol(item);
         item.protocol = item.id === 'runninghub'
@@ -3673,6 +3700,22 @@ async function saveProviders(){
         markJinniProvidersSaved();
         // 广播变更，画布等其他 iframe 立即重新拉取最新平台/模型列表
         broadcastStudioApiChange('providers-changed');
+        if(importModels){
+            setStatus('API Key 已保存，正在读取 yzstudio 可用模型…');
+            try {
+                const response = await fetch('/api/providers/yzstudio/fetch-models');
+                if(!response.ok) throw new Error('读取失败');
+                const models = await response.json();
+                const current = providers.find(item => item.id === 'yzstudio');
+                for(const key of ['image_models','chat_models','video_models']) current[key] = unique(models[key] || []);
+                if(!['image_models','chat_models','video_models'].some(key => current[key].length)) throw new Error('暂无模型');
+                renderEditor();
+                if(await saveProviders(false)) setStatus('API Key 与可用模型已保存，可以返回画布使用。');
+                else setStatus('API Key 已保存；模型保存失败，请点击保存重试。');
+            } catch(error){
+                setStatus('API Key 已保存，暂未读到可用模型。请检查 Key 权限后点击「拉取模型」重试。');
+            }
+        }
         return true;
     } catch(err) {
         setStatus(err.message || tr('api.saveFailed'));

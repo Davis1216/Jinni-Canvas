@@ -822,8 +822,15 @@ def bearer_auth_value(value):
     token = strip_auth_scheme(value, "Bearer")
     return f"Bearer {token}" if token else ""
 
+def builtin_yzstudio_provider():
+    return {
+        "id": "yzstudio", "name": "yzstudio", "base_url": "https://yzstudio.vip/v1",
+        "protocol": "openai", "image_request_mode": "openai", "enabled": True,
+        "primary": False, "image_models": [], "chat_models": [], "video_models": [],
+    }
+
 def default_api_providers():
-    return [{
+    return [{**builtin_yzstudio_provider(), "primary": True}, {
         "id": "custom-api",
         "name": "自定义 API",
         "base_url": "https://api.openai.com/v1",
@@ -832,7 +839,7 @@ def default_api_providers():
         "image_generation_endpoint": "",
         "image_edit_endpoint": "",
         "enabled": True,
-        "primary": True,
+        "primary": False,
         "image_models": [],
         "chat_models": [],
         "video_models": [],
@@ -844,6 +851,9 @@ def merge_default_api_providers(providers):
     if not providers:
         return default_api_providers()
     merged = [dict(item) for item in providers]
+    builtin = next((item for item in merged if item.get("id") == "yzstudio"), builtin_yzstudio_provider())
+    builtin.update({key: builtin_yzstudio_provider()[key] for key in ("name", "base_url", "protocol")})
+    merged = [builtin, *[item for item in merged if item.get("id") != "yzstudio"]]
     # 即梦 CLI 不再是强制保留的默认平台：仅在用户已添加了即梦协议的平台时，规范化其默认模型/地址。
     for current in merged:
         if not is_jimeng_provider(current):
@@ -1154,6 +1164,8 @@ def normalize_provider(item):
     provider_id = str(item.get("id") or "").strip().lower()
     if not PROVIDER_ID_RE.fullmatch(provider_id):
         raise HTTPException(status_code=400, detail=f"API 平台 ID 不合法：{provider_id or '(empty)'}")
+    if provider_id == "yzstudio":
+        item = {**item, **{key: builtin_yzstudio_provider()[key] for key in ("name", "base_url", "protocol")}}
     name = re.sub(r"\s+", " ", str(item.get("name") or provider_id).strip())[:60] or provider_id
     base_url = str(item.get("base_url") or "").strip().rstrip("/")
     if base_url and not re.match(r"^https?://", base_url):
@@ -13453,14 +13465,16 @@ async def save_providers(payload: List[ApiProviderPayload]):
             provider["protocol"] = "runninghub"
         if provider["id"] == "volcengine":
             provider["protocol"] = "volcengine"
-    if not providers:
-        raise HTTPException(status_code=400, detail="至少保留一个 API 平台")
+    # Older clients may omit the built-in provider; preserve its saved configuration.
+    if not any(provider["id"] == "yzstudio" for provider in providers):
+        providers.append(next(p for p in load_api_providers() if p["id"] == "yzstudio"))
     # 强制最多一个 primary（取最后被标记的；都没标记则保持原样不强制）
     primary_indices = [i for i, flag in enumerate(raw_primary_flags) if flag]
     if primary_indices:
         winner = primary_indices[-1]
         for i, p in enumerate(providers):
             p["primary"] = (i == winner)
+    providers = merge_default_api_providers(providers)
     save_api_providers(providers)
     if env_updates:
         update_env_values(env_updates)
