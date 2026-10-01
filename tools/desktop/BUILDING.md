@@ -43,6 +43,8 @@ EXE 尚未进行 Authenticode 签名。
 向导会检测旧版 LocalAppData 数据，复制并校验后再切换。
 缺少 WebView2 时可从 https://developer.microsoft.com/microsoft-edge/webview2/ 安装。
 Python 依赖锁定在 `requirements-windows.lock`，不依赖目标机器的 Python 配置。
+启动器以 UTF-8 模式运行 Python；初始化页面和数据定位配置也明确使用 UTF-8，
+兼容中文 Windows 默认 GBK 编码。
 
 ## 验证
 
@@ -53,7 +55,8 @@ python3 tools/desktop/smoke_backend.py \
 codesign --verify --deep --strict 'dist/Jinni Canvas.app'
 ```
 
-Windows CI 会运行内置 Python 启动检查及 EXE `--smoke-test`，验证原生 WebView
+Windows CI 会运行内置 Python 启动检查、`smoke_backend.py --first-run` 首次初始化检查
+及 EXE `--smoke-test`。首次初始化检查覆盖 UTF-8 页面、中文数据目录和后端切换，原生检查验证 WebView
 加载应用和本地 API。该检查不代表所有用户工作流或显卡性能均已验收。
 测试可以设置 `JINNI_DESKTOP_HOME` 使用独立的数据根目录，并通过
 `JINNI_STORAGE_CONFIG` 隔离定位配置。`--smoke-test` 使用临时数据跳过向导，

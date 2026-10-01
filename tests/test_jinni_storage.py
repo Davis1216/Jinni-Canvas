@@ -135,7 +135,8 @@ def test_preference_api_roundtrip_and_corruption(tmp_path):
     assert client.put('/api/ui-preferences', json=value).status_code == 200
 
 
-def test_setup_picker_requires_local_nonce_and_expires(tmp_path):
+@pytest.mark.parametrize('default_encoding', [None, 'gbk'])
+def test_setup_picker_requires_local_nonce_and_expires(tmp_path, default_encoding):
     import os
     import re
     import socket
@@ -145,10 +146,17 @@ def test_setup_picker_requires_local_nonce_and_expires(tmp_path):
     with socket.socket() as listener:
         listener.bind(('127.0.0.1', 0))
         port = listener.getsockname()[1]
-    root = tmp_path / 'data-root'
+    root = tmp_path / '中文数据'
     env = {key: value for key, value in os.environ.items() if not key.startswith('JINNI_')}
     env.update(JINNI_DESKTOP_HOME=str(root), JINNI_STORAGE_CONFIG=str(tmp_path / 'storage.json'), JINNI_PORT=str(port))
-    process = subprocess.Popen([sys.executable, '-c', 'from pathlib import Path; import jinni_storage as s; s.legacy_roots=lambda project: []; s.ensure_storage(Path.cwd())'], cwd=Path(__file__).resolve().parents[1], env=env, stdout=subprocess.DEVNULL)
+    # Emulate Windows' locale fallback only inside the isolated child process.
+    script = "from pathlib import Path; import jinni_storage as s; s.legacy_roots=lambda project: []; "
+    if default_encoding:
+        script += ("original_read_text=Path.read_text; "
+                   "Path.read_text=lambda self, encoding=None, errors=None: "
+                   f"original_read_text(self, encoding=encoding or {default_encoding!r}, errors=errors); ")
+    script += "s.ensure_storage(Path.cwd())"
+    process = subprocess.Popen([sys.executable, '-c', script], cwd=Path(__file__).resolve().parents[1], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     url = f'http://127.0.0.1:{port}'
     try:
         for _ in range(100):
@@ -159,6 +167,8 @@ def test_setup_picker_requires_local_nonce_and_expires(tmp_path):
                 time.sleep(.05)
         else:
             pytest.fail('setup service did not start')
+        assert page.status_code == 200
+        assert '欢迎使用 Jinni Canvas' in page.text
         token = re.search(r"const token='([^']+)'", page.text).group(1)
         endpoint = url + '/api/setup/directory-picker'
         assert requests.post(endpoint).status_code == 403

@@ -39,7 +39,7 @@ def atomic_json(path, value):
 
 def valid_root(root):
     try:
-        return json.loads((root / MARKER).read_text())['version'] == 1 and all((root / name).is_dir() for name in REQUIRED)
+        return json.loads((root / MARKER).read_text(encoding='utf-8'))['version'] == 1 and all((root / name).is_dir() for name in REQUIRED)
     except (OSError, ValueError, KeyError, TypeError):
         return False
 
@@ -181,7 +181,7 @@ def activate(root):
     os.environ['JINNI_KB_DATA_DIR'] = str(root / 'data/knowledge_base')
     # Resolve old absolute media references without rewriting credentials or source files.
     try:
-        source = json.loads(config_path().read_text()).get('legacy_root')
+        source = json.loads(config_path().read_text(encoding='utf-8')).get('legacy_root')
         if source:
             os.environ['JINNI_LEGACY_ROOT'] = source
     except (OSError, ValueError):
@@ -232,7 +232,7 @@ def ensure_storage(project):
                 return self.reply(state)
             if self.path != '/':
                 return self.reply({'initializing': True}, 503)
-            raw = (project / 'static/setup.html').read_text().replace('__SETUP_TOKEN__', token).encode()
+            raw = (project / 'static/setup.html').read_text(encoding='utf-8').replace('__SETUP_TOKEN__', token).encode('utf-8')
             self.send_response(200)
             self.send_header('Content-Type', 'text/html; charset=utf-8')
             self.send_header('Cache-Control', 'no-store')

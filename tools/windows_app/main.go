@@ -149,7 +149,7 @@ func run() error {
 		return err
 	}
 	defer log.Close()
-	command := exec.Command(filepath.Join(content, "python", "python.exe"), filepath.Join(content, "app", "main.py"))
+	command := exec.Command(filepath.Join(content, "python", "python.exe"), "-X", "utf8", filepath.Join(content, "app", "main.py"))
 	command.Dir = filepath.Join(content, "app")
 	command.Env = append(os.Environ(),
 		"JINNI_DESKTOP_BUNDLE=1",

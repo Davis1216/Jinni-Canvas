@@ -6,6 +6,7 @@ on:
     branches: [main]
     paths:
       - 'main.py'
+      - 'jinni_storage.py'
       - 'static/**'
       - 'knowledge_base/**'
       - 'tools/desktop/**'
@@ -34,6 +35,8 @@ jobs:
         run: bash tools/windows_app/build.sh
       - name: Verify bundled backend
         run: python tools/desktop/smoke_backend.py --python build/windows_app/python/python.exe --app build/windows_app/app
+      - name: Verify first-run setup and Chinese data path
+        run: python tools/desktop/smoke_backend.py --python build/windows_app/python/python.exe --app build/windows_app/app --first-run
       - name: Verify native WebView window
         shell: pwsh
         run: |
