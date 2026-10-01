@@ -580,10 +580,8 @@ function updateApimartDomesticHint(item=provider()){
 function renderProviderOnboarding(item){
     if(!providerOnboardingCard) return;
     if(item?.id === 'yzstudio'){
-        providerOnboardingCard.hidden = false;
-        document.body.classList.remove('show-provider-onboarding');
-        providerOnboardingCard.innerHTML = `<div class="onboarding-head"><div><div class="onboarding-title">连接 yzstudio</div><div class="onboarding-desc">请求地址已内置。输入并保存 API Key，系统会自动读取可用模型。</div></div><a class="onboarding-key-btn" href="https://yzstudio.vip" target="_blank" rel="noopener noreferrer">访问官网 ↗</a></div>`;
-        return;
+        providerOnboardingCard.hidden=true;providerOnboardingCard.replaceChildren();
+        document.body.classList.remove('show-provider-onboarding');return;
     }
     const guide = ONBOARDING_GUIDES[item?.id];
     const visible = Boolean(!recommendInlineOpen && guide && isNewUserProvider(item));
@@ -2334,7 +2332,7 @@ function renderProviderList(){
     providerList.innerHTML = visible.length ? visible.map(item => {
         const active = item.id === selectedId ? 'active' : '';
         const itemProtocol = String(item.protocol || 'openai').toLowerCase();
-        const stateClass = item.enabled === false ? 'is-disabled' : (item.has_key || item.has_wallet_key || CLI_PROTOCOLS.has(itemProtocol) ? 'has-key' : 'missing-key');
+        const stateClass = item.enabled === false ? 'is-disabled' : (item.has_key || item.has_wallet_key || Object.values(item.key_scopes||{}).some(scope=>scope.configured) || CLI_PROTOCOLS.has(itemProtocol) ? 'has-key' : 'missing-key');
         const protocolLabel = item.id === 'runninghub' ? 'RH' : String(item.protocol || 'openai').toUpperCase();
         if(item.id === 'yzstudio'){
             return `<div class="provider-pinned">
@@ -2345,48 +2343,6 @@ function renderProviderList(){
                 </button>
                 <a class="provider-website" href="https://yzstudio.vip" target="_blank" rel="noopener noreferrer">yzstudio.vip <i data-lucide="arrow-up-right" class="w-3.5 h-3.5"></i></a>
             </div>`;
-        }
-        if(item.id === 'modelscope'){
-            return `
-                <button class="provider-card provider-card-banner ${active} ${stateClass}" type="button" onclick="selectProvider('${escapeHtml(item.id)}')">
-                    <span class="provider-banner-inner">
-                        <span class="provider-logo-wrap">
-                            <img src="/static/images/modelscope.gif" alt="ModelScope" class="ms-icon-light">
-                            <img src="/static/images/modelscope-1.gif" alt="ModelScope" class="ms-icon-dark">
-                            <span class="provider-logo-fallback">ModelScope</span>
-                        </span>
-                        <span class="provider-protocol-pill">OpenAI</span>
-                    </span>
-                </button>
-            `;
-        }
-        if(item.id === 'runninghub'){
-            return `
-                <button class="provider-card provider-card-banner ${active} ${stateClass}" type="button" onclick="selectProvider('${escapeHtml(item.id)}')">
-                    <span class="provider-banner-inner">
-                        <span class="provider-logo-wrap">
-                            <img src="/static/images/RunningHub-B.png" alt="RunningHub" class="runninghub-icon ms-icon-light">
-                            <img src="/static/images/RunningHub-W.png" alt="RunningHub" class="runninghub-icon ms-icon-dark">
-                            <span class="provider-logo-fallback">RunningHub</span>
-                        </span>
-                        <span class="provider-protocol-pill">RH</span>
-                    </span>
-                </button>
-            `;
-        }
-        if(item.id === 'volcengine'){
-            return `
-                <button class="provider-card provider-card-banner ${active} ${stateClass}" type="button" onclick="selectProvider('${escapeHtml(item.id)}')">
-                    <span class="provider-banner-inner">
-                        <span class="provider-logo-wrap">
-                            <img src="/static/images/volcengine-theme-light.svg" alt="火山引擎" class="volcengine-icon ms-icon-light">
-                            <img src="/static/images/volcengine-theme-dark.svg" alt="火山引擎" class="volcengine-icon ms-icon-dark">
-                            <span class="provider-logo-fallback">火山引擎</span>
-                        </span>
-                        <span class="provider-protocol-pill">Ark</span>
-                    </span>
-                </button>
-            `;
         }
         return `
             <button class="provider-card provider-card-sortable ${active} ${stateClass}" type="button" onclick="selectProvider('${escapeHtml(item.id)}')"${providerDragAttrs(item)}>
@@ -2479,9 +2435,10 @@ function renderEditor(){
         imageEditRouteInput.disabled = item.id === 'modelscope' || item.id === 'runninghub' || item.id === 'volcengine' || CLI_PROTOCOLS.has(String(protocolInput?.value || item.protocol || '').toLowerCase());
     }
     renderProviderKeyScopes(item);
+    renderProviderUsage(item);
     keyInput.value = item.api_key || '';
     keyInput.placeholder = item.has_key ? `${tr('api.keepCurrentKey')} ${item.key_preview || ''}` : tr('api.enterKey');
-    keyHint.textContent = item.has_key ? `${tr('api.keySaved')}${item.key_env || 'API/.env'}` : tr('api.noKey');
+    keyHint.textContent = item.has_key ? '已保存 · 留空保留当前 Key' : '可选；未设置独立 Key 的功能将使用此 Key';
     const isModelScope = item.id === 'modelscope';
     const isRunningHub = item.id === 'runninghub';
     const isVolcengine = item.id === 'volcengine' || String(protocolInput?.value || item.protocol || '').toLowerCase() === 'volcengine';
@@ -3320,9 +3277,9 @@ function renderModels(kind){
     const showProtocol = kind !== 'video' && providerSupportsModelProtocol(item);
     list.innerHTML = models.map((model, index) => `
         <div class="model-row${showProtocol ? ' has-protocol' : ''}">
-            <input value="${escapeAttr(model)}" oninput="updateModel('${kind}', ${index}, this.value)">
+            <input aria-label="${kind === 'image' ? '图像' : kind === 'video' ? '视频' : '文本'}模型 ID" value="${escapeAttr(model)}" oninput="updateModel('${kind}', ${index}, this.value)">
             ${modelProtocolSelectHtml(kind, index, model, item)}
-            <button class="icon-btn" type="button" onclick="removeModel('${kind}', ${index})" title="删除"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+            <button class="icon-btn" type="button" onclick="removeModel('${kind}', ${index})" title="删除模型" aria-label="删除模型 ${escapeAttr(model)}"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
         </div>
     `).join('');
     refreshIcons();
@@ -3697,6 +3654,7 @@ async function saveProviders(autoImport = true){
         if(!res.ok) throw new Error((await res.json()).detail || tr('api.saveFailed'));
         const data = await res.json();
         providers = data.providers || providers;
+        providerUsageCache.clear();
         providers.forEach(item => {
             delete item.api_key;
             delete item.wallet_api_key;
@@ -3828,14 +3786,14 @@ rhWorkflowEditorOverlay?.addEventListener('input', () => { jinniRhDraftDirty = t
 
 function renderProviderKeyScopes(item){
  let panel=document.getElementById('providerKeyScopes');
- if(!panel){panel=document.createElement('section');panel.id='providerKeyScopes';panel.className='provider-key-scopes';keyHint.parentElement.insertAdjacentElement('afterend',panel)}
+ if(!panel){panel=document.createElement('section');panel.id='providerKeyScopes';panel.className='provider-key-scopes';document.getElementById('providerConnection').insertAdjacentElement('afterend',panel)}
  panel.hidden=CLI_PROTOCOLS.has(item.protocol)||['runninghub','modelscope','volcengine'].includes(item.id);
- if(panel.hidden)return;
+ if(panel.hidden){document.getElementById('providerKeyPurposeRow')?.remove();return;}
  const updates=[];
  panel.onKeyStateChange=()=>updates.forEach(update=>update());
  if(!panel.dataset.listening){panel.addEventListener('key-state-change',()=>panel.onKeyStateChange?.());panel.dataset.listening='true'}
  const labels={llm:'LLM',image:'图像',video:'视频'};
- panel.innerHTML='<h3>功能 API Key</h3><p>上方为全局 Key。下方独立配置优先，留空时继承全局；也可以只配置所需功能。</p>';
+ panel.innerHTML='<h3>独立 API Key <span>可选</span></h3><p>为不同功能使用不同 Key；留空时继承全局 Key。</p>';
  for(const scope of Object.keys(labels)){
   const row=document.createElement('div');row.className='provider-key-row';
   const label=document.createElement('label');label.textContent=labels[scope];
@@ -3844,28 +3802,58 @@ function renderProviderKeyScopes(item){
   const update=()=>{const source=item[scope+'_api_key']||(!item['clear_'+scope+'_key']&&item.key_scopes?.[scope]?.source==='independent');state.textContent=source?'使用独立 Key':item.api_key||(!item._clearKey&&item.has_key)?'继承全局 Key':'未配置';input.placeholder=source?'已配置，留空保留':'可选：继承全局 Key'};
   input.oninput=()=>{item[scope+'_api_key']=input.value.trim();item['clear_'+scope+'_key']=false;update()};
   const clear=document.createElement('button');clear.type='button';clear.textContent='恢复继承';clear.onclick=()=>{item[scope+'_api_key']='';item['clear_'+scope+'_key']=true;input.value='';update()};
-  label.append(input);row.append(label,state,clear);panel.append(row);updates.push(update);update();
+  label.append(state,input);row.append(label,clear);panel.append(row);updates.push(update);update();
  }
+ document.getElementById('providerKeyPurposeRow')?.remove();
  const purpose=document.createElement('select');purpose.id='providerKeyPurpose';purpose.setAttribute('aria-label','连接测试和模型读取使用的 Key');
  for(const [value,label] of Object.entries({global:'全局 Key',...labels})){const option=new Option(label,value);purpose.add(option)}
  if(!item.has_key&&!item.api_key)purpose.value=['image','llm','video'].find(x=>item[x+'_api_key']||item.key_scopes?.[x]?.configured)||'global';
- const purposeLabel=document.createElement('label');purposeLabel.textContent='连接测试 / 模型读取：';purposeLabel.append(purpose);panel.append(purposeLabel);
- const query=document.createElement('button');query.type='button';query.textContent='查询额度';
- const status=document.createElement('div');status.className='provider-usage';status.setAttribute('role','status');
- query.onclick=async()=>{query.disabled=true;status.textContent='正在查询已保存配置…';try{
-  const response=await fetch('/api/providers/'+encodeURIComponent(item.id)+'/usage?refresh=true');
-  if(!response.ok)throw Error('查询失败，请先保存供应商配置');
-  const data=await response.json();status.replaceChildren();
-  for(const entry of data.entries||[]){const card=document.createElement('p');const scopes=(entry.scopes||[]).map(x=>({global:'全局',...labels})[x]||x).join(' / ');let text=scopes+'：';
-   if(entry.status!=='ok')text+=entry.message||(entry.status==='unconfigured'?'未配置':'查询失败');
-   else {const parts=[];if(entry.key_quota)parts.push('Key 剩余额度 '+String(entry.key_quota.remaining??'未知')+' '+(entry.key_quota.unit||''));if(entry.balance!=null)parts.push('账户余额 '+entry.balance+' '+(entry.unit||''));
-    if(entry.subscription){for(const [period,name] of [['daily','日'],['weekly','周'],['monthly','月']]){const limit=entry.subscription[period+'_limit_usd'],used=entry.subscription[period+'_usage_usd'];if(limit!=null)parts.push(name+'额度：已用 '+String(used??'未知')+' / '+limit+' USD')}if(entry.subscription.expires_at)parts.push('到期 '+entry.subscription.expires_at)}
-    for(const window of entry.rate_limits||[])parts.push(window.window+'：剩余 '+String(window.remaining??'未知')+' / '+String(window.limit??'未知'));
-    if(!parts.length)parts.push('供应商未返回可用额度数值');
-    if(entry.valid===false||entry.key_status)parts.push('Key 状态：'+(entry.key_status||'无效'));
-    if(entry.updated_at)parts.push('更新于 '+new Date(entry.updated_at).toLocaleTimeString());text+=parts.join(' · ');
-   }card.textContent=text;status.append(card);
+ const purposeLabel=document.createElement('label');purposeLabel.id='providerKeyPurposeRow';purposeLabel.textContent='测试与读取模型使用';purposeLabel.append(purpose);document.querySelector('.verify-action-row').prepend(purposeLabel);
+}
+
+
+const providerUsageCache=new Map();
+function renderProviderUsage(item){
+ const root=document.getElementById('providerUsage');if(!root)return;
+ root.replaceChildren();root.dataset.providerId=item.id;
+ const head=document.createElement('div');head.className='usage-heading';
+ const title=document.createElement('div');title.innerHTML='<h3>额度与余额</h3><p>按已保存的 Key 查询，共用额度合并展示</p>';
+ const refresh=document.createElement('button');refresh.type='button';refresh.className='usage-refresh';refresh.title='刷新额度';refresh.setAttribute('aria-label','刷新额度');refresh.innerHTML='<i data-lucide="refresh-cw" aria-hidden="true"></i>';
+ head.append(title,refresh);root.append(head);
+ const body=document.createElement('div');body.className='usage-entries';body.setAttribute('role','status');body.setAttribute('aria-live','polite');root.append(body);
+ const scopeNames={global:'全局',llm:'文本',image:'图像',video:'视频'};
+ const number=value=>value==null?'—':Number.isFinite(Number(value))?new Intl.NumberFormat('zh-CN',{maximumFractionDigits:4}).format(Number(value)):String(value);
+ function draw(data){
+  body.replaceChildren();
+  if(!data.entries?.length){body.textContent='供应商未返回额度信息';return}
+  for(const entry of data.entries){
+   const card=document.createElement('section');card.className='usage-entry';
+   const scope=document.createElement('div');scope.className='usage-scopes';scope.textContent=(entry.scopes||[]).map(x=>scopeNames[x]||x).join(' / ')||'当前 Key';card.append(scope);
+   const metrics=document.createElement('div');metrics.className='usage-metrics';card.append(metrics);
+   function metric(label,value,unit){const box=document.createElement('div');const caption=document.createElement('span');caption.textContent=label;const amount=document.createElement('strong');amount.textContent=number(value);const suffix=document.createElement('small');suffix.textContent=unit||'';box.append(caption,amount,suffix);metrics.append(box)}
+   if(entry.status==='ok'){
+    if(entry.key_quota)metric('Key 剩余额度',entry.key_quota.remaining,entry.key_quota.unit);
+    if(entry.balance!=null)metric('账户余额',entry.balance,entry.unit);
+    for(const [period,label] of [['daily','每日'],['weekly','每周'],['monthly','每月']]){const plan=entry.subscription;if(plan?.[period+'_limit_usd']!=null)metric(label+'已用 / 上限',number(plan[period+'_usage_usd'])+' / '+number(plan[period+'_limit_usd']),'USD')}
+    for(const limit of entry.rate_limits||[])metric(limit.window+'剩余 / 上限',number(limit.remaining)+' / '+number(limit.limit),limit.unit);
+    if(!metrics.children.length)metric('可用额度',null,'未提供数值');
+    const details=[];if(entry.valid===false||entry.key_status)details.push('Key 状态：'+(entry.key_status||'无效'));if(entry.subscription?.expires_at)details.push('到期：'+entry.subscription.expires_at);if(entry.updated_at)details.push('更新于 '+new Date(entry.updated_at).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'}));
+    if(details.length){const note=document.createElement('p');note.className='usage-note';note.textContent=details.join(' · ');card.append(note)}
+   }else{const note=document.createElement('p');note.className='usage-note';note.textContent=entry.message||(entry.status==='unconfigured'?'尚未配置 API Key':'查询失败，请重试');card.append(note)}
+   body.append(card);
   }
- }catch(error){status.textContent=error.message}finally{query.disabled=false}};
- panel.append(query,status);
+ }
+ async function query(force){
+  refresh.disabled=true;root.setAttribute('aria-busy','true');
+  if(!body.children.length)body.textContent='正在读取额度…';
+  try{const response=await fetch('/api/providers/'+encodeURIComponent(item.id)+'/usage?refresh='+String(force));if(!response.ok)throw Error(response.status===404?'请先保存供应商配置':'额度查询失败，请重试');const data=await response.json();providerUsageCache.set(item.id,{data,time:Date.now()});if(root.dataset.providerId===item.id&&body.isConnected)draw(data)}
+  catch(error){if(body.isConnected)body.textContent=error.message}
+  finally{refresh.disabled=false;if(body.isConnected)root.removeAttribute('aria-busy')}
+ }
+ refresh.onclick=()=>query(true);
+ const configured=item.has_key||Object.values(item.key_scopes||{}).some(scope=>scope.configured);
+ if(CLI_PROTOCOLS.has(item.protocol)){body.textContent='此供应商不提供 API Key 额度查询';refresh.disabled=true}
+ else if(!configured){body.textContent='保存 API Key 后可查看额度';refresh.disabled=true}
+ else{const cached=providerUsageCache.get(item.id);if(cached&&Date.now()-cached.time<30000)draw(cached.data);else query(false)}
+ refreshIcons();
 }

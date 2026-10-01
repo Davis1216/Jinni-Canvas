@@ -11,8 +11,6 @@ INDEX_HTML = (ROOT / "static" / "index.html").read_text(encoding="utf-8")
 IMAGE_MENTIONS_JS = (ROOT / "static" / "js" / "image-mentions.js").read_text(encoding="utf-8")
 IMAGE_MENTIONS_CSS = (ROOT / "static" / "css" / "image-mentions.css").read_text(encoding="utf-8")
 ASSET_MANAGER_JS = (ROOT / "static" / "js" / "asset-manager.js").read_text(encoding="utf-8")
-SMART_CANVAS_JS = (ROOT / "static" / "js" / "smart-canvas.js").read_text(encoding="utf-8")
-SMART_CANVAS_HTML = (ROOT / "static" / "smart-canvas.html").read_text(encoding="utf-8")
 TOOL_API_MODE_JS = (ROOT / "static" / "js" / "tool-api-mode.js").read_text(encoding="utf-8")
 ONLINE_HTML = (ROOT / "static" / "online.html").read_text(encoding="utf-8")
 MAIN_PY = (ROOT / "main.py").read_text(encoding="utf-8")
@@ -28,13 +26,9 @@ def test_unconfigured_modelscope_and_runninghub_are_filtered_from_canvas():
 
 def test_unconfigured_builtin_providers_are_filtered_from_other_model_pickers():
     assert "providerReadyForSelection(p)" in ONLINE_HTML
-    assert "providerReadyForSmartCanvasSelection(p)" in SMART_CANVAS_JS
-    assert 'value="modelscope" data-i18n="smart.engineMs" hidden' in SMART_CANVAS_HTML
-    assert 'value="runninghub" data-i18n="smart.engineRh" hidden' in SMART_CANVAS_HTML
-    assert "refreshSmartEngineProviderVisibility()" in SMART_CANVAS_JS
     assert "providerReadyForSelection(provider)" in TOOL_API_MODE_JS
     assert "providerReadyForAssetSelection(p)" in ASSET_MANAGER_JS
-    for source in (ONLINE_HTML, SMART_CANVAS_JS, TOOL_API_MODE_JS, ASSET_MANAGER_JS):
+    for source in (ONLINE_HTML, TOOL_API_MODE_JS, ASSET_MANAGER_JS):
         assert "has_key === true" in source
         assert "has_wallet_key === true" in source
 

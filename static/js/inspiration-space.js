@@ -243,7 +243,7 @@
     }
 
     function sourceLabel(type){
-        return {online:'在线生图', canvas:'无限画布', smart_canvas:'智能画布'}[type] || type || '未记录';
+        return {online:'在线生图', canvas:'无限画布'}[type] || type || '未记录';
     }
 
     function openDetail(id){

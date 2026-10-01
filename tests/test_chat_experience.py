@@ -111,8 +111,6 @@ class ChatExperienceTests(unittest.TestCase):
             "chat": os.path.join(main.STATIC_DIR, "gpt-chat.html"),
             "canvas_js": os.path.join(main.STATIC_DIR, "js", "canvas.js"),
             "canvas_css": os.path.join(main.STATIC_DIR, "css", "canvas.css"),
-            "smart_js": os.path.join(main.STATIC_DIR, "js", "smart-canvas.js"),
-            "smart_css": os.path.join(main.STATIC_DIR, "css", "smart-canvas.css"),
         }
         sources = {}
         for name, path in paths.items():
@@ -127,9 +125,6 @@ class ChatExperienceTests(unittest.TestCase):
         self.assertIn('class="output-progress-state"', sources["canvas_js"])
         self.assertIn(".node-run-status.done { background:#dcfce7", sources["canvas_css"])
         self.assertNotIn(".node-run-status.done { display:none; }", sources["canvas_css"])
-        self.assertIn("function inferToastTone", sources["smart_js"])
-        self.assertIn("toast(`任务完成 · ${formatRunDuration(runMs)}`, 'success')", sources["smart_js"])
-        self.assertIn(".toast.error", sources["smart_css"])
 
     def test_first_queued_message_creates_exactly_one_history_record(self):
         async def no_background_run(*args, **kwargs):

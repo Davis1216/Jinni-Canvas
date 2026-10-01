@@ -11,8 +11,8 @@ html body input[type="range"]:focus-visible{outline:2px solid #7775e7!important;
 html body input[type="range"]:disabled{opacity:.45;cursor:not-allowed}
 /* Settings and library dialogs share typography and action sizing. */
 .jinni-dialog {
-    --ju-bg:#f8faff; --ju-panel:#eef1f7; --ju-card:#fff; --ju-line:#dce2ef;
-    --ju-text:#20283c; --ju-muted:#64718a; --ju-accent:#5457cd; --ju-active:#e5e7ff; --ju-danger:#b43c52;
+    --ju-bg:#fff; --ju-panel:#f8fafc; --ju-card:#fff; --ju-line:#e8edf3;
+    --ju-text:#111827; --ju-muted:#64748b; --ju-accent:#111827; --ju-active:#eef1f5; --ju-danger:#b43c52;
     box-sizing:border-box; width:min(960px,calc(100vw - 32px)); height:min(680px,calc(100dvh - 32px));
     margin:auto; padding:0; border:1px solid var(--ju-line); border-radius:22px;
     background:var(--ju-bg); color:var(--ju-text); box-shadow:0 24px 100px #0004;
@@ -20,8 +20,8 @@ html body input[type="range"]:disabled{opacity:.45;cursor:not-allowed}
     writing-mode:horizontal-tb; text-align:left; overflow:hidden;
 }
 :is(.theme-dark,.studio-theme-dark) .jinni-dialog {
-    --ju-bg:#1b2130; --ju-panel:#171d2a; --ju-card:#252d40; --ju-line:#374156;
-    --ju-text:#e6ebf5; --ju-muted:#a0adc5; --ju-accent:#b4b5ff; --ju-active:#34385c; --ju-danger:#ffacb6;
+    --ju-bg:#171d29; --ju-panel:#111722; --ju-card:#171d29; --ju-line:#2a3444;
+    --ju-text:#e5e9f0; --ju-muted:#8f9aab; --ju-accent:#d8dee9; --ju-active:#2a3444; --ju-danger:#ffacb6;
 }
 .jinni-dialog *, .jinni-dialog *::before, .jinni-dialog *::after {box-sizing:border-box}
 .jinni-dialog::backdrop {background:#10182766;backdrop-filter:blur(5px)}
@@ -34,8 +34,8 @@ html body input[type="range"]:disabled{opacity:.45;cursor:not-allowed}
 .jinni-dialog button:hover {background:var(--ju-active);border-color:var(--ju-accent)}
 .jinni-dialog button:disabled {opacity:.45;cursor:not-allowed}
 .jinni-dialog :is(button,input,select):focus-visible {outline:2px solid var(--ju-accent);outline-offset:3px}
-.jinni-dialog .jinni-primary {background:#595bd6;color:#fff;border-color:#595bd6;font-weight:600}
-.jinni-dialog .jinni-primary:hover {background:#484bc0;border-color:#484bc0}
+.jinni-dialog .jinni-primary {background:var(--ju-text);color:var(--ju-bg);border-color:var(--ju-text);font-weight:600}
+.jinni-dialog .jinni-primary:hover {opacity:.86}
 .jinni-dialog .jinni-description {font-size:13px;line-height:1.65;color:var(--ju-muted);margin:6px 0 0;overflow-wrap:break-word}
 .jinni-settings-layout {display:flex;height:100%;min-height:0}
 .jinni-settings-nav {width:180px;flex-shrink:0;padding:26px 12px 18px;display:flex;flex-direction:column;gap:8px;background:var(--ju-panel);border-right:1px solid var(--ju-line)}
@@ -59,8 +59,8 @@ html body input[type="range"]:disabled{opacity:.45;cursor:not-allowed}
 .jinni-toggle-row small {display:block;margin-top:2px;font-size:12px;color:var(--ju-muted)}
 .jinni-toggle-row input {appearance:none!important;flex:0 0 40px;width:40px!important;height:24px!important;min-height:24px!important;border:1px solid var(--ju-line)!important;border-radius:99px!important;padding:0!important;background:var(--ju-line)!important;position:relative;cursor:pointer}
 .jinni-toggle-row input::after {content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 3px #0003;transition:transform .15s}
-.jinni-toggle-row input:checked {background:#6567dd!important;border-color:#6567dd!important}
-.jinni-toggle-row input:checked::after {transform:translateX(16px)}
+.jinni-toggle-row input:checked {background:var(--ju-text)!important;border-color:var(--ju-text)!important}
+.jinni-toggle-row input:checked::after {transform:translateX(16px);background:var(--ju-bg)}
 #jinniKeyRows {flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;padding:0 26px;scrollbar-gutter:stable}
 .jinni-shortcut-row {display:grid;grid-template-columns:minmax(0,1fr) minmax(132px,max-content) auto;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid var(--ju-line)}
 .jinni-shortcut-row:last-child {border-bottom:0}
@@ -162,7 +162,9 @@ input[readonly] {cursor:default;color:var(--muted)}
 /* Preview motion follows the wheel without a trailing CSS animation. */
 #outputPreview img,.preview-frame,#previewFrame,.studio-preview-img{transition:none!important}
 #sidebarLogoToggle{border:0!important;background:transparent!important;color:var(--text);transform:none!important}
-#sidebarLogoToggle .jc-logo{flex-shrink:0}
+#sidebarLogoToggle .jc-logo{flex-shrink:0;transition:opacity .15s}
+#sidebarLogoToggle:hover .jc-logo{opacity:.7}
+#sidebarLogoToggle:focus-visible{outline:2px solid currentColor;outline-offset:4px;border-radius:12px}
 
 .provider-recommended{border-color:#8581db!important;background:linear-gradient(120deg,#8074df18,transparent)!important}
 .provider-builtin-badge{color:#7770cc!important;background:#887de51c!important}

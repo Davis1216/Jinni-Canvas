@@ -1,6 +1,8 @@
 // Local static server: python3 -m http.server 8766 --bind 127.0.0.1
 // Run: playwright-cli run-code "$(cat tests/canvas_performance.browser.js)"
 async (page) => {
+    await page.unrouteAll({behavior:"ignoreErrors"});
+    await page.setViewportSize({width:1440,height:1000});
     const check = (condition, message) => { if(!condition) throw new Error(message); };
     const fixture = {id:'perf',title:'性能验证',nodes:Array.from({length:120},(_,i)=>({id:'p'+i,type:'prompt',x:5000+(i%12)*400,y:4000+Math.floor(i/12)*300,text:'中文提示词排版验证。'.repeat(30)})),connections:[],viewport:{x:0,y:0,scale:1}};
     const errors = [];

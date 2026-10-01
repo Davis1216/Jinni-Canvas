@@ -57,7 +57,7 @@ async (page) => {
     check(await page.locator('body > dialog[open]').count()===1,'Create form must be an independent modal');
     check(await page.locator('#boardWorld .ws-create-card').count()===0,'Create form must not occupy board space');
     await page.locator('.ws-create-input').fill('新画布');
-    await page.locator('[data-kind="smart"]').click();
+    check(await page.locator('[data-kind="smart"]').count()===0,'Only classic canvas is available');
     failCreate=true;
     await page.locator('.ws-create-confirm').click();
     await page.locator('.ws-create-error:not([hidden])').waitFor();
@@ -66,7 +66,7 @@ async (page) => {
     await page.locator('.ws-create-confirm').dblclick();
     await page.waitForTimeout(250);
     check(posts.length===2,'Pending creation must not submit twice');
-    check(posts[1].title==='新画布' && posts[1].kind==='smart' && posts[1].project==='default','Creation must preserve fields');
+    check(posts[1].title==='新画布' && posts[1].kind==='classic' && posts[1].project==='default','Creation must preserve fields');
     check(await page.locator('dialog[open]').count()===0,'Successful creation must close the dialog');
     const overlaps=await page.evaluate(()=>{
         const rects=[...boardWorld.querySelectorAll('.ws-card')].map(el=>el.getBoundingClientRect());

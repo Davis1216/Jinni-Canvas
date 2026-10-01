@@ -557,7 +557,7 @@
             return true;
         }
         /* ---- RunningHub：模型下拉来自 API 设置里配置的工作流 / AI 应用，而非通用 image_models ----
-         * 与智能画布一致：value=app:ID / workflow:ID，后端 generate_ai_image 走 RH 工作流运行路径。 */
+         * 与画布保持一致：value=app:ID / workflow:ID，后端 generate_ai_image 走 RH 工作流运行路径。 */
         function runningHubEntryId(entry, kind){
             if(!entry || typeof entry !== 'object') return '';
             const raw = kind === 'workflow' ? (entry.workflowId || entry.id) : (entry.appId || entry.webappId || entry.id);

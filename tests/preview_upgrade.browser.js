@@ -31,13 +31,5 @@ async page => {
   return {continuous,large,reversed,zero,line,pixels,smaller,anchorError:Math.hypot(anchor.x-point.x,anchor.y-point.y),baseUnchanged:base===JSON.stringify(viewport),transition};
  });
  assert(Math.abs(output.continuous-output.large)<1e-10,'event rate independent');assert(Math.abs(output.reversed-1)<1e-10&&output.zero===output.reversed,'reverse and zero');assert(output.line===output.pixels,'deltaMode normalization');assert(output.anchorError<1e-6,'focal point stable at UI scale');assert(output.baseUnchanged,'underlying canvas moved');assert(output.smaller<1,'zoom out from fit');assert(output.transition==='0s','preview transition trails');
- await page.evaluate(()=>closeOutputLightbox());await page.goto('http://127.0.0.1:8768/static/smart-canvas.html?id=preview');await page.waitForFunction(()=>!!canvas);
- await page.evaluate(()=>{nodes=[];createImageNodeAt({x:400,y:350},[{url:'/assets/upload.png',name:'参考图',kind:'image'}]);render()});
- await page.locator('.image-node img.node-img').first().dblclick();await page.locator('#imageEditModal.open').waitFor();
- const smart=await page.evaluate(async()=>{
-  resetPreviewTransform();const stage=document.getElementById('previewStage'),r=stage.getBoundingClientRect();const event={clientX:Math.round(r.x+r.width*.35),clientY:Math.round(r.y+r.height*.4)};const p=JinniPreviewZoom.point(event,stage);
-  const before={x:(p.x-stage.clientWidth/2-previewPan.x)/previewZoom,y:(p.y-stage.clientHeight/2-previewPan.y)/previewZoom};
-  document.getElementById('imageEditStage').dispatchEvent(new WheelEvent('wheel',{...event,deltaY:-120,bubbles:true,cancelable:true}));await new Promise(requestAnimationFrame);
-  return {error:Math.hypot((p.x-stage.clientWidth/2-previewPan.x)/previewZoom-before.x,(p.y-stage.clientHeight/2-previewPan.y)/previewZoom-before.y),zoom:previewZoom};
- });assert(smart.error<1e-6,'smart focal anchor');assert(!errors.length,errors.join('\n'));return {upload,output,smart,errors};
+ await page.evaluate(()=>closeOutputLightbox());assert(!errors.length,errors.join('\n'));return {upload,output,errors};
 }

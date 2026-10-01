@@ -298,7 +298,6 @@ const selectionBox = document.getElementById('selectionBox');
 const selectionHub = document.getElementById('selectionHub');
 const gateStatus = document.getElementById('gateStatus');
 const gateCreateBtn = document.getElementById('gateCreateBtn');
-const gateCreateSmartBtn = document.getElementById('gateCreateSmartBtn');
 const gateRefreshBtn = document.getElementById('gateRefreshBtn');
 const gateBackBtn = document.getElementById('gateBackBtn');
 const gateTrashBtn = document.getElementById('gateTrashBtn');
@@ -1328,15 +1327,13 @@ function ensureCanvas(){
 }
 function setCreateMode(active, kind='classic'){
     creatingCanvas = active;
-    createCanvasKind = active ? ((kind === 'smart') ? 'smart' : 'classic') : 'classic';
+    createCanvasKind = 'classic';
     if(active) trashMode = false;
     canvasGate.classList.toggle('creating', active);
     refreshGateViewControls();
     setStatus(active ? tr('canvas.enterCanvasName') : (canvases.length ? tr('canvas.chooseFirst') : tr('canvas.noCanvasCreateFirst')));
     if(active) {
-        gateTitleInput.placeholder = createCanvasKind === 'smart'
-            ? (tr('canvas.newSmartCanvasPlaceholder') || tr('canvas.newCanvasPlaceholder'))
-            : tr('canvas.newCanvasPlaceholder');
+        gateTitleInput.placeholder = tr('canvas.newCanvasPlaceholder');
         gateTitleInput.focus();
         gateTitleInput.select();
     } else {
@@ -2024,11 +2021,10 @@ function renderCanvasListInto(list){
     }
     items.forEach(item => {
         const row = document.createElement('div');
-        const isSmartCanvas = (item.kind || 'classic') === 'smart';
         const color = String(item.color || '').trim();
         const owner = String(item.owner || '').trim();
         const pinned = !!item.pinned && !trashMode;
-        row.className = `canvas-item ${isSmartCanvas ? 'smart-canvas' : ''} ${canvas?.id === item.id ? 'active' : ''} ${pinned ? 'pinned' : ''} ${color ? 'has-color' : ''}`;
+        row.className = `canvas-item ${canvas?.id === item.id ? 'active' : ''} ${pinned ? 'pinned' : ''} ${color ? 'has-color' : ''}`;
         row.dataset.canvasId = item.id;
         const ownerChip = owner
             ? `<span class="canvas-owner-chip" role="button" tabindex="0" title="${escapeAttr(owner)}"><i data-lucide="user-round" class="w-3 h-3"></i><span class="canvas-owner-text">${escapeHtml(owner)}</span></span>`
@@ -2036,8 +2032,7 @@ function renderCanvasListInto(list){
         row.innerHTML = `
             <div class="canvas-open" role="button" tabindex="${trashMode ? '-1' : '0'}">
                 <div class="canvas-card-icon-row">
-                    <span class="canvas-preview-mark ${color ? `icon-has-color cc-${escapeAttr(color)}` : ''}" role="button" tabindex="0" title="${trashMode ? tr('canvas.deletedCanvas') : (tr('canvas.editMeta') || '编辑图标 / 颜色 / 负责人')}">${renderCanvasIcon(isSmartCanvas && /[^\x00-\x7F]/.test(item.icon || '') ? 'sparkles' : item.icon, 16)}</span>
-                    ${isSmartCanvas ? `<span class="canvas-kind-chip">${tr('canvas.smartCanvasShort')}</span>` : ''}
+                    <span class="canvas-preview-mark ${color ? `icon-has-color cc-${escapeAttr(color)}` : ''}" role="button" tabindex="0" title="${trashMode ? tr('canvas.deletedCanvas') : (tr('canvas.editMeta') || '编辑图标 / 颜色 / 负责人')}">${renderCanvasIcon(item.icon, 16)}</span>
                 </div>
                 <div class="canvas-card-title">${escapeHtml(item.title)}</div>
                 ${ownerChip}
@@ -2203,8 +2198,7 @@ function positionCanvasMetaPopover(){
 }
 async function createCanvas(){
     const customTitle = gateTitleInput?.value.trim();
-    const isSmart = createCanvasKind === 'smart';
-    const titleBase = isSmart ? tr('canvas.newSmartCanvas') : tr('canvas.newCanvas');
+    const titleBase = tr('canvas.newCanvas');
     const title = customTitle || `${titleBase} ${new Date().toLocaleTimeString(window.StudioI18n?.lang() === 'en' ? 'en-US' : 'zh-CN', {hour:'2-digit', minute:'2-digit'})}`;
     trashMode = false;
     refreshGateViewControls();
@@ -2213,16 +2207,10 @@ async function createCanvas(){
         const res = await fetch('/api/canvases', {
             method:'POST',
             headers:{'Content-Type':'application/json'},
-            body:JSON.stringify({title, icon:isSmart ? 'sparkles' : '🧩', kind:isSmart ? 'smart' : 'classic'})
+            body:JSON.stringify({title, icon:'🧩', kind:'classic'})
         });
         if(!res.ok) throw new Error(tr('canvas.createFailed'));
         const data = await res.json();
-        if(isSmart){
-            setCreateMode(false);
-            await loadCanvasList(false);
-            openSmartCanvasPage(data.canvas?.id);
-            return;
-        }
         resetCascadeRuntimeState();
         canvas = data.canvas;
         canvas.logs = canvas.logs || [];
@@ -2243,13 +2231,6 @@ async function createCanvas(){
         setStatus(tr('canvas.createFailed'));
         console.error(e);
     }
-}
-async function createSmartCanvas(){
-    setCreateMode(true, 'smart');
-}
-function openSmartCanvasPage(id){
-    if(!id) return;
-    window.location.href = `/static/smart-canvas.html?id=${encodeURIComponent(id)}&v=2026.07.16.2`;
 }
 function toggleEmojiPicker(id, event){
     event?.preventDefault();
@@ -2368,10 +2349,6 @@ async function openCanvas(id){
         rememberCanvasListProject(canvas.project || 'default');
         const touched = await touchCanvasOpened(canvas.id);
         if(touched?.updated_at) canvas.updated_at = Number(touched.updated_at);
-        if((canvas.kind || 'classic') === 'smart'){
-            openSmartCanvasPage(canvas.id);
-            return;
-        }
         canvas.logs = canvas.logs || [];
         nodes = canvas.nodes || [];
         connections = canvas.connections || [];
@@ -2651,14 +2628,12 @@ async function purgeCanvas(id, event){
     }
 }
 window.createCanvas = createCanvas;
-window.createSmartCanvas = createSmartCanvas;
 window.loadCanvasList = loadCanvasList;
 window.openCanvas = openCanvas;
 window.deleteCanvas = deleteCanvas;
 window.returnToCanvasManager = returnToCanvasManager;
 // 选画布 gate 已拆分到 canvas-list.html；编辑器页不再含这些元素，用可选链避免空引用报错。
 gateCreateBtn?.addEventListener('click', () => setCreateMode(true));
-gateCreateSmartBtn?.addEventListener('click', createSmartCanvas);
 gateBackBtn?.addEventListener('click', () => setTrashMode(false));
 gateTrashBtn?.addEventListener('click', () => setTrashMode(true));
 gateRefreshBtn?.addEventListener('click', () => trashMode ? loadTrashList() : loadCanvasList(false));
@@ -6397,43 +6372,44 @@ function measureCanvasOriginalImageNodes(root=nodesEl){
     });
 }
 
+function nodeRenderSignature(el){
+    return el.outerHTML + JSON.stringify([...el.querySelectorAll('input,textarea,select')].map(input=>[input.value,input.checked]));
+}
+function rememberRenderedNode(el,node){
+    el._canvasNode=node;
+    el._canvasSignature=nodeRenderSignature(el);
+}
 function render(){
-    const previousNodeIds = new Set([...nodesEl.children].map(el => el.dataset.id));
-    const outputScrolls = captureOutputScrolls();
-    const mediaStates = captureMediaPlaybackStates();
-    const reusableMediaNodes = new Map();
-    nodesEl.querySelectorAll('.node').forEach(el => {
-        const node = nodes.find(n => n.id === el.dataset.id);
-        if(nodeHasLiveMedia(node)) reusableMediaNodes.set(node.id, el);
-    });
+    const existing=new Map([...nodesEl.children].map(el=>[el.dataset.id,el]));
+    const outputScrolls=captureOutputScrolls();
+    const mediaStates=captureMediaPlaybackStates();
     applyViewport();
-    [...nodesEl.children].forEach(child => {
-        if(!reusableMediaNodes.has(child.dataset?.id)) child.remove();
-    });
-    nodes.forEach(node => {
-        // 单个节点渲染异常不能中断整个循环，否则它后面的节点（含新建节点，通常排在末尾）都不会被
-        // 追加进 DOM，连带这些节点的连线也会因找不到 DOM 而画到 (0,0) 变成“消失”。
-        try {
-            const fresh = renderNode(node);
-            const old = reusableMediaNodes.get(node.id);
-            if(!previousNodeIds.has(node.id)){
-                fresh.classList.add('canvas-node-enter');
-                setTimeout(() => fresh.classList.remove('canvas-node-enter'), 260);
+    const activeIds=new Set(nodes.map(node=>node.id));
+    for(const [id,el] of existing)if(!activeIds.has(id))el.remove();
+    nodes.forEach((node,index)=>{
+        try{
+            const old=existing.get(node.id);
+            // History restores clone the model. Keep equal objects so retained handlers
+            // continue to edit the active model rather than an obsolete snapshot.
+            if(old?._canvasNode && old._canvasNode!==node && JSON.stringify(old._canvasNode)===JSON.stringify(node)){
+                node=old._canvasNode;nodes[index]=node;
             }
-            nodesEl.appendChild(fresh);
+            const fresh=renderNode(node);
+            rememberRenderedNode(fresh,node);
+            if(old && old._canvasNode===node && old._canvasSignature===fresh._canvasSignature)return;
             if(old){
-                transplantNodeMediaElement(old, fresh);
-                if(old !== fresh) old.remove();
+                transplantNodeMediaElement(old,fresh);
+                old.replaceWith(fresh);
+            }else{
+                fresh.classList.add('canvas-node-enter');
+                setTimeout(()=>fresh.classList.remove('canvas-node-enter'),260);
+                nodesEl.appendChild(fresh);
             }
-        } catch(err){
-            console.error('[canvas] renderNode 失败，已跳过该节点：', node?.id, node?.type, err);
-        }
+        }catch(err){console.error('[canvas] renderNode 失败：',node?.id,node?.type,err)}
     });
     restoreMediaPlaybackStates(mediaStates);
     restoreOutputScrolls(outputScrolls);
-    refreshGeometry();
-    refreshGeometryAfterLayout();
-    refreshIcons();
+    refreshGeometry();refreshGeometryAfterLayout();refreshIcons();
     bindCanvasPreviewImageFallbacks(nodesEl);
     syncCanvasSelectedImageResolution(nodesEl);
     measureCanvasOriginalImageNodes(nodesEl);
@@ -6455,6 +6431,7 @@ function refreshNodes(ids=[]){
         }
         try {
             const fresh = renderNode(node);
+            rememberRenderedNode(fresh,node);
             if(nodeHasLiveMedia(node)) transplantNodeMediaElement(current, fresh);
             current.replaceWith(fresh);
         } catch(err){
@@ -7761,13 +7738,13 @@ function activeCanvasPromptLibrary(){
 }
 function defaultCanvasPromptTemplateGroups(){
     return [
-        {id:'view', name:tr('smart.tplCatView')},
-        {id:'storyboard', name:tr('smart.tplCatStoryboard')},
-        {id:'character', name:tr('smart.tplCatCharacter')},
-        {id:'product', name:tr('smart.tplCatProduct')},
-        {id:'lighting', name:tr('smart.tplCatLighting')},
-        // “我的”分组在后端/智能画布里用的分类 id 是 custom，这里保持一致，否则后端 custom 条目在普通画布看不到。
-        {id:'custom', name:tr('smart.tplCatMine')}
+        {id:'view', name:tr('canvas.tplCatView')},
+        {id:'storyboard', name:tr('canvas.tplCatStoryboard')},
+        {id:'character', name:tr('canvas.tplCatCharacter')},
+        {id:'product', name:tr('canvas.tplCatProduct')},
+        {id:'lighting', name:tr('canvas.tplCatLighting')},
+        // “我的”分组在后端里用的分类 id 是 custom，这里保持一致，否则后端 custom 条目在普通画布看不到。
+        {id:'custom', name:tr('canvas.tplCatMine')}
     ];
 }
 function loadCanvasPromptTemplateGroups(){
@@ -7820,7 +7797,7 @@ function activeCanvasPromptLibraryItems(){
             sourceId:t.id,
             builtin:true,
             // 系统提示词库本身是后端真实库（/api/prompt-libraries 返回的 system 库），标记为 remote，
-            // 这样编辑/删除走后端 PATCH/DELETE 并同步（与智能画布一致），而不是只存本地、不同步。
+            // 这样编辑/删除走后端 PATCH/DELETE 并同步，而不是只存本地、不同步。
             remote:true,
             libraryId:'system',
             libraryName:'系统提示词库',
@@ -7854,19 +7831,19 @@ function activeCanvasPromptTemplateGroups(){
     return Array.isArray(lib.categories) ? lib.categories.filter(c => c?.id && c?.name) : [];
 }
 function canvasPromptTemplateCategoryLabel(category){
-    if(category === 'all') return tr('smart.tplAll');
+    if(category === 'all') return tr('canvas.tplAll');
     const lib = activeCanvasPromptLibrary();
     if(lib && lib.id !== 'system'){
         return activeCanvasPromptTemplateGroups().find(g => g.id === category)?.name || category || '';
     }
     const builtin = {
-        view:tr('smart.tplCatView'),
-        storyboard:tr('smart.tplCatStoryboard'),
-        character:tr('smart.tplCatCharacter'),
-        product:tr('smart.tplCatProduct'),
-        lighting:tr('smart.tplCatLighting'),
-        custom:tr('smart.tplCatMine'),
-        mine:tr('smart.tplCatMine')
+        view:tr('canvas.tplCatView'),
+        storyboard:tr('canvas.tplCatStoryboard'),
+        character:tr('canvas.tplCatCharacter'),
+        product:tr('canvas.tplCatProduct'),
+        lighting:tr('canvas.tplCatLighting'),
+        custom:tr('canvas.tplCatMine'),
+        mine:tr('canvas.tplCatMine')
     };
     return builtin[category] || promptTemplateGroups.find(g => g.id === category)?.name || category || '';
 }
@@ -7907,7 +7884,7 @@ function canvasPromptTemplateVisibleItems(){
     });
 }
 function currentCanvasPromptTemplateLibraryEditable(){
-    // 系统库后端 readonly=false，也允许新增/编辑（走后端，与智能画布、素材库管理同步）。只按 readonly 判断。
+    // 系统库后端 readonly=false，也允许新增/编辑（走后端，与素材库管理同步）。只按 readonly 判断。
     const lib = activeCanvasPromptLibrary();
     return Boolean(lib && !lib.readonly);
 }
@@ -7993,7 +7970,7 @@ async function saveCanvasPromptTemplateEdit(){
     const name = promptTemplatePanel.querySelector('[data-template-edit-name]')?.value?.trim() || '';
     const positive = promptTemplatePanel.querySelector('[data-template-edit-text]')?.value?.trim() || '';
     const category = promptTemplatePanel.querySelector('[data-template-edit-category]')?.value || 'mine';
-    if(!name || !positive){ setStatus(tr('smart.tplRequired')); return; }
+    if(!name || !positive){ setStatus(tr('canvas.tplRequired')); return; }
     try {
         // 仅当模板不是后端项（非 remote）时才退回本地覆盖；系统库现在是 remote，走下面的后端 PATCH 同步。
         if(item.builtin && !item.remote){
@@ -8081,7 +8058,7 @@ function restorePromptTemplateScroll(snapshot){
     });
 }
 async function createCanvasPromptTemplateGroup(){
-    const name = window.prompt(tr('smart.tplNewGroupPrompt'), tr('smart.tplNewGroupDefault'));
+    const name = window.prompt(tr('canvas.tplNewGroupPrompt'), tr('canvas.tplNewGroupDefault'));
     if(!String(name || '').trim()) return;
     const lib = activeCanvasPromptLibrary();
     if(lib && lib.id !== 'system'){
@@ -8107,7 +8084,7 @@ async function renameCanvasPromptTemplateGroup(groupId){
     const lib = activeCanvasPromptLibrary();
     const group = activeCanvasPromptTemplateGroups().find(g => g.id === groupId);
     if(!group) return;
-    const name = window.prompt(tr('smart.tplGroupNamePrompt'), group.name || '');
+    const name = window.prompt(tr('canvas.tplGroupNamePrompt'), group.name || '');
     if(!String(name || '').trim()) return;
     if(lib && lib.id !== 'system'){
         try {
@@ -8128,7 +8105,7 @@ async function renameCanvasPromptTemplateGroup(groupId){
 async function deleteCanvasPromptTemplateGroup(groupId){
     const lib = activeCanvasPromptLibrary();
     if(lib && lib.id !== 'system'){
-        if(!window.confirm(tr('smart.tplDeleteGroupConfirm'))) return;
+        if(!window.confirm(tr('canvas.tplDeleteGroupConfirm'))) return;
         try {
             const data = await fetch(`/api/prompt-libraries/categories/${encodeURIComponent(groupId)}`, {method:'DELETE'})
                 .then(async r => { if(!r.ok) throw new Error((await r.json().catch(() => ({}))).detail || '删除失败'); return r.json(); });
@@ -8143,7 +8120,7 @@ async function deleteCanvasPromptTemplateGroup(groupId){
         renameCanvasPromptTemplateGroup(groupId);
         return;
     }
-    if(!window.confirm(tr('smart.tplDeleteGroupConfirm'))) return;
+    if(!window.confirm(tr('canvas.tplDeleteGroupConfirm'))) return;
     promptTemplateGroups = promptTemplateGroups.filter(g => g.id !== groupId);
     Object.entries(canvasPromptTemplateOverrides.editedBuiltins || {}).forEach(([id, item]) => {
         if(item?.category === groupId) canvasPromptTemplateOverrides.editedBuiltins[id] = {...item, category:'mine'};
@@ -8164,7 +8141,7 @@ function renderPromptTemplateModal(){
     renderCanvasPromptLibrarySelect();
     const scrollSnapshot = promptTemplateScrollSnapshot();
     const activeGroups = activeCanvasPromptTemplateGroups();
-    const categories = [{id:'all', name:tr('smart.tplAll')}, ...activeGroups.map(group => ({...group, name:canvasPromptTemplateCategoryLabel(group.id)}))];
+    const categories = [{id:'all', name:tr('canvas.tplAll')}, ...activeGroups.map(group => ({...group, name:canvasPromptTemplateCategoryLabel(group.id)}))];
     const counts = canvasPromptTemplates.reduce((map, item) => {
         const category = item.category || 'mine';
         map[category] = (map[category] || 0) + 1;
@@ -8175,12 +8152,12 @@ function renderPromptTemplateModal(){
         <div class="prompt-template-group-panel">
             <div class="prompt-template-group-title">
                 <div>
-                    <strong>${escapeHtml(tr('smart.tplGroupManage'))}</strong>
-                    <span>${escapeHtml(tr('smart.tplGroupHint'))}</span>
+                    <strong>${escapeHtml(tr('canvas.tplGroupManage'))}</strong>
+                    <span>${escapeHtml(tr('canvas.tplGroupHint'))}</span>
                 </div>
                 <div class="prompt-template-group-tools">
-                    <button type="button" data-template-cat-new><i data-lucide="plus"></i><span>${escapeHtml(tr('smart.tplAdd'))}</span></button>
-                    <button type="button" class="primary" data-template-group-edit><i data-lucide="check"></i><span>${escapeHtml(tr('smart.tplDone'))}</span></button>
+                    <button type="button" data-template-cat-new><i data-lucide="plus"></i><span>${escapeHtml(tr('canvas.tplAdd'))}</span></button>
+                    <button type="button" class="primary" data-template-group-edit><i data-lucide="check"></i><span>${escapeHtml(tr('canvas.tplDone'))}</span></button>
                 </div>
             </div>
             <div class="prompt-template-group-list">
@@ -8190,7 +8167,7 @@ function renderPromptTemplateModal(){
                             <span>${escapeHtml(canvasPromptTemplateCategoryLabel(group.id))}</span>
                             <small>${counts[group.id] || 0}</small>
                         </button>
-                        <button type="button" class="group-tool" data-template-cat-edit="${escapeAttr(group.id)}" title="${escapeAttr(tr('smart.tplRename'))}"><i data-lucide="pencil"></i></button>
+                        <button type="button" class="group-tool" data-template-cat-edit="${escapeAttr(group.id)}" title="${escapeAttr(tr('canvas.tplRename'))}"><i data-lucide="pencil"></i></button>
                         ${['view','storyboard','character','product','lighting','mine'].includes(group.id) ? '' : `<button type="button" class="group-tool danger" data-template-cat-delete="${escapeAttr(group.id)}" title="${escapeAttr(tr('common.delete'))}"><i data-lucide="trash-2"></i></button>`}
                     </div>
                 `).join('')}
@@ -8206,7 +8183,7 @@ function renderPromptTemplateModal(){
                     </button>
                 `).join('')}
             </div>
-            <button type="button" class="prompt-template-manage-groups" data-template-group-edit><i data-lucide="settings-2"></i><span>${escapeHtml(tr('smart.tplManageGroups'))}</span></button>
+            <button type="button" class="prompt-template-manage-groups" data-template-group-edit><i data-lucide="settings-2"></i><span>${escapeHtml(tr('canvas.tplManageGroups'))}</span></button>
         </div>
     `;
     const items = canvasPromptTemplateVisibleItems();
@@ -8217,51 +8194,51 @@ function renderPromptTemplateModal(){
     promptTemplateBody.innerHTML = `
         <div class="prompt-template-list">
             <div class="prompt-template-list-tools">
-                <button type="button" ${canCreateCurrentLibrary ? '' : 'disabled'} data-template-save-current><i data-lucide="bookmark-plus"></i><span>${escapeHtml(tr('smart.tplSaveCurrent'))}</span></button>
-                <button type="button" ${canCreateCurrentLibrary ? '' : 'disabled'} data-template-new><i data-lucide="file-plus-2"></i><span>${escapeHtml(tr('smart.tplNewTemplate'))}</span></button>
+                <button type="button" ${canCreateCurrentLibrary ? '' : 'disabled'} data-template-save-current><i data-lucide="bookmark-plus"></i><span>${escapeHtml(tr('canvas.tplSaveCurrent'))}</span></button>
+                <button type="button" ${canCreateCurrentLibrary ? '' : 'disabled'} data-template-new><i data-lucide="file-plus-2"></i><span>${escapeHtml(tr('canvas.tplNewTemplate'))}</span></button>
             </div>
             ${items.length ? items.map(item => `<button type="button" class="prompt-template-card ${item.id === selected?.id ? 'active' : ''}" data-template-id="${escapeAttr(item.id)}">
                 <span class="prompt-template-card-top">
                     <span class="prompt-template-name">${escapeHtml(canvasPromptTemplateName(item))}</span>
-                    <span class="prompt-template-source">${escapeHtml(item.builtin ? tr('smart.tplBuiltin') : tr('smart.tplMine'))}</span>
+                    <span class="prompt-template-source">${escapeHtml(item.builtin ? tr('canvas.tplBuiltin') : tr('canvas.tplMine'))}</span>
                 </span>
                 <span class="prompt-template-scene">${escapeHtml(canvasPromptTemplateScene(item) || item.positive || '')}</span>
                 <span class="prompt-template-tag">${escapeHtml(canvasPromptTemplateCategoryLabel(item.category || 'mine'))}</span>
-            </button>`).join('') : `<div class="prompt-template-list-empty">${escapeHtml(tr('smart.tplNoMatches'))}</div>`}
+            </button>`).join('') : `<div class="prompt-template-list-empty">${escapeHtml(tr('canvas.tplNoMatches'))}</div>`}
         </div>
         <div class="prompt-template-detail">
             ${selected ? `
                 <div class="prompt-template-detail-head">
                     <div>
                         <strong>${escapeHtml(canvasPromptTemplateName(selected) || '')}</strong>
-                        <span>${escapeHtml(canvasPromptTemplateCategoryLabel(selected.category || ''))} · ${escapeHtml(selected.builtin ? tr('smart.tplBuiltinTemplate') : tr('smart.tplMineTemplate'))}</span>
+                        <span>${escapeHtml(canvasPromptTemplateCategoryLabel(selected.category || ''))} · ${escapeHtml(selected.builtin ? tr('canvas.tplBuiltinTemplate') : tr('canvas.tplMineTemplate'))}</span>
                     </div>
                     ${editMode ? '' : `
                         <div class="prompt-template-icon-actions">
-                            <button type="button" data-template-edit title="${escapeAttr(tr('smart.tplEditTemplate'))}"><i data-lucide="pencil"></i><span>${escapeHtml(tr('common.edit'))}</span></button>
-                            <button type="button" class="danger" data-template-delete title="${escapeAttr(tr('smart.tplDeleteTemplate'))}"><i data-lucide="trash-2"></i><span>${escapeHtml(tr('common.delete'))}</span></button>
+                            <button type="button" data-template-edit title="${escapeAttr(tr('canvas.tplEditTemplate'))}"><i data-lucide="pencil"></i><span>${escapeHtml(tr('common.edit'))}</span></button>
+                            <button type="button" class="danger" data-template-delete title="${escapeAttr(tr('canvas.tplDeleteTemplate'))}"><i data-lucide="trash-2"></i><span>${escapeHtml(tr('common.delete'))}</span></button>
                         </div>
                     `}
                 </div>
             ${editMode ? `
                 <div class="prompt-template-edit-fields">
-                    <label>${escapeHtml(tr('smart.tplName'))}</label>
-                    <input data-template-edit-name value="${escapeAttr(canvasPromptTemplateName(selected) || '')}" placeholder="${escapeAttr(tr('smart.tplName'))}">
-                    <label>${escapeHtml(tr('smart.tplGroup'))}</label>
+                    <label>${escapeHtml(tr('canvas.tplName'))}</label>
+                    <input data-template-edit-name value="${escapeAttr(canvasPromptTemplateName(selected) || '')}" placeholder="${escapeAttr(tr('canvas.tplName'))}">
+                    <label>${escapeHtml(tr('canvas.tplGroup'))}</label>
                     <select data-template-edit-category>
                         ${promptTemplateGroups.map(group => `<option value="${escapeAttr(group.id)}" ${group.id === (selected.category || 'mine') ? 'selected' : ''}>${escapeHtml(canvasPromptTemplateCategoryLabel(group.id))}</option>`).join('')}
                     </select>
-                    <label>${escapeHtml(tr('smart.tplContent'))}</label>
-                    <textarea data-template-edit-text placeholder="${escapeAttr(tr('smart.tplContent'))}">${escapeHtml(selected.positive || '')}</textarea>
+                    <label>${escapeHtml(tr('canvas.tplContent'))}</label>
+                    <textarea data-template-edit-text placeholder="${escapeAttr(tr('canvas.tplContent'))}">${escapeHtml(selected.positive || '')}</textarea>
                 </div>
             ` : `
                 <div class="prompt-template-preview-content">
                     <div class="prompt-template-section">
-                        <label>${escapeHtml(tr('smart.tplPositive'))}</label>
+                        <label>${escapeHtml(tr('canvas.tplPositive'))}</label>
                         <p>${escapeHtml(selected.positive || '')}</p>
                     </div>
-                    ${selected.negative ? `<div class="prompt-template-section"><label>${escapeHtml(tr('smart.tplNegative'))}</label><p>${escapeHtml(selected.negative)}</p></div>` : ''}
-                    ${Object.keys(selected.params || {}).length ? `<div class="prompt-template-section"><label>${escapeHtml(tr('smart.tplParams'))}</label><p>${escapeHtml(Object.entries(selected.params).map(([k,v]) => `${k}: ${v}`).join('\n'))}</p></div>` : ''}
+                    ${selected.negative ? `<div class="prompt-template-section"><label>${escapeHtml(tr('canvas.tplNegative'))}</label><p>${escapeHtml(selected.negative)}</p></div>` : ''}
+                    ${Object.keys(selected.params || {}).length ? `<div class="prompt-template-section"><label>${escapeHtml(tr('canvas.tplParams'))}</label><p>${escapeHtml(Object.entries(selected.params).map(([k,v]) => `${k}: ${v}`).join('\n'))}</p></div>` : ''}
                 </div>
             `}
             <div class="prompt-template-actions">
@@ -8270,11 +8247,11 @@ function renderPromptTemplateModal(){
                     <button type="button" class="danger" data-template-delete><i data-lucide="trash-2"></i><span>${escapeHtml(tr('common.delete'))}</span></button>
                     <button type="button" class="primary" data-template-edit-save><i data-lucide="save"></i><span>${escapeHtml(tr('common.save'))}</span></button>
                 ` : `
-                    <button type="button" data-template-apply="positive"><i data-lucide="corner-down-left"></i><span>${escapeHtml(tr('smart.tplApplyPositive'))}</span></button>
-                    <button type="button" class="primary" data-template-apply="full"><i data-lucide="wand-sparkles"></i><span>${escapeHtml(tr('smart.tplApplyFull'))}</span></button>
+                    <button type="button" data-template-apply="positive"><i data-lucide="corner-down-left"></i><span>${escapeHtml(tr('canvas.tplApplyPositive'))}</span></button>
+                    <button type="button" class="primary" data-template-apply="full"><i data-lucide="wand-sparkles"></i><span>${escapeHtml(tr('canvas.tplApplyFull'))}</span></button>
                 `}
             </div>
-            ` : `<div class="prompt-template-empty">${escapeHtml(tr('smart.tplPickOrCreate'))}</div>`}
+            ` : `<div class="prompt-template-empty">${escapeHtml(tr('canvas.tplPickOrCreate'))}</div>`}
         </div>
     `;
     refreshIcons();

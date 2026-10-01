@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>API 设置</title>
+    <title>供应商设置</title>
     <script>
         (function(){
             try {
@@ -25,13 +25,14 @@
     <link rel="stylesheet" href="/static/css/theme.css?v=2026.07.4.2.1783154122">
     <link rel="stylesheet" href="/static/css/api-settings.css?v=2026.07.4.2.1784275157">
 <link rel="stylesheet" href="/static/css/jinni-ui.css?v=2026.07.4.2.1790798844">
+<link rel="stylesheet" href="/static/css/provider-layout.css?v=2026.07.4.2.1790819237">
 </head>
-<body>
+<body id="providerSettingsPage">
     <div class="page">
         <div class="wrap">
             <header class="page-head">
                 <div>
-                    <div class="title" data-i18n="api.title">API 设置</div>
+                    <div class="title" data-i18n="api.title">供应商设置</div>
                     <div class="sub" data-i18n="api.subtitle">管理平台地址、模型列表和 Key。Key 写入后端 env，页面不会回显完整内容。</div>
                 </div>
                 <div id="status" class="status"></div>
@@ -56,9 +57,11 @@
                         </div>
                     </div>
 
+                    <section id="providerUsage" class="provider-usage-summary" aria-label="供应商额度"></section>
+
                     <section id="providerOnboardingCard" class="provider-onboarding-card" hidden></section>
 
-                    <section class="block">
+                    <section id="providerConnection" class="block">
                         <div class="block-head">
                             <div>
                                 <div class="block-title" data-i18n="api.basicInfo">基本信息</div>
@@ -91,13 +94,13 @@
                                 </div>
                             </label>
                             <label class="field full api-key-field">
-                                <span class="label api-key-label">API Key</span>
+                                <span class="label api-key-label">全局 API Key</span>
                                 <div class="key-panel api-standard-key-row">
                                     <div class="key-input-line">
                                         <div class="field-frame"><input id="keyInput" type="password"></div>
                                         <div class="key-actions">
-                                            <button class="key-btn" type="button" onclick="saveKeyOnly()" title="保存 Key" data-i18n-title="api.saveKeyTitle"><i data-lucide="check" class="w-4 h-4"></i></button>
-                                            <button class="key-btn key-clear" type="button" onclick="clearKeyOnly()" title="清除 Key" data-i18n-title="api.clearKeyTitle"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                                            <button class="key-btn" type="button" onclick="saveKeyOnly()" aria-label="保存全局 Key" title="保存 Key" data-i18n-title="api.saveKeyTitle"><i data-lucide="check" class="w-4 h-4"></i></button>
+                                            <button class="key-btn key-clear" type="button" onclick="clearKeyOnly()" aria-label="清除全局 Key" title="清除 Key" data-i18n-title="api.clearKeyTitle"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
                                         </div>
                                     </div>
                                 </div>
@@ -248,7 +251,7 @@
                                 <div id="geminiCliInfo" class="jimeng-credit"></div>
                             </div>
                             <!-- 验证操作行 -->
-                            <div class="verify-action-row">
+                            <div class="verify-action-row" aria-label="连接与协议测试">
                                 <button id="testUrlBtn" class="action-btn" type="button" onclick="testConnection()">
                                     <i data-lucide="check-circle-2" class="w-3.5 h-3.5"></i><span data-i18n="api.testUrl">验证地址</span>
                                 </button>
@@ -256,7 +259,7 @@
                                     <i data-lucide="radar" class="w-3.5 h-3.5"></i><span>验证协议</span>
                                 </button>
                                 <div class="field-frame protocol-selector-wrap">
-                                    <select id="protocolInput">
+                                    <select id="protocolInput" aria-label="连接协议">
                                         <option value="openai" data-i18n="api.protocolOpenAI">OpenAI 直连</option>
                                         <option value="apimart" data-i18n="api.protocolApimart">异步协议</option>
                                         <option value="gemini" data-i18n="api.protocolGemini">Gemini 协议</option>
@@ -264,7 +267,7 @@
                                     </select>
                                 </div>
                                 <div class="field-frame image-request-mode-wrap">
-                                    <select id="imageRequestModeInput" title="图片接口">
+                                    <select id="imageRequestModeInput" title="图片接口" aria-label="图片接口">
                                         <option value="openai">图片：OpenAI 标准</option>
                                         <option value="openai-json">图片：OpenAI JSON</option>
                                         <option value="openai-video-proxy">图片：OpenAI 中转</option>
@@ -330,7 +333,7 @@
                                         <span class="ms-line"><span data-i18n="api.msModelExample">模型名称示意：</span><span class="inline-code">Tongyi-MAI/Z-Image-Turbo</span></span>
                                     </div>
                                 </div>
-                                <button class="ghost-btn" type="button" onclick="addModel('image')"><i data-lucide="plus" class="w-3.5 h-3.5"></i><span data-i18n="api.model">模型</span></button>
+                                <button class="ghost-btn" type="button" onclick="addModel('image')"><i data-lucide="plus" class="w-3.5 h-3.5"></i><span data-i18n="api.addModel">添加模型</span></button>
                             </div>
                             <div id="imageModelList" class="model-list"></div>
                         </section>
@@ -341,7 +344,7 @@
                                     <div class="block-title" data-i18n="api.chatModels">聊天模型</div>
                                     <div class="block-desc" data-i18n="api.chatHint">头脑风暴和 LLM 节点使用</div>
                                 </div>
-                                <button class="ghost-btn" type="button" onclick="addModel('chat')"><i data-lucide="plus" class="w-3.5 h-3.5"></i><span data-i18n="api.model">模型</span></button>
+                                <button class="ghost-btn" type="button" onclick="addModel('chat')"><i data-lucide="plus" class="w-3.5 h-3.5"></i><span data-i18n="api.addModel">添加模型</span></button>
                         </div>
                         <div id="chatModelList" class="model-list"></div>
                     </section>
@@ -352,7 +355,7 @@
                                     <div class="block-title" data-i18n="api.videoModels">视频模型</div>
                                     <div class="block-desc" data-i18n="api.videoHint">传统画布视频生成节点使用</div>
                                 </div>
-                                <button class="ghost-btn" type="button" onclick="addModel('video')"><i data-lucide="plus" class="w-3.5 h-3.5"></i><span data-i18n="api.model">模型</span></button>
+                                <button class="ghost-btn" type="button" onclick="addModel('video')"><i data-lucide="plus" class="w-3.5 h-3.5"></i><span data-i18n="api.addModel">添加模型</span></button>
                             </div>
                             <div id="videoModelList" class="model-list"></div>
                         </section>

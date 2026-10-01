@@ -41,26 +41,5 @@ async page => {
     return {textOutputs:nodes.filter(n=>n.outputKind==='text').length,imageKind:imageOutput.outputKind,batch:all.length,legacy:true};
   });
   assert(classic.textOutputs===1,'repeated LLM must reuse output');assert(checkedOutput===4,'all classic requests checked');
-  await page.goto('http://127.0.0.1:8768/static/smart-canvas.html?id=execution');await page.waitForFunction(()=>!!canvas&&document.querySelector('#taskModel').options.length);
-  failSubmission=submitted+2;const start=submitted;
-  await page.locator('#taskPrompt').fill('部分失败的批量图片');await page.locator('#taskCount').fill('2');await page.locator('[data-run]').click();
-  await page.waitForFunction(()=>nodes.some(n=>n.task?.status==='failed'),null,{timeout:15000});
-  const failedId=await page.evaluate(()=>{const n=nodes.find(n=>n.task);if(n.images.length!==1)throw Error('successful result not preserved');selectedId=n.id;render();return n.id});
-  await page.locator('#smartTaskActions').getByRole('button',{name:'重试失败项'}).click();
-  await page.waitForFunction(()=>nodes.some(n=>n.task?.status==='done'&&n.images.length===2),null,{timeout:15000});
-  assert(submitted-start===3,'retry should submit only the missing image');assert(await page.evaluate(id=>nodes.filter(n=>n.task).length===1&&nodes[0].id===id,failedId),'retry must reuse task');
-  const partialRetrySubmissions=submitted-start;
-  failQuery=true;await page.locator('#taskCount').fill('1');await page.locator('#taskPrompt').fill('查询失败保留任务');await page.locator('[data-run]').click();
-  await page.waitForFunction(()=>nodes.some(n=>n.task?.status==='failed'&&n.pendingTasks?.length),null,{timeout:15000});
-  const beforeQueryRetry=submitted;
-  const pendingId=await page.evaluate(()=>{const n=nodes.find(n=>n.task?.status==='failed'&&n.pendingTasks?.length);selectedId=n.id;render();return n.id});
-  await page.locator('#smartTaskActions').getByRole('button',{name:'重试失败项'}).click();
-  await page.waitForFunction(id=>nodes.find(n=>n.id===id)?.task?.status==='done',pendingId,{timeout:15000});
-  assert(submitted===beforeQueryRetry,'query retry must not resubmit paid task');
-  await page.locator('#smartTaskBar [data-kind="video"]').click();await page.locator('#taskPrompt').fill('让画面运动');await page.locator('[data-run]').click();
-  await page.waitForFunction(()=>nodes.some(n=>n.task?.kind==='video'&&n.task.status==='done'));assert(videoRequests===1,'video request');
-  await page.setViewportSize({width:640,height:850});await page.evaluate(()=>StudioTheme.set('dark'));
-  const bounds=await page.locator('#smartTaskBar').boundingBox();assert(bounds.x>=0&&bounds.x+bounds.width<=640,'narrow composer contained');
-  await page.screenshot({path:'output/playwright/smart-canvas-narrow-dark.png'});
-  assert(!errors.length,errors.join('\n'));return {classic,checkedOutput,textRequests,submitted,videoRequests,retrySubmissions:partialRetrySubmissions,queryRetryResubmitted:false,errors};
+  assert(!errors.length,errors.join('\n'));return {classic,checkedOutput,errors};
 }

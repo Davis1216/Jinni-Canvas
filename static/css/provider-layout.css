@@ -1,0 +1,123 @@
+/* Provider settings: one hierarchy in both the settings dialog and standalone page. */
+#providerSettingsPage { overflow:visible; color:var(--text); font-size:13px; line-height:1.55; }
+#providerSettingsPage .page { padding:24px; }
+#providerSettingsPage .layout { display:grid!important; grid-template-columns:210px minmax(0,1fr)!important; gap:20px!important; align-items:start; }
+#providerSettingsPage .content { min-width:0; gap:16px; }
+#providerSettingsPage .sidebar { padding:10px; top:16px; border-radius:12px; }
+#providerSettingsPage .content-head { padding:4px 0 12px; border:0; background:transparent; border-radius:0; box-shadow:none; align-items:center; }
+#providerSettingsPage .editor-title { font-size:20px; font-weight:650; line-height:1.4; }
+#providerSettingsPage .editor-sub { font-size:12px; line-height:1.5; font-weight:400; letter-spacing:0; }
+#providerSettingsPage .block { border:1px solid var(--line); border-radius:12px; padding:18px; box-shadow:none; min-width:0; }
+#providerSettingsPage :is(.block-title,.rh-group-title) { font-size:14px; font-weight:600; line-height:1.5; letter-spacing:0; }
+#providerSettingsPage :is(.block-desc,.hint,.provider-meta) { font-size:12px; line-height:1.6; font-weight:400; letter-spacing:0; word-break:normal; overflow-wrap:anywhere; }
+#providerSettingsPage .form { gap:16px; }
+#providerSettingsPage .field { gap:6px; min-width:0; }
+#providerSettingsPage .label { font-size:13px; font-weight:500; }
+#providerSettingsPage :is(input,select,button) { font-family:inherit; }
+#providerSettingsPage :is(input,select) { min-width:0; font-size:13px; font-weight:400; }
+#providerSettingsPage .field-frame { border-radius:8px; min-width:0; }
+#providerSettingsPage .key-panel { padding:0; border:0; background:transparent; }
+#providerSettingsPage :is(.action-btn,.ghost-btn,.add-btn) { font-size:12px; font-weight:500; letter-spacing:0; min-height:34px; border-radius:8px; white-space:nowrap; }
+#providerSettingsPage .key-input-line { display:flex; gap:8px; min-width:0; }
+#providerSettingsPage .key-input-line>.field-frame { flex:1; width:0; }
+#providerSettingsPage .key-actions { flex:none; }
+#providerSettingsPage .key-btn { width:34px; height:34px; border-radius:8px; }
+#providerSettingsPage :is(.block-head,.models-toolbar) { gap:12px; flex-wrap:wrap; align-items:center; }
+#providerSettingsPage .model-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; }
+#providerSettingsPage .models-toolbar { display:flex!important; }
+#providerSettingsPage .models-toolbar>div:first-child { flex:1 1 200px; min-width:0; }
+#providerSettingsPage .models-toolbar-actions { display:flex; flex-wrap:wrap; gap:8px; }
+#providerSettingsPage .verify-action-row { display:flex; flex-wrap:wrap; align-items:end; gap:8px; }
+#providerSettingsPage .verify-action-row .field-frame { flex:1 1 150px; }
+#providerKeyPurposeRow { display:flex; flex-direction:column; gap:6px; flex:1 0 100%; font-size:12px; color:var(--muted); }
+#providerKeyPurposeRow select { width:100%; min-height:36px; padding:6px 10px; border:1px solid var(--line); border-radius:8px; background:var(--panel); color:var(--text); }
+#providerSettingsPage #providerKeyScopes { margin:0; padding:18px; background:var(--panel); border:1px solid var(--line); border-radius:12px; }
+#providerKeyScopes h3 { display:flex; align-items:center; gap:8px; margin:0; font-size:14px; font-weight:600; }
+#providerKeyScopes h3 span { color:var(--muted); font-size:11px; font-weight:400; }
+#providerSettingsPage #providerKeyScopes>p { margin:5px 0 16px; font-size:12px; color:var(--muted); }
+#providerSettingsPage .provider-key-row { display:flex; align-items:end; flex-wrap:nowrap; gap:10px; margin:14px 0 0; }
+#providerSettingsPage .provider-key-row label { display:grid; grid-template-columns:auto 1fr; gap:6px 10px; flex:1; min-width:0; font-size:13px; }
+#providerSettingsPage .provider-key-row small { margin:0; text-align:right; font-size:11px; white-space:nowrap; color:var(--muted); }
+#providerSettingsPage .provider-key-row input { grid-column:1/-1; width:100%; margin:0; min-height:36px; border:1px solid var(--line); border-radius:8px; padding:8px 10px; background:var(--soft); color:var(--text); }
+#providerSettingsPage .provider-key-row button { flex:none; height:36px; margin:0; padding:6px 10px; border:1px solid var(--line); background:transparent; color:var(--muted); border-radius:8px; font-size:12px; }
+#providerSettingsPage .provider-card { padding:10px 8px; min-width:0; gap:8px; border-radius:9px; }
+#providerSettingsPage .provider-info { flex:1; min-width:0; }
+#providerSettingsPage .provider-name { font-size:13px; font-weight:550; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+#providerSettingsPage .provider-meta { font-size:11px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+#providerSettingsPage .provider-side-meta { display:none; }
+#providerSettingsPage .provider-mark { width:24px; height:24px; border-radius:6px; }
+#providerSettingsPage .provider-pinned .provider-card { display:grid; grid-template-columns:24px minmax(0,1fr); padding:10px; }
+#providerSettingsPage .provider-builtin-badge { grid-column:2; justify-self:start; font-size:10px; }
+#providerSettingsPage .provider-website { font-size:11px; padding:6px 10px; }
+#providerSettingsPage .provider-drag-handle { width:8px; opacity:.35; }
+#providerSettingsPage .provider-usage-summary { border:1px solid var(--line); border-radius:12px; padding:18px; background:var(--panel); }
+.usage-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:14px; }
+.usage-heading h3 { margin:0; font-size:14px; font-weight:600; }
+.usage-heading p { margin:4px 0 0; color:var(--muted); font-size:12px; }
+#providerSettingsPage .usage-refresh { display:flex; align-items:center; justify-content:center; flex:none; width:34px; height:34px; padding:8px; border:1px solid var(--line); border-radius:8px; background:transparent; color:var(--muted); cursor:pointer; }
+.usage-refresh svg { width:16px; height:16px; }
+.usage-refresh:disabled { opacity:.4; cursor:default; }
+.usage-refresh:hover:not(:disabled) { color:var(--text); background:var(--soft); }
+.usage-entries { display:grid; gap:12px; color:var(--muted); font-size:12px; min-height:26px; }
+.usage-entry { padding:12px 14px; border-radius:9px; background:var(--soft); border:1px solid var(--line); }
+.usage-scopes { font-size:11px; color:var(--muted); margin-bottom:8px; }
+.usage-metrics { display:grid; grid-template-columns:repeat(auto-fit,minmax(135px,1fr)); gap:14px; }
+.usage-metrics>div { display:flex; flex-wrap:wrap; align-items:baseline; gap:0 5px; min-width:0; }
+.usage-metrics span { flex-basis:100%; font-size:12px; color:var(--muted); }
+.usage-metrics strong { font-size:23px; font-weight:600; line-height:1.6; color:var(--text); font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
+.usage-metrics small { font-size:11px; color:var(--muted); }
+.usage-note { font-size:12px; line-height:1.6; margin:6px 0 0; overflow-wrap:anywhere; }
+#providerSettingsPage :is(button,input,select):focus-visible { outline:2px solid var(--muted); outline-offset:2px; }
+#providerSettingsPage :is(.api-link-btn,.recommend-platform-card) svg { animation:none!important; }
+@media(max-width:800px) {
+ #providerSettingsPage .layout { grid-template-columns:170px minmax(0,1fr)!important; gap:14px!important; }
+ #providerSettingsPage .page { padding:16px!important; }
+ #providerSettingsPage .model-grid { grid-template-columns:1fr; }
+ #providerSettingsPage .provider-drag-handle { display:none; }
+}
+@media(max-width:580px) {
+ #providerSettingsPage .layout { grid-template-columns:minmax(0,1fr)!important; }
+ #providerSettingsPage .sidebar { position:static; max-height:none; padding:10px; }
+ #providerSettingsPage .provider-list { flex-direction:row; overflow-x:auto; align-items:stretch; gap:8px; max-height:150px; padding-bottom:8px; }
+ #providerSettingsPage .provider-card { flex:0 0 160px; }
+ #providerSettingsPage .provider-pinned { flex:0 0 170px; }
+ #providerSettingsPage .provider-pinned .provider-card { width:100%; }
+ #providerSettingsPage .block,#providerSettingsPage #providerKeyScopes,#providerSettingsPage .provider-usage-summary { padding:14px; }
+ #providerSettingsPage .content-head { flex-wrap:wrap; }
+ #providerSettingsPage .provider-key-row { gap:8px; }
+ #providerSettingsPage .provider-key-row label { grid-template-columns:1fr; }
+ #providerSettingsPage .provider-key-row small { text-align:left; }
+}
+/* Replace legacy grid/min-height rules that otherwise clip names and create empty panels. */
+#providerSettingsPage .provider-list { display:flex!important; flex-direction:column; width:100%!important; min-height:0!important; max-height:calc(100vh - 200px)!important; overflow:auto!important; }
+#providerSettingsPage .provider-card-sortable { display:flex!important; width:100%!important; min-width:0!important; max-width:100%!important; }
+#providerSettingsPage .provider-card-sortable .provider-info { width:0!important; min-width:0!important; flex:1!important; }
+#providerSettingsPage .provider-name { font-weight:550!important; }
+#providerSettingsPage .content-head { background:transparent!important; }
+#providerSettingsPage .provider-onboarding-card { min-height:0!important; padding:16px!important; gap:12px!important; }
+#providerSettingsPage .provider-onboarding-card[hidden] { display:none!important; }
+.jinni-embedded-providers #providerSettingsPage .page-head .sub { display:none; }
+.jinni-embedded-providers #providerSettingsPage .page-head { margin:0!important; padding:0!important; min-height:0!important; }
+#providerSettingsPage #status:empty { display:none; }
+#providerSettingsPage .usage-entries { grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr)); }
+@media(max-width:580px) {
+ #providerSettingsPage .provider-list { flex-direction:row!important; max-height:150px!important; align-items:stretch; }
+ #providerSettingsPage .provider-card-sortable { flex:0 0 170px!important; min-width:170px!important; max-width:170px!important; align-self:stretch; }
+}
+
+/* Use the same semantic surfaces for every control in either theme. */
+#providerSettingsPage :is(.action-btn,.ghost-btn,.add-btn,.key-btn,.cli-quick-btn,.provider-card,.model-add-btn) { background:var(--panel)!important; color:var(--text)!important; border-color:var(--line)!important; box-shadow:none!important; }
+#providerSettingsPage :is(.action-btn,.ghost-btn,.add-btn,.key-btn,.cli-quick-btn,.provider-card,.model-add-btn):hover { background:var(--soft)!important; color:var(--text)!important; transform:none!important; }
+#providerSettingsPage .provider-card.active { background:var(--soft)!important; color:var(--text)!important; border-color:var(--line-strong)!important; }
+#providerSettingsPage .provider-card :is(.provider-name,.provider-mark) { color:var(--text)!important; }
+#providerSettingsPage .provider-card .provider-mark { background:var(--panel)!important; }
+#providerSettingsPage .action-btn:is(.primary-btn,.save-btn) { background:var(--text)!important; color:var(--panel)!important; border-color:var(--text)!important; }
+#providerSettingsPage .action-btn:is(.primary-btn,.save-btn):hover { opacity:.85; }
+#providerSettingsPage .provider-pinned { border-color:var(--line-strong); }
+#providerSettingsPage .provider-builtin-badge { color:var(--muted)!important; background:var(--panel)!important; }
+#providerSettingsPage button:disabled { opacity:.45; cursor:default; }
+
+#providerSettingsPage .sidebar { position:sticky!important; top:16px!important; }
+#providerSettingsPage .content-head { position:sticky; top:0; z-index:3; padding:12px 0; background:var(--bg)!important; }
+#providerSettingsPage .action-btn.danger-btn { color:#bf4557!important; }
+@media(max-width:580px) { #providerSettingsPage .sidebar { position:static!important; } }
