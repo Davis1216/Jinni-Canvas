@@ -34,7 +34,7 @@
     const notify=(type,extra={})=>document.querySelectorAll('iframe').forEach(f=>{try{f.contentWindow.postMessage({type,...extra},location.origin)}catch(e){}});
     const message=(text,error=false)=>{const el=dialog.querySelector('.jinni-message');el.textContent=text;el.classList.toggle('jinni-error',error)};
     function providerDirty(){try{return !!providerFrame.contentWindow.JinniProviderDraft?.dirty}catch(e){return false}}
-    function close(){if((dirty||providerDirty())&&!confirm('有未保存的修改，确认丢弃并关闭设置？'))return;if(providerDirty())providerFrame.contentWindow.JinniProviderDraft.discard();capture=null;dirty=false;dialog.close();notify('jinni-settings-state',{open:false});previousFocus?.focus()}
+    function close(){capture=null;dialog.close();notify('jinni-settings-state',{open:false});previousFocus?.focus()}
     function rows(){
         const container=dialog.querySelector('#jinniKeyRows');
         const scrollTop=container.scrollTop;
@@ -58,7 +58,7 @@
         dialog.querySelector('#jinniKeysEnabled').checked=draft.enabled;
     }
     function resetDraft(){draft=structuredClone(keys.state);dirty=false;capture=null;rows();message('修改后点击“保存更改”生效。')}
-    window.openJinniSettings=async(page='providers')=>{if(!dialog.open){previousFocus=document.activeElement;resetDraft();dialog.showModal();notify('jinni-settings-state',{open:true});try{await keys.load();if(!dirty)resetDraft()}catch(e){message(e.message,true)}}showPage(page);};
+    window.openJinniSettings=async(page='providers')=>{if(!dialog.open){previousFocus=document.activeElement;if(!draft)resetDraft();dialog.showModal();notify('jinni-settings-state',{open:true});try{await keys.load();if(!dirty)resetDraft()}catch(e){message(e.message,true)}}showPage(page);};
     function showPage(page){capture=null;if(draft)rows();dialog.querySelectorAll('[data-content]').forEach(el=>el.hidden=el.dataset.content!==page);dialog.querySelectorAll('[data-page]').forEach(el=>el.classList.toggle('active',el.dataset.page===page));dialog.querySelector('h2').textContent={providers:'供应商配置',shortcuts:'快捷键配置',about:'关于'}[page];if(page==='providers'&&!providerFrame.getAttribute('src'))providerFrame.src='/static/api-settings.html?embedded=1';}
     dialog.querySelectorAll('[data-page]').forEach(el=>el.onclick=()=>showPage(el.dataset.page));dialog.querySelector('[data-close]').onclick=close;dialog.addEventListener('cancel',e=>{e.preventDefault();if(capture){capture=null;rows()}else close()});dialog.addEventListener('click',e=>{if(e.target===dialog){const r=dialog.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)close()}});
     dialog.querySelector('#jinniKeysEnabled').onchange=e=>{draft.enabled=e.target.checked;dirty=true};dialog.querySelector('[data-reset]').onclick=()=>{draft={enabled:true,bindings:{...keys.defaults}};dirty=true;capture=null;rows();message('已恢复默认键位，保存后生效。')};dialog.querySelector('[data-cancel]').onclick=()=>{if(!dirty||confirm('确认丢弃快捷键修改？'))resetDraft()};

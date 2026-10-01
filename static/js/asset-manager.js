@@ -684,7 +684,7 @@ function canvasAssetCategories(){
         ? canvasAssetsData.categories.filter(cat => ['smart','classic'].includes(cat.id))
         : [
             {id:'smart', name:'智能画布', count:(canvasAssetsData.items || []).filter(item => item.canvas_kind === 'smart').length, canvas_count:(canvasAssetsData.canvases || []).filter(item => item.kind === 'smart').length},
-            {id:'classic', name:'普通画布', count:(canvasAssetsData.items || []).filter(item => item.canvas_kind !== 'smart').length, canvas_count:(canvasAssetsData.canvases || []).filter(item => item.kind !== 'smart').length}
+            {id:'classic', name:'传统画布', count:(canvasAssetsData.items || []).filter(item => item.canvas_kind !== 'smart').length, canvas_count:(canvasAssetsData.canvases || []).filter(item => item.kind !== 'smart').length}
         ];
     return cats;
 }
@@ -740,7 +740,7 @@ function canvasAssetKindLabel(item){
     return '图片';
 }
 function canvasKindLabel(kind){
-    return kind === 'smart' ? '智能画布' : '普通画布';
+    return kind === 'smart' ? '智能画布' : '传统画布';
 }
 function canvasAssetSortLabel(){
     const map = {canvas_asc:'画布名称', updated_desc:'最近更新', updated_asc:'最早更新', name_asc:'名称 A-Z', kind:'类型'};

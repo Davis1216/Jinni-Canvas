@@ -5,8 +5,12 @@ package main
 import (
 	"archive/zip"
 	"bytes"
+	"crypto/rand"
 	"crypto/sha256"
 	_ "embed"
+	"encoding/base64"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net"
@@ -202,6 +206,59 @@ func run() error {
 		return fmt.Errorf("无法创建窗口。请安装 Microsoft Edge WebView2 Runtime：https://developer.microsoft.com/microsoft-edge/webview2/")
 	}
 	defer view.Destroy()
+	exportNonce := make([]byte, 32)
+	if _, err := rand.Read(exportNonce); err != nil {
+		return err
+	}
+	exportToken := hex.EncodeToString(exportNonce)
+	if err := view.Bind("jinniSaveExportNative", func(token, filename, encoded string) (map[string]string, error) {
+		if token != exportToken {
+			return nil, fmt.Errorf("无效的导出来源")
+		}
+		filename = filepath.Base(filename)
+		ext := strings.ToLower(filepath.Ext(filename))
+		if ext != ".json" && ext != ".zip" {
+			return nil, fmt.Errorf("不支持的导出格式")
+		}
+		data, err := base64.StdEncoding.DecodeString(encoded)
+		if err != nil {
+			return nil, fmt.Errorf("导出内容无效")
+		}
+		last, _ := os.ReadFile(filepath.Join(root, "export-directory.txt"))
+		picker := exec.Command("powershell.exe", "-NoProfile", "-STA", "-Command", `[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; Add-Type -AssemblyName System.Windows.Forms; $p = New-Object System.Windows.Forms.SaveFileDialog; $p.FileName = $env:JINNI_EXPORT_NAME; $p.InitialDirectory = $env:JINNI_EXPORT_DIRECTORY; $p.OverwritePrompt = $true; if ($p.ShowDialog() -eq 'OK') { [Console]::Write($p.FileName) }`)
+		picker.Env = append(os.Environ(), "JINNI_EXPORT_NAME="+filename, "JINNI_EXPORT_DIRECTORY="+string(last))
+		picker.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+		output, err := picker.Output()
+		if err != nil {
+			return nil, fmt.Errorf("无法打开另存为窗口")
+		}
+		target := strings.TrimSpace(strings.TrimPrefix(string(output), "\ufeff"))
+		if target == "" {
+			return map[string]string{"status": "cancelled"}, nil
+		}
+		tmp, err := os.CreateTemp(filepath.Dir(target), ".jinni-export-*")
+		if err != nil {
+			return nil, fmt.Errorf("导出目录不可写")
+		}
+		defer os.Remove(tmp.Name())
+		_, writeErr := tmp.Write(data)
+		closeErr := tmp.Close()
+		if writeErr != nil || closeErr != nil {
+			return nil, fmt.Errorf("导出写入失败")
+		}
+		src, _ := windows.UTF16PtrFromString(tmp.Name())
+		dst, _ := windows.UTF16PtrFromString(target)
+		if err := windows.MoveFileEx(src, dst, windows.MOVEFILE_REPLACE_EXISTING|windows.MOVEFILE_WRITE_THROUGH); err != nil {
+			return nil, fmt.Errorf("无法保存导出文件")
+		}
+		_ = os.WriteFile(filepath.Join(root, "export-directory.txt"), []byte(filepath.Dir(target)), 0600)
+		return map[string]string{"status": "saved", "path": target}, nil
+	}); err != nil {
+		return err
+	}
+	originJSON, _ := json.Marshal(strings.TrimSuffix(address, "/"))
+	tokenJSON, _ := json.Marshal(exportToken)
+	view.Init(fmt.Sprintf(`if(location.origin===%s){window.jinniSaveExport=(name,data)=>window.jinniSaveExportNative(%s,name,data)}`, originJSON, tokenJSON))
 	if err := view.Bind("chooseDataDirectory", func(token string) (string, error) {
 		// Only the local setup document knows this per-start nonce. The endpoint
 		// disappears once initialization hands control to the normal backend.

@@ -7,8 +7,8 @@
     <script>
         (function(){
             try {
-                var theme = localStorage.getItem('studio_theme') || localStorage.getItem('canvas_theme') || 'light';
-                if(theme === 'dark') {
+                var theme = localStorage.getItem('studio_theme') || localStorage.getItem('canvas_theme') || 'system';
+                if(theme === 'dark' || (theme === 'system' && matchMedia('(prefers-color-scheme: dark)').matches)) {
                     document.documentElement.classList.add('studio-theme-dark');
                     document.documentElement.classList.add('theme-dark');
                 }
@@ -17,11 +17,12 @@
     </script>
     <script src="/static/vendor/js/tailwindcss-cdn.js?v=2026.07.4.2.1783154122"></script>
     <script src="/static/vendor/js/lucide.js?v=2026.07.4.2.1783154122"></script>
-    <script src="/static/js/theme.js?v=2026.07.4.2.1783154122"></script>
-    <script src="/static/js/i18n.js?v=2026.07.4.2.1784104411"></script>
+    <script src="/static/js/preview-zoom.js?v=2026.07.4.2.1790798458"></script>
+    <script src="/static/js/theme.js?v=2026.07.4.2.1790798458"></script>
+    <script src="/static/js/i18n.js?v=2026.07.4.2.1790798458"></script>
     <link rel="stylesheet" href="/static/css/comfyui-settings.css?v=2026.07.4.2.1783154122">
     <link rel="stylesheet" href="/static/css/theme.css?v=2026.07.4.2.1783154122">
-<link rel="stylesheet" href="/static/css/jinni-ui.css?v=2026.07.4.2">
+<link rel="stylesheet" href="/static/css/jinni-ui.css?v=2026.07.4.2.1790798844">
 </head>
 <body>
     <div class="page">
@@ -123,7 +124,7 @@
         <img id="imageLightboxImg" src="" alt="preview" onclick="event.stopPropagation()">
     </div>
 
-    <script src="/static/js/comfyui-settings.js?v=2026.07.4.2.1783154122"></script>
+    <script src="/static/js/comfyui-settings.js?v=2026.07.4.2.1790798458"></script>
 <script src="/static/js/jinni-ui.js?v=2026.07.4.2"></script>
 </body>
 </html>

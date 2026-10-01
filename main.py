@@ -777,8 +777,13 @@ def read_api_env_value(key: str) -> str:
         return ""
     return ""
 
-def provider_env_key_value(provider_id: str) -> str:
+def provider_env_key_value(provider_id: str, purpose: str = "global") -> str:
     provider_id = str(provider_id or "").strip().lower()
+    if purpose in {"llm", "image", "video"}:
+        scoped = provider_key_env(provider_id) + "_" + purpose.upper()
+        specific = os.getenv(scoped, "") or read_api_env_value(scoped)
+        if specific:
+            return specific
     env_key = provider_key_env(provider_id)
     key = os.getenv(env_key, "") or read_api_env_value(env_key)
     if key:
@@ -1244,6 +1249,11 @@ def public_provider(provider):
         "key_preview": mask_secret(key),
         "key_env": provider_key_env(provider["id"]),
     }
+    item["key_scopes"] = {}
+    for purpose in ("llm", "image", "video"):
+        scoped = provider_key_env(provider["id"]) + "_" + purpose.upper()
+        specific = os.getenv(scoped, "") or read_api_env_value(scoped)
+        item["key_scopes"][purpose] = {"configured": bool(specific or key), "source": "independent" if specific else "global" if key else "missing"}
     item["image_quality_support"] = {
         str(model): image_quality_parameter_supported(provider, model)
         for model in (provider.get("image_models") or [])
@@ -2576,6 +2586,12 @@ class ApiProviderPayload(BaseModel):
     volcengine_access_key_id: Optional[str] = None
     volcengine_secret_access_key: Optional[str] = None
     api_key: Optional[str] = None
+    llm_api_key: Optional[str] = None
+    image_api_key: Optional[str] = None
+    video_api_key: Optional[str] = None
+    clear_llm_key: bool = False
+    clear_image_key: bool = False
+    clear_video_key: bool = False
     wallet_api_key: Optional[str] = None
     clear_key: bool = False
     clear_wallet_key: bool = False
@@ -4777,7 +4793,7 @@ def resolve_chat_provider(provider: str, model: str, ms_model: str):
         base = RUNNINGHUB_LLM_BASE_URL
     else:
         base = base_root if base_root.endswith("/v1") else base_root + "/v1"
-    hdrs = api_headers(provider=api_provider, model=mdl)
+    hdrs = api_headers(provider=api_provider, model=mdl, purpose="llm")
     return base, hdrs, mdl
 
 def log_net_error(context, exc, url=""):
@@ -4811,11 +4827,11 @@ def log_net_error(context, exc, url=""):
         except Exception:
             pass
 
-def api_headers(json_body=True, provider=None, model=""):
+def api_headers(json_body=True, provider=None, model="", purpose="image"):
     if provider:
         if is_codex_provider(provider) or is_gemini_cli_provider(provider):
             raise HTTPException(status_code=400, detail="CLI 协议使用本机登录态，不需要 API Key。当前入口应走对应 CLI 专用通道。")
-        api_key = provider_env_key_value(provider["id"])
+        api_key = provider_env_key_value(provider["id"], provider.get("_key_purpose", purpose))
         provider_name = provider.get("name") or provider["id"]
         if not api_key:
             raise HTTPException(status_code=400, detail=f"未配置 {provider_name} 的 API Key，请在 API 平台管理中填写。")
@@ -13433,6 +13449,13 @@ async def save_providers(payload: List[ApiProviderPayload]):
             raise HTTPException(status_code=400, detail=f"API 平台 ID 重复：{provider['id']}")
         providers.append(provider)
         key_env = provider_key_env(provider["id"])
+        for purpose in ("llm", "image", "video"):
+            scoped = key_env + "_" + purpose.upper()
+            value = getattr(item, purpose + "_api_key")
+            if getattr(item, "clear_" + purpose + "_key"):
+                env_updates[scoped] = ""
+            elif value is not None and value.strip():
+                env_updates[scoped] = value.strip()
         if item.clear_key:
             env_updates[key_env] = ""
         elif item.api_key is not None and item.api_key.strip():
@@ -13501,6 +13524,7 @@ async def get_global_token():
 # --- 在线生图 (COMFLY) ---
 
 class TestConnectionPayload(BaseModel):
+    purpose: str = "global"
     base_url: str = ""
     api_key: str = ""
     provider_id: str = ""
@@ -13532,7 +13556,7 @@ def api_key_from_payload(payload, protocol: str = ""):
             value = os.getenv(runninghub_wallet_key_env(), "")
             if value:
                 return value
-        value = provider_env_key_value(provider_id)
+        value = provider_env_key_value(provider_id, getattr(payload, "purpose", "global"))
         if value:
             return value
     if protocol == "volcengine":
@@ -13725,6 +13749,63 @@ def apply_agnes_model_defaults(base_url, grouped, ids):
     ids = sorted(set(ids))
     grouped["video"] = sorted(set(grouped.get("video") or []))
     return grouped, ids
+
+
+_PROVIDER_USAGE_CACHE = {}
+
+def normalize_provider_usage(raw):
+    if not isinstance(raw, dict) or raw.get("mode") not in {"quota_limited", "unrestricted"}:
+        return {"status": "unsupported", "message": "该供应商未提供兼容额度接口"}
+    result = {"status": "ok", "service": "sub2api", "mode": raw["mode"], "valid": raw.get("isValid"), "key_status": raw.get("status"), "unit": raw.get("unit"), "plan": raw.get("planName"), "updated_at": datetime.datetime.now(datetime.timezone.utc).isoformat()}
+    result["key_quota"] = {k: raw["quota"].get(k) for k in ("limit", "used", "remaining", "unit")} if isinstance(raw.get("quota"), dict) else None
+    result["balance"] = raw.get("balance")
+    result["remaining"] = raw.get("remaining")
+    result["subscription"] = {k: raw["subscription"].get(k) for k in ("daily_usage_usd", "weekly_usage_usd", "monthly_usage_usd", "daily_limit_usd", "weekly_limit_usd", "monthly_limit_usd", "expires_at")} if isinstance(raw.get("subscription"), dict) else None
+    result["rate_limits"] = [{k: row.get(k) for k in ("window", "limit", "used", "remaining", "reset_at")} for row in (raw.get("rate_limits") or []) if isinstance(row, dict)]
+    return result
+
+@app.get("/api/providers/{provider_id}/usage")
+async def provider_usage(provider_id: str, purpose: str = "all", refresh: bool = False):
+    provider = get_api_provider_exact(provider_id)
+    if purpose not in {"all", "global", "llm", "image", "video"}:
+        raise HTTPException(400, "未知功能类型")
+    base = (provider.get("base_url") or "").rstrip("/")
+    if not base.startswith(("https://", "http://")):
+        return {"entries": [{"status": "unsupported", "message": "该供应商未提供兼容额度接口"}]}
+    url = base + ("/usage" if base.endswith("/v1") else "/v1/usage")
+    groups = {}
+    missing = []
+    for scope in (("global", "llm", "image", "video") if purpose == "all" else (purpose,)):
+        key = provider_env_key_value(provider_id, scope)
+        if key:
+            groups.setdefault(key, []).append(scope)
+        else:
+            missing.append(scope)
+    entries = [{"scopes": missing, "status": "unconfigured"}] if missing else []
+    async with httpx.AsyncClient(timeout=15, follow_redirects=False) as client:
+        for key, scopes in groups.items():
+            cache_key = (url, hashlib.sha256(key.encode()).hexdigest())
+            cached = _PROVIDER_USAGE_CACHE.get(cache_key)
+            if cached and not refresh and time.monotonic() - cached[0] < 30:
+                data = cached[1]
+            else:
+                try:
+                    response = await client.get(url, headers={"Authorization": bearer_auth_value(key), "Accept": "application/json"})
+                    if response.status_code in (404, 405):
+                        data = {"status": "unsupported", "message": "该供应商未提供兼容额度接口"}
+                    elif response.status_code in (401, 403):
+                        data = {"status": "unauthorized", "message": "Key 无效、已过期或没有查询权限"}
+                    elif response.status_code != 200:
+                        data = {"status": "error", "message": f"额度查询失败（HTTP {response.status_code}）"}
+                    else:
+                        data = normalize_provider_usage(response.json())
+                    if len(_PROVIDER_USAGE_CACHE) > 128:
+                        _PROVIDER_USAGE_CACHE.clear()
+                    _PROVIDER_USAGE_CACHE[cache_key] = (time.monotonic(), data)
+                except (httpx.HTTPError, ValueError):
+                    data = {"status": "error", "message": "额度查询超时或响应无效，请重试"}
+            entries.append({**data, "scopes": scopes})
+    return {"provider_id": provider_id, "entries": entries}
 
 @app.post("/api/providers/test-connection")
 async def test_provider_connection(payload: TestConnectionPayload):
@@ -14121,16 +14202,34 @@ async def fetch_upstream_models_from_payload(payload: TestConnectionPayload):
     return await fetch_models_from_upstream(payload.base_url, api_key, protocol, payload.image_request_mode)
 
 @app.get("/api/providers/{provider_id}/fetch-models")
-async def fetch_upstream_models(provider_id: str):
+async def fetch_upstream_models(provider_id: str, purpose: str = "global"):
     """从已保存的上游 OpenAI 兼容接口拉取 /v1/models 列表，按名称智能分类为 image/chat/video。"""
     provider = get_api_provider_exact(provider_id)
+    if purpose == "all":
+        combined = {"image_models": [], "chat_models": [], "video_models": [], "all": [], "errors": []}
+        cache = {}
+        for scope, field in (("image", "image_models"), ("llm", "chat_models"), ("video", "video_models")):
+            key = provider_env_key_value(provider_id, scope)
+            if not key:
+                continue
+            try:
+                if key not in cache:
+                    cache[key] = await fetch_models_from_upstream(provider.get("base_url") or "", key, provider_protocol(provider), provider.get("image_request_mode") or "openai")
+                result = cache[key]
+                combined[field] = list(dict.fromkeys(result.get(field) or []))
+                combined["all"] = list(dict.fromkeys(combined["all"] + (result.get("all") or [])))
+            except (HTTPException, httpx.HTTPError):
+                combined["errors"].append({"scope": scope, "message": "该功能模型读取失败，请检查对应 Key 权限"})
+        return combined
+    if purpose not in {"global", "llm", "image", "video"}:
+        raise HTTPException(400, "未知功能类型")
     if is_codex_provider(provider):
         return await fetch_models_from_upstream("", "", "codex", provider.get("image_request_mode") or "openai")
     if is_gemini_cli_provider(provider):
         return await fetch_models_from_upstream("", "", "gemini-cli", provider.get("image_request_mode") or "openai")
     api_key = os.getenv(runninghub_wallet_key_env(), "") if provider["id"] == "runninghub" else ""
     if not api_key:
-        api_key = provider_env_key_value(provider["id"])
+        api_key = provider_env_key_value(provider["id"], purpose)
     if not api_key:
         raise HTTPException(status_code=400, detail=f"{provider.get('name') or provider_id} 未配置 API Key")
     return await fetch_models_from_upstream(provider.get("base_url") or "", api_key, provider_protocol(provider), provider.get("image_request_mode") or "openai")
@@ -14734,7 +14833,7 @@ async def wait_for_agnes_video_task(client, provider, video_id, model):
         last_error = None
         for url in (query_url, legacy_url):
             try:
-                response = await client.get(url, headers=api_headers(provider=provider, model=model))
+                response = await client.get(url, headers=api_headers(provider=provider, model=model, purpose="video"))
                 response.raise_for_status()
                 raw = response.json()
                 break
@@ -14785,7 +14884,7 @@ async def generate_agnes_video(client, payload, provider, base_url, requested_mo
     if payload.seed is not None:
         body["seed"] = payload.seed
     submit_url = f"{base_url}/v1/videos"
-    response = await client.post(submit_url, headers=api_headers(provider=provider, model=model), json=body)
+    response = await client.post(submit_url, headers=api_headers(provider=provider, model=model, purpose="video"), json=body)
     response.raise_for_status()
     raw = response.json()
     video_id = str(raw.get("video_id") or "").strip()
@@ -14879,7 +14978,7 @@ async def generate_yuli_openai_video(client, payload, provider, base_url, reques
         if ref_file:
             files["input_reference"] = ref_file
             break
-    headers = api_headers(json_body=False, provider=provider)
+    headers = api_headers(json_body=False, provider=provider, purpose="video")
     if files:
         response = await client.post(submit_url, headers=headers, data=data, files=files)
     else:
@@ -14917,6 +15016,7 @@ def volcengine_video_prompt_text(prompt, aspect_ratio="", duration=None):
 @app.post("/api/canvas-video")
 async def canvas_video(payload: CanvasVideoRequest):
     provider = get_api_provider(payload.provider_id)
+    provider = {**provider, "_key_purpose": "video"}
     if is_jimeng_provider(provider):
         result = await generate_jimeng_video(payload, provider)
         save_canvas_video_usage(payload, provider, result)
@@ -14935,7 +15035,7 @@ async def canvas_video(payload: CanvasVideoRequest):
     base_url = video_api_root(provider)
     if not base_url:
         raise HTTPException(status_code=400, detail=f"{provider.get('name') or provider['id']} 未配置 Base URL")
-    api_key = provider_env_key_value(provider["id"])
+    api_key = provider_env_key_value(provider["id"], "video")
     if not api_key:
         raise HTTPException(status_code=400, detail=f"未配置 {provider.get('name') or provider['id']} 的 API Key，请在 API 设置中填写。")
     is_apimart = is_apimart_provider(provider)
@@ -15264,7 +15364,7 @@ async def canvas_video(payload: CanvasVideoRequest):
             for idx, candidate_url in enumerate(submit_urls):
                 submit_url = candidate_url
                 is_last = idx == total_candidates - 1
-                response = await client.post(submit_url, headers=api_headers(provider=provider), json=body)
+                response = await client.post(submit_url, headers=api_headers(provider=provider, purpose="video"), json=body)
                 last_response = response
                 if response.status_code >= 400:
                     # 404/405（或直接返回网页 HTML）通常表示该平台不支持这个端点路径——
@@ -15897,9 +15997,22 @@ async def import_canvas_workflow(file: UploadFile = File(...)):
             with zipfile.ZipFile(BytesIO(raw), "r") as zf:
                 candidates = [n for n in zf.namelist() if n.lower().endswith("workflow.json")]
                 workflow_name = "workflow.json" if "workflow.json" in zf.namelist() else (candidates[0] if candidates else "")
+                if not workflow_name and "canvas.json" in zf.namelist():
+                    workflow_name = "canvas.json"
                 if not workflow_name:
-                    raise HTTPException(status_code=400, detail="压缩包中没有 workflow.json")
+                    raise HTTPException(status_code=400, detail="压缩包中没有 workflow.json 或 canvas.json")
                 workflow = json.loads(zf.read(workflow_name).decode("utf-8-sig"))
+                if not isinstance(workflow, dict):
+                    raise HTTPException(status_code=400, detail="工作流格式不正确")
+                if workflow_name == "canvas.json" and "resources-manifest.json" in zf.namelist():
+                    manifest = json.loads(zf.read("resources-manifest.json").decode("utf-8-sig"))
+                    if not isinstance(manifest, dict) or not isinstance(manifest.get("resources"), list):
+                        raise HTTPException(status_code=400, detail="资源清单格式不正确")
+                    workflow["resources"] = [
+                        {"url": entry.get("url"), "archive": entry.get("file")}
+                        for entry in manifest["resources"]
+                        if isinstance(entry, dict) and not entry.get("skipped") and entry.get("file")
+                    ]
                 stamp = time.strftime("%Y%m%d-%H%M%S")
                 import_dir = os.path.join(OUTPUT_INPUT_DIR, f"workflow_import_{stamp}_{uuid.uuid4().hex[:6]}")
                 os.makedirs(import_dir, exist_ok=True)

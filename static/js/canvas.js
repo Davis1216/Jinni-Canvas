@@ -8,14 +8,16 @@ function langIsEn(){ return window.StudioI18n?.lang?.() === 'en'; }
 const CanvasInteractionRules = window.CanvasInteractionRules || {
     clampViewportScale:value => Math.max(.06, Math.min(3, Number(value) || 1)),
     allowedOutputKinds:(type, mediaKind) => type === 'rh'
-        ? ['single-image','image-group','general']
-        : (type === 'llm' || type === 'video' || type === 'ltxDirector')
-            ? ['general']
+        ? ['single-image','image-group','text','video','general']
+        : type === 'llm' ? ['text','general']
+        : (type === 'video' || type === 'ltxDirector')
+            ? ['video','general']
             : ['generator','msgen','comfy'].includes(type) ? ['single-image','image-group'] : [],
     requiredOutputKinds:(type, mediaKind) => type === 'rh' && mediaKind !== 'image'
         ? ['general']
-        : (type === 'llm' || type === 'video' || type === 'ltxDirector')
-            ? ['general']
+        : type === 'llm' ? ['text','general']
+        : (type === 'video' || type === 'ltxDirector')
+            ? ['video','general']
             : ['generator','msgen','comfy','rh'].includes(type) ? ['single-image','image-group'] : [],
     normalizeMediaKind:value => String(value || '').toLowerCase() === 'image' ? 'image' : 'unknown',
     inferWorkflowOutputMediaKind:() => 'unknown'
@@ -2774,12 +2776,10 @@ document.getElementById('imageEditStage').addEventListener('wheel', event => {
     event.stopPropagation();
     const stage = event.currentTarget;
     const oldZoom = imageEditZoom;
-    const factor = event.deltaY < 0 ? 1.12 : 1 / 1.12;
+    const factor = JinniPreviewZoom.factor(event);
     imageEditZoom = Math.max(0.15, Math.min(6.0, imageEditZoom * factor));
     // 焦点缩放：保持鼠标指向的图片位置不动
-    const stageRect = stage.getBoundingClientRect();
-    const mx = event.clientX - stageRect.left; // 鼠标在 stage 内偏移
-    const my = event.clientY - stageRect.top;
+    const {x:mx,y:my} = JinniPreviewZoom.point(event, stage);
     const contentX = stage.scrollLeft + mx;
     const contentY = stage.scrollTop + my;
     applyImageEditZoom();
@@ -3499,7 +3499,7 @@ function addComfyNode(point){
 function addOutputNode(kind='image-group', point=null){
     if(kind && typeof kind === 'object') { point = kind; kind = 'image-group'; }
     const p = point || defaultPoint(260, 0);
-    const outputKind = ['single-image','image-group','general'].includes(kind) ? kind : 'image-group';
+    const outputKind = ['single-image','image-group','text','video','general'].includes(kind) ? kind : 'image-group';
     return addNode({id:uid('out'), type:'output', outputKind, x:p.x, y:p.y, images:[], texts:[], activeTextVersions:{}, textViewModes:{}});
 }
 function openCreateMenu(clientX, clientY){
@@ -3668,7 +3668,7 @@ function linkCreateOptions(state){
         }
         if(['image','prompt','loop','group','promptGroup','llm','output'].includes(node.type)){
             return [
-                ...(node.type === 'llm' ? [{type:'outputGeneral', label:tr('canvas.outputGeneral'), icon:'panel-top'}] : []),
+                ...(node.type === 'llm' ? [{type:'outputText', label:tr('canvas.outputText'), icon:'text'}] : []),
                 {type:'generator', label:tr('canvas.apiGenerate'), icon:'wand-sparkles'},
                 ...(hasConfiguredCanvasProvider('modelscope') ? [{type:'msgen', label:tr('canvas.modelscopeGenerate'), icon:'cloud-lightning'}] : []),
                 {type:'video', label:tr('canvas.videoGenerateNode'), icon:'clapperboard'},
@@ -3679,7 +3679,7 @@ function linkCreateOptions(state){
     }
     if(CANVAS_GENERATOR_TYPES.includes(node.type) || node.type === 'llm'){
         return [
-            ...(node.type === 'llm' ? [{type:'outputGeneral', label:tr('canvas.outputGeneral'), icon:'panel-top'}] : []),
+            ...(node.type === 'llm' ? [{type:'outputText', label:tr('canvas.outputText'), icon:'text'}] : []),
             {type:'image', label:tr('canvas.imageCard'), icon:'image-plus'},
             {type:'prompt', label:tr('canvas.prompt'), icon:'text-cursor-input'},
             {type:'loop', label:tr('canvas.loopNode'), icon:'repeat-2'},
@@ -4064,6 +4064,8 @@ function createNodeByType(type, point){
     if(type === 'ltxDirector') return addLTXDirectorNode(point);
     if(type === 'output' || type === 'outputGroup') return addOutputNode('image-group', point);
     if(type === 'outputSingle') return addOutputNode('single-image', point);
+    if(type === 'outputText') return addOutputNode('text', point);
+    if(type === 'outputVideo') return addOutputNode('video', point);
     if(type === 'outputGeneral') return addOutputNode('general', point);
     return null;
 }
@@ -4081,6 +4083,8 @@ function menuAdd(type){
     if(type === 'ltxDirector') addLTXDirectorNode(menuPoint);
     if(type === 'output' || type === 'outputGroup') addOutputNode('image-group', menuPoint);
     if(type === 'outputSingle') addOutputNode('single-image', menuPoint);
+    if(type === 'outputText') addOutputNode('text', menuPoint);
+    if(type === 'outputVideo') addOutputNode('video', menuPoint);
     if(type === 'outputGeneral') addOutputNode('general', menuPoint);
 }
 function mediaKindForUpload(file){
@@ -10654,7 +10658,7 @@ function updateComfyField(node, input, event){
 const CANVAS_GENERATOR_TYPES = ['generator','msgen','comfy','ltxDirector','video','rh'];
 const CANVAS_IMAGE_OUTPUT_TYPES = ['generator','msgen','comfy','ltxDirector','rh'];
 const CANVAS_MEDIA_OUTPUT_TYPES = ['generator','msgen','comfy','ltxDirector','video','rh'];
-const CANVAS_OUTPUT_KINDS = ['single-image','image-group','general'];
+const CANVAS_OUTPUT_KINDS = ['single-image','image-group','text','video','general'];
 function outputKindForNode(node){
     if(node?.type !== 'output') return '';
     return CANVAS_OUTPUT_KINDS.includes(node.outputKind) ? node.outputKind : 'image-group';
@@ -10663,6 +10667,8 @@ function outputTitleForNode(node){
     const kind = outputKindForNode(node);
     if(kind === 'single-image') return tr('canvas.outputSingle');
     if(kind === 'image-group') return tr('canvas.outputGroup');
+    if(kind === 'text') return tr('canvas.outputText');
+    if(kind === 'video') return tr('canvas.outputVideo');
     return tr('canvas.outputGeneral');
 }
 function configuredOutputMediaKind(value){
@@ -10705,6 +10711,8 @@ function outputCreationOptionsForSource(node){
     const map = {
         'single-image':{type:'outputSingle', label:tr('canvas.outputSingle'), icon:'image'},
         'image-group':{type:'outputGroup', label:tr('canvas.outputGroup'), icon:'images'},
+        text:{type:'outputText', label:tr('canvas.outputText'), icon:'text'},
+        video:{type:'outputVideo', label:tr('canvas.outputVideo'), icon:'film'},
         general:{type:'outputGeneral', label:tr('canvas.outputGeneral'), icon:'panel-top'}
     };
     return expectedOutputKindsForSource(node).map(kind => map[kind]).filter(Boolean);
@@ -10719,23 +10727,9 @@ function compatibleOutputNodesForSource(node){
         .map(c => nodes.find(n => n.id === c.to))
         .filter(out => outputAcceptsSource(out, node));
 }
-function outputConnectionError(node){
-    const kinds = expectedOutputKindsForSource(node);
-    const connectedKinds = new Set(compatibleOutputNodesForSource(node).map(outputKindForNode));
-    if(!kinds.length || kinds.some(kind => connectedKinds.has(kind))) return '';
-    if(node.type === 'llm') return langIsEn() ? 'Connect a General Output before sending.' : '请先连接“通用输出”节点，再发送文本请求。';
-    if(node.type === 'video') return langIsEn() ? 'Connect a General Output before generating video.' : '请先连接“通用输出”节点，再生成视频。';
-    if(node.type === 'ltxDirector') return langIsEn() ? 'Connect a General Output before generating video.' : '请先连接“通用输出”节点，再生成视频。';
-    if(node.type === 'rh' && sourceOutputMediaKind(node) !== 'image') return langIsEn() ? 'Connect a General Output before running this dynamic workflow.' : '当前 RunningHub 结果类型未知或包含非图像内容，请先连接“通用输出”节点，避免付费生成后内容丢失。';
-    if(node.type === 'rh') return langIsEn() ? 'Connect a Single Image or Image Group Output before generating.' : '该 RunningHub 工作流输出图像，请先连接“单图输出”或“图组输出”节点。';
-    return langIsEn() ? 'Connect a Single Image or Image Group Output before generating.' : '请先连接“单图输出”或“图组输出”节点，再发起生成。';
-}
 function requireOutputConnection(node, opts={}){
-    const message = outputConnectionError(node);
-    if(!message) return true;
-    if(opts.cascade) throw new Error(message);
-    showErrorModal(message, langIsEn() ? 'Output required' : '需要连接输出节点');
-    return false;
+    // The validated execution path creates an output via outputForNode.
+    return Boolean(node);
 }
 function registerOutputRun(node, run){
     if(!node || !run?.id) return;
@@ -10811,7 +10805,17 @@ function outputForNode(node, dx=460){
     if(!node) return null;
     const outputs = compatibleOutputNodesForSource(node);
     const required = new Set(expectedOutputKindsForSource(node));
-    return outputs.find(out => required.has(outputKindForNode(out))) || outputs[0] || null;
+    const existing = outputs.find(out => required.has(outputKindForNode(out))) || outputs[0];
+    if(existing) return existing;
+    const kind = node.type === 'llm' ? 'text' : ['video','ltxDirector'].includes(node.type) ? 'video' : node.type === 'rh' && sourceOutputMediaKind(node) !== 'image' ? 'general' : 'single-image';
+    const point = {x:Number(node.x || 0) + dx, y:Number(node.y || 0)};
+    while(nodes.some(n => Math.abs(Number(n.x)-point.x)<330 && Math.abs(Number(n.y)-point.y)<260)) point.y += 300;
+    pushUndo();
+    const out = {id:uid('out'),type:'output',outputKind:kind,...point,images:[],texts:[],activeTextVersions:{},textViewModes:{}};
+    nodes.push(out);
+    connections.push({id:uid('c'),from:node.id,to:out.id});
+    render(); scheduleSave();
+    return out;
 }
 function outputNodesForSource(nodeId){
     const source = nodes.find(n => n.id === nodeId);
@@ -12379,6 +12383,7 @@ async function runLLMNode(nodeId, opts={}){
     beginNodeRunState(node, !opts.cascade);
     refreshNodes([node.id]);
     try {
+        outputForNode(node);
         node.outputText = await callCanvasLLM(node, input, [], {cascadeTargetId});
         const textOutputs = syncLLMTextOutputs(node, node.outputText, 'node');
         if(!opts.cascade) node.running = false;
@@ -12638,12 +12643,6 @@ async function runNodeCascade(nodeId){
     if(target.running){ alert('当前节点正在运行'); return; }
     const order = computeCascadeOrder(nodeId);
     if(!order.length){ alert('没有可运行的生成节点'); return; }
-    const missingOutputs = order.map(id => nodes.find(n => n.id === id)).filter(Boolean).filter(node => outputConnectionError(node));
-    if(missingOutputs.length){
-        const labels = missingOutputs.map(node => `${node.type === 'llm' ? 'LLM' : node.type} (${node.id})`).join('\n');
-        showErrorModal(`${langIsEn() ? 'Connect compatible Output nodes before running the workflow:' : '工作流运行前，请先为以下节点连接兼容的 Output：'}\n${labels}`, langIsEn() ? 'Output required' : '需要连接输出节点');
-        return;
-    }
     const loop = resolveCascadeLoop(nodeId);
     const totalRounds = loop?.count || 1;
     const startIdx = Math.max(1, Number(loop?.node?.loopStart) || 1);
@@ -12819,6 +12818,7 @@ async function runLLMChat(nodeId){
     if(!requireOutputConnection(node)) return;
     const message = (node.chatInput || '').trim();
     if(!message) return;
+    outputForNode(node);
     node.messages = node.messages || [];
     const history = node.messages.slice();
     node.messages.push({role:'user', content:message});
@@ -12898,7 +12898,7 @@ function deleteNodeFromButton(id, event){
 function deleteConnection(id, event){
     event?.preventDefault();
     event?.stopPropagation();
-    if(!connections.some(c => c.id === id) || !confirm('确认删除这条连线？')) return;
+    if(!connections.some(c => c.id === id)) return;
     pushUndo();
     connections = connections.filter(c => c.id !== id);
     if(hoveredConnectionId === id) hoveredConnectionId = '';
@@ -14398,34 +14398,40 @@ function resetOutputPreviewZoom(){
     outputPreview.classList.remove('panning');
     applyOutputPreviewZoom();
 }
+function outputPreviewActualSize(){
+    const img = outputLightboxImg;
+    if(!img.naturalWidth || !img.clientWidth) return;
+    const fit = Math.min(img.clientWidth / img.naturalWidth, img.clientHeight / img.naturalHeight);
+    outputPreviewZoom = 1 / fit;
+    outputPreviewPan = {x:outputPreview.clientWidth * (1-outputPreviewZoom)/2, y:outputPreview.clientHeight * (1-outputPreviewZoom)/2};
+    applyOutputPreviewZoom();
+}
 function initOutputPreviewZoomEvents(){
     outputPreview.addEventListener('wheel', e => {
         if(outputLightboxVideo.style.display === 'block') return;
         e.preventDefault();
         e.stopPropagation();
         const rect = outputPreview.getBoundingClientRect();
-        const localX = e.clientX - rect.left;
-        const localY = e.clientY - rect.top;
+        const {x:localX,y:localY} = JinniPreviewZoom.point(e, outputPreview);
         const before = {
             x:(localX - outputPreviewPan.x) / outputPreviewZoom,
             y:(localY - outputPreviewPan.y) / outputPreviewZoom
         };
-        const factor = e.deltaY > 0 ? .9 : 1.1;
-        const nextZoom = Math.max(1, Math.min(6, outputPreviewZoom * factor));
+        const factor = JinniPreviewZoom.factor(e);
+        const nextZoom = Math.max(0.05, Math.min(16, outputPreviewZoom * factor));
         outputPreviewZoom = nextZoom;
-        outputPreviewPan = nextZoom <= 1.001 ? {x: 0, y: 0} : {
+        outputPreviewPan = {
             x:localX - before.x * nextZoom,
             y:localY - before.y * nextZoom
         };
-        applyOutputPreviewZoom();
+        JinniPreviewZoom.render(outputPreview, applyOutputPreviewZoom);
     }, {passive:false});
     outputPreview.addEventListener('mousedown', e => {
         if(outputLightboxVideo.style.display === 'block') return;
-        if(e.button !== 0 || outputPreviewZoom <= 1.001) return;
+        if(e.button !== 0) return;
         if(e.target.closest('.output-preview-actions, .output-resolution, .output-compare-slider')) return;
         outputPreviewPanDrag = {
-            sx:e.clientX,
-            sy:e.clientY,
+            ...JinniPreviewZoom.point(e, outputPreview),
             ox:outputPreviewPan.x,
             oy:outputPreviewPan.y
         };
@@ -14435,11 +14441,12 @@ function initOutputPreviewZoomEvents(){
     });
     window.addEventListener('mousemove', e => {
         if(!outputPreviewPanDrag) return;
+        const point = JinniPreviewZoom.point(e, outputPreview);
         outputPreviewPan = {
-            x:outputPreviewPanDrag.ox + e.clientX - outputPreviewPanDrag.sx,
-            y:outputPreviewPanDrag.oy + e.clientY - outputPreviewPanDrag.sy
+            x:outputPreviewPanDrag.ox + point.x - outputPreviewPanDrag.x,
+            y:outputPreviewPanDrag.oy + point.y - outputPreviewPanDrag.y
         };
-        applyOutputPreviewZoom();
+        JinniPreviewZoom.render(outputPreview, applyOutputPreviewZoom);
     });
     window.addEventListener('mouseup', () => {
         outputPreviewPanDrag = null;
@@ -15468,7 +15475,7 @@ function endDrag(event=null){
     if(pendingKnifeConnections.size){
         const ids = new Set(pendingKnifeConnections);
         pendingKnifeConnections.clear();
-        if(confirm(`确认切断 ${ids.size} 条连线？`)){
+        {
             pushUndo();
             connections = connections.filter(c => !ids.has(c.id));
             syncGeneratorInputs();
@@ -16356,3 +16363,8 @@ window.resetZoomTo100 = resetZoomTo100;
 window.performUndo = performUndo;
 window.performRedo = performRedo;
 window.deleteSelectedNodes = deleteSelectedNodes;
+
+// Preserve the same world center when the navigation changes available space.
+(() => {let width=board.clientWidth,height=board.clientHeight;
+ new ResizeObserver(()=>{const w=board.clientWidth,h=board.clientHeight;if(w&&h&&width&&height&&canvas){viewport.x+=(w-width)/2;viewport.y+=(h-height)/2;applyViewport()}if(w&&h){width=w;height=h}}).observe(board);
+})();

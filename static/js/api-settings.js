@@ -2338,10 +2338,10 @@ function renderProviderList(){
         const protocolLabel = item.id === 'runninghub' ? 'RH' : String(item.protocol || 'openai').toUpperCase();
         if(item.id === 'yzstudio'){
             return `<div class="provider-pinned">
-                <button class="provider-card ${active} ${stateClass}" type="button" onclick="selectProvider('yzstudio')">
+                <button class="provider-card provider-recommended ${active} ${stateClass}" type="button" onclick="selectProvider('yzstudio')">
                     <span class="provider-mark"><i data-lucide="pin" class="w-4 h-4"></i></span>
-                    <span class="provider-info"><span class="provider-name">yzstudio</span><span class="provider-meta">${item.has_key ? '已配置 API Key' : '输入 API Key 即可连接'}</span></span>
-                    <span class="provider-builtin-badge">内置</span>
+                    <span class="provider-info"><span class="provider-name">yzstudio</span><span class="provider-meta">${item.has_key || Object.values(item.key_scopes||{}).some(s=>s.configured) ? '已配置 API Key' : '输入 API Key 即可连接'}</span></span>
+                    <span class="provider-builtin-badge">官方推荐</span>
                 </button>
                 <a class="provider-website" href="https://yzstudio.vip" target="_blank" rel="noopener noreferrer">yzstudio.vip <i data-lucide="arrow-up-right" class="w-3.5 h-3.5"></i></a>
             </div>`;
@@ -2478,7 +2478,8 @@ function renderEditor(){
         imageEditRouteInput.value = normalizeImageEditRoute(item.image_edit_route);
         imageEditRouteInput.disabled = item.id === 'modelscope' || item.id === 'runninghub' || item.id === 'volcengine' || CLI_PROTOCOLS.has(String(protocolInput?.value || item.protocol || '').toLowerCase());
     }
-    keyInput.value = '';
+    renderProviderKeyScopes(item);
+    keyInput.value = item.api_key || '';
     keyInput.placeholder = item.has_key ? `${tr('api.keepCurrentKey')} ${item.key_preview || ''}` : tr('api.enterKey');
     keyHint.textContent = item.has_key ? `${tr('api.keySaved')}${item.key_env || 'API/.env'}` : tr('api.noKey');
     const isModelScope = item.id === 'modelscope';
@@ -2842,6 +2843,11 @@ async function loadGeminiCliHelp(){
     }
 }
 function currentProviderApiKey(item){
+    const scope=document.getElementById('providerKeyPurpose')?.value || 'global';
+    if(scope!=='global'){
+        if(item[scope+'_api_key'])return item[scope+'_api_key'];
+        if(item.key_scopes?.[scope]?.source==='independent' && !item['clear_'+scope+'_key'])return '';
+    }
     if(item?.id === 'runninghub'){
         return rhWalletKeyInput?.value.trim() || rhFreeKeyInput?.value.trim() || '';
     }
@@ -2955,7 +2961,8 @@ async function probeAsync(){
                 headers:{'Content-Type':'application/json'},
                 body:JSON.stringify({
                     base_url:baseUrl,
-                    api_key:apiKey,
+                    purpose:document.getElementById('providerKeyPurpose')?.value || 'global',
+                api_key:apiKey,
                     provider_id:'runninghub',
                     protocol:'runninghub',
                     image_request_mode:'openai'
@@ -2981,6 +2988,7 @@ async function probeAsync(){
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({
                 base_url: baseUrl,
+                purpose:document.getElementById('providerKeyPurpose')?.value || 'global',
                 api_key: apiKey,
                 provider_id: item.id,
                 protocol: currentProtocol,
@@ -3047,6 +3055,7 @@ async function testConnection(){
             method: 'POST', headers: {'Content-Type':'application/json'},
             body: JSON.stringify({
                 base_url: baseUrl,
+                purpose:document.getElementById('providerKeyPurpose')?.value || 'global',
                 api_key: apiKey,
                 provider_id: runninghubContext ? 'runninghub' : item.id,
                 protocol: runninghubContext ? 'runninghub' : (protocolInput?.value || 'openai'),
@@ -3117,6 +3126,7 @@ async function fetchModels(){
             headers:{'Content-Type':'application/json'},
             body:JSON.stringify({
                 base_url:baseUrl,
+                purpose:document.getElementById('providerKeyPurpose')?.value || 'global',
                 api_key:apiKey,
                 provider_id:runninghubContext ? 'runninghub' : item.id,
                 protocol:runninghubContext ? 'runninghub' : (protocolInput?.value || 'openai'),
@@ -3253,9 +3263,10 @@ function applyModelPicker(){
         else if(cat === 'video') video.push(id);
         else chat.push(id);
     });
-    item.image_models = image;
-    item.chat_models = chat;
-    item.video_models = video;
+    const scope=document.getElementById('providerKeyPurpose')?.value || 'global';
+    if(scope==='global'||scope==='image')item.image_models = image;
+    if(scope==='global'||scope==='llm')item.chat_models = chat;
+    if(scope==='global'||scope==='video')item.video_models = video;
     renderModels('image'); renderModels('chat'); renderModels('video');
     renderMsLoras();
     setStatus(`已应用 · 生图 ${image.length} / LLM ${chat.length} / 视频 ${video.length}，点保存生效`);
@@ -3265,6 +3276,7 @@ async function saveKeyOnly(){
     const item = provider();
     if(!item) return;
     const key = keyInput.value.trim();
+    if(!key && ['llm','image','video'].some(scope=>item[scope+'_api_key'])){await saveProviders();return}
     if(!key){ alert(tr('api.enterKeyAlert') || '请输入 Key'); return; }
     item.api_key = key;
     if(item.id === 'modelscope' || item.id === 'runninghub') item.enabled = true;
@@ -3597,7 +3609,7 @@ async function loadProviders(){
 async function saveProviders(autoImport = true){
     syncEditor();
     const yz = providers.find(item => item.id === 'yzstudio');
-    const importModels = autoImport && yz?.api_key && !['image_models','chat_models','video_models'].some(key => yz[key]?.length);
+    const importModels = autoImport && (yz?.api_key || yz?.llm_api_key || yz?.image_api_key || yz?.video_api_key) && !['image_models','chat_models','video_models'].some(key => yz[key]?.length);
     providers.forEach(item => {
         applyYzstudioDefaults(item);
         item.id = normalizeId(item.id);
@@ -3673,6 +3685,7 @@ async function saveProviders(autoImport = true){
                 volcengine_region:item.id === 'volcengine' ? (item.volcengine_region || VOLCENGINE_DEFAULT_REGION) : '',
                 volcengine_access_key_id:item.volcengine_access_key_id || undefined,
                 volcengine_secret_access_key:item.volcengine_secret_access_key || undefined,
+                ...Object.fromEntries(['llm','image','video'].flatMap(scope=>[[scope+'_api_key',item[scope+'_api_key'] || undefined],['clear_'+scope+'_key',item['clear_'+scope+'_key']===true]])),
                 api_key:item.api_key || undefined,
                 wallet_api_key:item.wallet_api_key || undefined,
                 clear_key:item._clearKey === true,
@@ -3703,7 +3716,7 @@ async function saveProviders(autoImport = true){
         if(importModels){
             setStatus('API Key 已保存，正在读取 yzstudio 可用模型…');
             try {
-                const response = await fetch('/api/providers/yzstudio/fetch-models');
+                const response = await fetch('/api/providers/yzstudio/fetch-models?purpose=all');
                 if(!response.ok) throw new Error('读取失败');
                 const models = await response.json();
                 const current = providers.find(item => item.id === 'yzstudio');
@@ -3727,7 +3740,7 @@ function escapeHtml(str){
 }
 function escapeAttr(str){ return escapeHtml(str).replace(/`/g, '&#96;'); }
 window.addEventListener('message', event => {
-    if(event.data?.type === 'studio-theme' && window.StudioTheme) window.StudioTheme.set(event.data.theme);
+    if(event.data?.type === 'studio-theme' && window.StudioTheme) window.StudioTheme.apply(event.data.theme);
     if(event.data?.type === 'studio-lang' && window.StudioI18n) {
         window.StudioI18n.set(event.data.lang);
         if(recommendInlineOpen) renderRecommendApi();
@@ -3783,7 +3796,12 @@ window.onload = () => {
     [keyInput, rhFreeKeyInput, rhWalletKeyInput].forEach(input => {
         if(input) input.addEventListener('input', () => {
             refreshProviderOnboarding();
-            if(input === keyInput) updateApimartDomesticHint();
+            if(input === keyInput){
+                const item=provider();
+                if(item)item.api_key=keyInput.value.trim();
+                document.getElementById('providerKeyScopes')?.dispatchEvent(new Event('key-state-change'));
+                updateApimartDomesticHint();
+            }
         });
     });
 };
@@ -3807,3 +3825,47 @@ window.addEventListener('keydown',event=>{
 });
 
 rhWorkflowEditorOverlay?.addEventListener('input', () => { jinniRhDraftDirty = true; });
+
+function renderProviderKeyScopes(item){
+ let panel=document.getElementById('providerKeyScopes');
+ if(!panel){panel=document.createElement('section');panel.id='providerKeyScopes';panel.className='provider-key-scopes';keyHint.parentElement.insertAdjacentElement('afterend',panel)}
+ panel.hidden=CLI_PROTOCOLS.has(item.protocol)||['runninghub','modelscope','volcengine'].includes(item.id);
+ if(panel.hidden)return;
+ const updates=[];
+ panel.onKeyStateChange=()=>updates.forEach(update=>update());
+ if(!panel.dataset.listening){panel.addEventListener('key-state-change',()=>panel.onKeyStateChange?.());panel.dataset.listening='true'}
+ const labels={llm:'LLM',image:'图像',video:'视频'};
+ panel.innerHTML='<h3>功能 API Key</h3><p>上方为全局 Key。下方独立配置优先，留空时继承全局；也可以只配置所需功能。</p>';
+ for(const scope of Object.keys(labels)){
+  const row=document.createElement('div');row.className='provider-key-row';
+  const label=document.createElement('label');label.textContent=labels[scope];
+  const input=document.createElement('input');input.type='password';input.autocomplete='new-password';input.setAttribute('aria-label',labels[scope]+' API Key');input.value=item[scope+'_api_key']||'';
+  const state=document.createElement('small');
+  const update=()=>{const source=item[scope+'_api_key']||(!item['clear_'+scope+'_key']&&item.key_scopes?.[scope]?.source==='independent');state.textContent=source?'使用独立 Key':item.api_key||(!item._clearKey&&item.has_key)?'继承全局 Key':'未配置';input.placeholder=source?'已配置，留空保留':'可选：继承全局 Key'};
+  input.oninput=()=>{item[scope+'_api_key']=input.value.trim();item['clear_'+scope+'_key']=false;update()};
+  const clear=document.createElement('button');clear.type='button';clear.textContent='恢复继承';clear.onclick=()=>{item[scope+'_api_key']='';item['clear_'+scope+'_key']=true;input.value='';update()};
+  label.append(input);row.append(label,state,clear);panel.append(row);updates.push(update);update();
+ }
+ const purpose=document.createElement('select');purpose.id='providerKeyPurpose';purpose.setAttribute('aria-label','连接测试和模型读取使用的 Key');
+ for(const [value,label] of Object.entries({global:'全局 Key',...labels})){const option=new Option(label,value);purpose.add(option)}
+ if(!item.has_key&&!item.api_key)purpose.value=['image','llm','video'].find(x=>item[x+'_api_key']||item.key_scopes?.[x]?.configured)||'global';
+ const purposeLabel=document.createElement('label');purposeLabel.textContent='连接测试 / 模型读取：';purposeLabel.append(purpose);panel.append(purposeLabel);
+ const query=document.createElement('button');query.type='button';query.textContent='查询额度';
+ const status=document.createElement('div');status.className='provider-usage';status.setAttribute('role','status');
+ query.onclick=async()=>{query.disabled=true;status.textContent='正在查询已保存配置…';try{
+  const response=await fetch('/api/providers/'+encodeURIComponent(item.id)+'/usage?refresh=true');
+  if(!response.ok)throw Error('查询失败，请先保存供应商配置');
+  const data=await response.json();status.replaceChildren();
+  for(const entry of data.entries||[]){const card=document.createElement('p');const scopes=(entry.scopes||[]).map(x=>({global:'全局',...labels})[x]||x).join(' / ');let text=scopes+'：';
+   if(entry.status!=='ok')text+=entry.message||(entry.status==='unconfigured'?'未配置':'查询失败');
+   else {const parts=[];if(entry.key_quota)parts.push('Key 剩余额度 '+String(entry.key_quota.remaining??'未知')+' '+(entry.key_quota.unit||''));if(entry.balance!=null)parts.push('账户余额 '+entry.balance+' '+(entry.unit||''));
+    if(entry.subscription){for(const [period,name] of [['daily','日'],['weekly','周'],['monthly','月']]){const limit=entry.subscription[period+'_limit_usd'],used=entry.subscription[period+'_usage_usd'];if(limit!=null)parts.push(name+'额度：已用 '+String(used??'未知')+' / '+limit+' USD')}if(entry.subscription.expires_at)parts.push('到期 '+entry.subscription.expires_at)}
+    for(const window of entry.rate_limits||[])parts.push(window.window+'：剩余 '+String(window.remaining??'未知')+' / '+String(window.limit??'未知'));
+    if(!parts.length)parts.push('供应商未返回可用额度数值');
+    if(entry.valid===false||entry.key_status)parts.push('Key 状态：'+(entry.key_status||'无效'));
+    if(entry.updated_at)parts.push('更新于 '+new Date(entry.updated_at).toLocaleTimeString());text+=parts.join(' · ');
+   }card.textContent=text;status.append(card);
+  }
+ }catch(error){status.textContent=error.message}finally{query.disabled=false}};
+ panel.append(query,status);
+}

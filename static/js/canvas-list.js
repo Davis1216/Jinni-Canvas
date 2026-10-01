@@ -483,7 +483,7 @@ function buildCard(c){
     // 卡片布局：顶部=类型标签+更多按钮；中部=标题；底部=节点数·时间。已移除图标。
     card.innerHTML = `
         <div class="ws-card-top">
-            <span class="ws-card-kind ${isSmart ? 'smart' : 'classic'}">${isSmart ? compactLabel('智能画布','智能','Smart') : compactLabel('普通画布','普通','Classic')}</span>
+            <span class="ws-card-kind ${isSmart ? 'smart' : 'classic'}">${isSmart ? compactLabel('智能画布','智能','Smart') : compactLabel('传统画布','传统','Classic')}</span>
             <button class="ws-card-menu" type="button" title="${L('更多','More')}" aria-label="${L('更多','More')}"><i data-lucide="more-horizontal" class="w-4 h-4"></i></button>
         </div>
         <div class="ws-card-title">${escapeHtml(c.title)}</div>
@@ -590,7 +590,7 @@ function openCreateDialog(worldPt){
             <label for="createCanvasName">${L('画布名称','Canvas name')}</label>
             <input id="createCanvasName" class="ws-create-input" autofocus type="text" maxlength="80" placeholder="${L('可留空，自动命名','Leave blank for an automatic name')}">
             <div class="ws-create-toggle" role="group" aria-label="${L('画布类型','Canvas type')}">
-                <button class="ws-create-toggle-btn active" aria-pressed="true" type="button" data-kind="classic">${L('普通画布','Classic')}</button>
+                <button class="ws-create-toggle-btn active" aria-pressed="true" type="button" data-kind="classic">${L('传统画布','Classic')}</button>
                 <button class="ws-create-toggle-btn" aria-pressed="false" type="button" data-kind="smart">${L('智能画布','Smart')}</button>
             </div>
             <p class="ws-create-error" role="alert" hidden></p>
@@ -700,19 +700,16 @@ async function exportCanvas(id){
     const c = canvases.find(x => x.id === id);
     setStatus(L('正在导出...','Exporting...'));
     try {
+        const save=await JinniExport.prepare(safeExportBase(c?.title || 'canvas')+'.json','application/json');
         const res = await fetch(`/api/canvases/${encodeURIComponent(id)}`);
         if(!res.ok) throw new Error('export failed');
         const data = await res.json();
         const cv = data.canvas || data;
         const base = String((c?.title) || cv.title || 'canvas').replace(/[\\/:*?"<>|]+/g, '_').trim().slice(0, 60) || 'canvas';
         const blob = new Blob([JSON.stringify(cv, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url; a.download = base + '.json';
-        document.body.appendChild(a); a.click(); a.remove();
-        setTimeout(() => URL.revokeObjectURL(url), 1500);
-        setStatus(L('已导出','Exported'));
-    } catch(e){ console.error(e); setStatus(L('导出失败','Export failed')); }
+        const result=await save(blob);
+        setStatus(JinniExport.message(result));
+    } catch(e){ if(e.name==='AbortError'){setStatus('已取消导出');return} console.error(e); setStatus('导出失败：'+e.message); }
 }
 
 /* ===== Export canvas with referenced resources ===== */
@@ -855,6 +852,7 @@ async function exportCanvasWithResources(id){
     const c = canvases.find(x => x.id === id);
     setStatus(L('正在收集资源...','Collecting assets...'));
     try {
+        const save=await JinniExport.prepare(safeExportBase(c?.title || 'canvas')+'.zip','application/zip');
         const res = await fetch(`/api/canvases/${encodeURIComponent(id)}`);
         if(!res.ok) throw new Error('export failed');
         const data = await res.json();
@@ -879,17 +877,9 @@ async function exportCanvasWithResources(id){
         }
         entries.push({ name:'resources-manifest.json', bytes:ZIP_ENCODER.encode(JSON.stringify({ canvas_id:id, resources:manifest }, null, 2)) });
         const blob = createZipBlob(entries);
-        const href = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = href;
-        a.download = `${base}.zip`;
-        document.body.appendChild(a); a.click(); a.remove();
-        setTimeout(() => URL.revokeObjectURL(href), 1500);
-        const included = Math.max(0, entries.length - 2);
-        setStatus(skipped
-            ? L(`已导出，跳过 ${skipped} 个资源`, `Exported, skipped ${skipped} assets`)
-            : L(`已导出 ${included} 个资源`, `Exported ${included} assets`));
-    } catch(e){ console.error(e); setStatus(L('导出失败','Export failed')); }
+        const result=await save(blob);
+        setStatus(JinniExport.message(result)+(result.status!=='cancelled' && skipped ? `；${skipped} 个资源未能包含，详见 resources-manifest.json` : ''));
+    } catch(e){ if(e.name==='AbortError'){setStatus('已取消导出');return} console.error(e); setStatus('导出失败：'+e.message); }
 }
 
 /* ===== Cut / paste a canvas across projects ===== */

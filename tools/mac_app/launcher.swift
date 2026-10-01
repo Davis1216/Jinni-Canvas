@@ -27,7 +27,7 @@ class CanvasWebView: WKWebView {
 }
 
 @available(macOS 11.3, *)
-class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigationDelegate, WKUIDelegate, WKDownloadDelegate, WKScriptMessageHandler {
+class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigationDelegate, WKUIDelegate, WKDownloadDelegate, WKScriptMessageHandler, WKScriptMessageHandlerWithReply {
     var window: NSWindow!
     var webView: CanvasWebView!
     var loadingView: NSView!
@@ -183,6 +183,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigati
         // WKWebView 配置
         let config = WKWebViewConfiguration()
         config.userContentController.add(self, name: "chooseDataDirectory")
+        config.userContentController.addScriptMessageHandler(self, contentWorld: .page, name: "saveCanvasExport")
         let prefs = config.preferences
         prefs.setValue(false, forKey: "developerExtrasEnabled")
         config.defaultWebpagePreferences.allowsContentJavaScript = true
@@ -286,6 +287,28 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigati
                   let data = try? JSONSerialization.data(withJSONObject: [path]),
                   let literal = String(data: data, encoding: .utf8) else { return }
             self.webView.evaluateJavaScript("window.jinniDirectorySelected?.(\(literal)[0])", completionHandler: nil)
+        }
+    }
+
+    func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage, replyHandler: @escaping (Any?, String?) -> Void) {
+        guard message.name == "saveCanvasExport", let url = message.frameInfo.request.url,
+              url.scheme == "http", url.host == "127.0.0.1", url.port == serverURL.port,
+              let body = message.body as? [String: String], let filename = body["filename"],
+              ["json", "zip"].contains((filename as NSString).pathExtension.lowercased()),
+              let encoded = body["base64"], let data = Data(base64Encoded: encoded) else {
+            replyHandler(nil, "无效的导出请求"); return
+        }
+        let panel = NSSavePanel()
+        panel.nameFieldStringValue = (filename as NSString).lastPathComponent
+        panel.canCreateDirectories = true
+        if let directory = UserDefaults.standard.string(forKey: "jinni_export_directory") { panel.directoryURL = URL(fileURLWithPath: directory) }
+        panel.beginSheetModal(for: window) { response in
+            guard response == .OK, let destination = panel.url else { replyHandler(["status":"cancelled"], nil); return }
+            do {
+                try data.write(to: destination, options: .atomic)
+                UserDefaults.standard.set(destination.deletingLastPathComponent().path, forKey: "jinni_export_directory")
+                replyHandler(["status":"saved", "path":destination.path], nil)
+            } catch { replyHandler(["status":"error", "message":"无法写入所选位置，请检查目录权限和可用空间"], nil) }
         }
     }
 

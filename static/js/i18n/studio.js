@@ -90,7 +90,7 @@
         "online.qualityMedium": { zh: "中", en: "Medium" },
         "online.qualityHigh": { zh: "高", en: "High" },
         "online.count": { zh: "数量", en: "Count" },
-        "online.modeApi": { zh: "API 生图", en: "API" },
+        "online.modeApi": { zh: "图像生成", en: "API" },
         "online.modeModelscope": { zh: "ModelScope", en: "ModelScope" },
         "online.modeRunningHub": { zh: "RunningHub", en: "RunningHub" },
         "online.modeVolcengine": { zh: "火山引擎", en: "Volcengine" },

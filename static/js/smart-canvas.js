@@ -154,6 +154,7 @@ let suppressNodeClickUntil = 0;
 let textSelectionGuard = null;
 const UNDO_LIMIT = 40;
 const undoStack = [];
+const redoStack = [];
 let undoSuppressed = false;
 let pendingUndoSnapshot = null;
 let runningHubWorkflowCache = {};
@@ -184,6 +185,7 @@ function smartCascadePathForCtx(ctx=null){
 function capturePendingUndo(){ pendingUndoSnapshot = snapshotForUndo(); }
 function commitPendingUndo(){
     if(pendingUndoSnapshot){
+        redoStack.length = 0;
         undoStack.push(pendingUndoSnapshot);
         if(undoStack.length > UNDO_LIMIT) undoStack.shift();
         pendingUndoSnapshot = null;
@@ -202,11 +204,14 @@ function snapshotForUndo(){
 function pushUndo(){
     if(undoSuppressed) return;
     if(!canvas) return;
+    redoStack.length = 0;
     undoStack.push(snapshotForUndo());
     if(undoStack.length > UNDO_LIMIT) undoStack.shift();
 }
 function performUndo(){
+    if(nodes.some(n=>n.task?.status==='running'||n.task?.status==='waiting')){toast('任务执行中，完成后可撤销或重做');return;}
     if(!undoStack.length){ toast(tr('smart.toastNoUndo')); return; }
+    redoStack.push(snapshotForUndo());
     const snap = undoStack.pop();
     undoSuppressed = true;
     nodes = snap.nodes;
@@ -220,6 +225,15 @@ function performUndo(){
     scheduleSave();
     undoSuppressed = false;
     toast(tr('smart.toastUndone'));
+}
+function performRedo(){
+    if(nodes.some(n=>n.task?.status==='running'||n.task?.status==='waiting')){toast('任务执行中，完成后可撤销或重做');return;}
+    if(!redoStack.length)return;
+    undoStack.push(snapshotForUndo());
+    const snap=redoStack.pop();
+    nodes=snap.nodes;if(canvas)canvas.connections=snap.connections;
+    selectedId=snap.selectedId;selectedIds=snap.selectedIds;selectedImage=snap.selectedImage;
+    activeComposerSubject=null;lastComposerNodeId='';render();scheduleSave();
 }
 let comfyWorkflowCache = {};
 let cropState = null;
@@ -2037,7 +2051,7 @@ function arrangeSelectedSmartNodes(){
     if(!canvas) return;
     const explicit = selectedNodeIds().filter(id => nodes.some(n => n.id === id));
     if(!explicit.length) return;
-    const ids = smartArrangeAtomicIds(explicit.length > 1 ? explicit : connectedSmartClusterIds(explicit[0]));
+    const ids = smartArrangeAtomicIds(explicit);
     if(ids.length < 2) return;
     pushUndo();
     if(!arrangeSmartIdsByConnections(ids)) return;
@@ -5794,6 +5808,12 @@ async function loadCanvas(){
             } else if(n.pending || n.queued){
                 clearSmartNodeBusyState(n);
             }
+        });
+        nodes.filter(n=>n.task && ['running','waiting'].includes(n.task.status)).forEach(n=>{
+            if(smartPendingTasks(n).length)return;
+            const complete=n.task.kind==='text'?Boolean(n.text):(n.images||[]).length>=n.task.count;
+            n.task.status=complete?'done':'failed';
+            if(!complete)n.task.error='上次任务已中断，请检查结果后重试';
         });
         const cleanedCompletedState = clearCompletedNodeBusyStates();
         const recoveredLoopOutputs = recoverStuckLoopOutputsFromLogs();
@@ -13286,6 +13306,7 @@ function finishLoopTargetPreviewState(node){
     node = liveSmartNode(node);
     markSmartNodeComplete(node);
     if((node.images || []).some(img => img?.url)){
+        if(node.task)node.task.status=node.images.length>=node.task.count?'done':'running';
         node.title = node.images.length > 1 ? 'Group' : 'Image';
         node.scale = node.images.length > 1 ? MEDIA_GROUP_DEFAULT_SCALE : MEDIA_NODE_DEFAULT_SCALE;
         node.outputKind = mediaKindForUrls(node.images || [], (node.images || []).some(isVideoMediaItem) ? 'video' : 'image');
@@ -15144,10 +15165,16 @@ async function pollSmartCanvasTask(taskId){
     const promise = (async () => {
         for(let i = 0; i < 900; i++){
             await new Promise(resolve => setTimeout(resolve, 2000));
-            const task = await fetch(`/api/canvas-image-tasks/${encodeURIComponent(taskId)}`).then(async r => {
-                if(!r.ok) throw new Error(await r.text());
-                return r.json();
-            });
+            let task;
+            try {
+                task = await fetch(`/api/canvas-image-tasks/${encodeURIComponent(taskId)}`).then(async r => {
+                    if(!r.ok) throw new Error('任务结果查询失败，请稍后重试查询');
+                    return r.json();
+                });
+            } catch(error) {
+                error.smartTaskQueryPending = true;
+                throw error;
+            }
             if(task.status === 'succeeded') return task.result || {};
             if(task.status === 'jimeng_pending') throw new JimengPendingSignal({submitId:task.submit_id, kind:task.kind, queueInfo:task.queue_info, message:task.message});
             if(task.status === 'failed'){
@@ -15156,7 +15183,7 @@ async function pollSmartCanvasTask(taskId){
                 throw new Error(task.error || tr('smart.errRunFailed'));
             }
         }
-        throw new Error(tr('smart.errRunTimeout'));
+        throw Object.assign(new Error(tr('smart.errRunTimeout')), {smartTaskQueryPending:true});
     })();
     activeSmartTaskPolls.set(taskId, promise);
     try {
@@ -15192,6 +15219,7 @@ function finalizeSmartPendingTask(node, taskId, images, kind='image'){
         node.runElapsedMs = Math.max(0, node.runFinishedAt - Number(node.runStartedAt || node.runFinishedAt));
         node.runTimerHidden = false;
         node.running = false;
+        if(node.task)node.task.status=node.images.length>=node.task.count?'done':'running';
         node.title = node.images.length > 1 ? (kind === 'video' ? 'Videos' : kind === 'audio' ? 'Audios' : kind === 'text' ? 'Texts' : 'Group') : (kind === 'video' ? 'Video' : kind === 'audio' ? 'Audio' : kind === 'text' ? 'Text' : 'Image');
         if(node.images.length > 1 && (!Number.isFinite(Number(node.scale)) || Number(node.scale) === MEDIA_NODE_DEFAULT_SCALE || Number(node.scale) === MEDIA_GROUP_PREVIOUS_DEFAULT_SCALE)) node.scale = MEDIA_GROUP_DEFAULT_SCALE;
         else node.scale = mediaNodeDefaultScale(node);
@@ -15224,6 +15252,11 @@ async function resumeSmartPendingNode(node, logContext={}){
             render();
             scheduleSave();
         } catch(e) {
+            if(e?.smartTaskQueryPending){
+                node.running=false;
+                if(node.task){node.task.status='failed';node.task.error='任务仍被保留，重试将继续查询结果';}
+                render();scheduleSave();return;
+            }
             if(e && e.jimengPending && e.submitId){
                 node.pendingTasks = smartPendingTasks(node).filter(item => item.taskId !== task.taskId);
                 setNodeJimengPending(node, e);
@@ -15255,6 +15288,7 @@ async function resumeSmartPendingNode(node, logContext={}){
                     delete node.h;
                 }
             }
+            if(node.task){node.task.status='failed';node.task.error=String(e.message||e).slice(0,240)}
             failures.push(e);
             logTaskFailure(e.message || tr('smart.errRunFailed'), task);
             if(e && typeof e === 'object') e.smartGenerationLogged = true;
@@ -15263,13 +15297,21 @@ async function resumeSmartPendingNode(node, logContext={}){
             scheduleSave();
         }
     }));
+    if(node.task && !smartPendingTasks(node).length){
+        node.task.status=(node.images||[]).length>=node.task.count?'done':'failed';
+        if(node.task.status==='failed')node.task.error=failures[0]?.message||'部分图片未生成，可重试失败项';
+        render();scheduleSave();
+    }
     if(failures.length && !(node.images || []).length){
         throw failures[0];
     }
 }
 function resumeSmartPendingTasks(){
     nodes.filter(node => smartPendingTasks(node).length).forEach(node => {
-        resumeSmartPendingNode(node);
+        resumeSmartPendingNode(node).catch(error => {
+            if(node.task){node.task.status='failed';node.task.error=String(error.message||error).slice(0,240);}
+            render();scheduleSave();
+        });
     });
 }
 function updateSelectionBox(event){
@@ -16161,7 +16203,7 @@ window.addEventListener('keydown', e => {
     }
     if((e.ctrlKey || e.metaKey) && key === 'z' && !isEditableTarget(e.target)){
         e.preventDefault();
-        performUndo();
+        if(e.shiftKey) performRedo(); else performUndo();
         return;
     }
     if((e.key === 'Delete' || e.key === 'Backspace') && (selectedId || selectedIds.length) && !isEditableTarget(e.target)){
@@ -16888,24 +16930,22 @@ document.getElementById('imageEditStage').addEventListener('wheel', event => {
             return;
         }
         const oldZoom = previewZoom;
-        const factor = event.deltaY < 0 ? 1.12 : 1 / 1.12;
-        previewZoom = Math.max(0.05, previewZoom * factor);
-        const frame = document.getElementById('previewFrame');
-        const rect = frame?.getBoundingClientRect();
-        if(rect){
-            const originX = event.clientX - rect.left - rect.width / 2;
-            const originY = event.clientY - rect.top - rect.height / 2;
+        const factor = JinniPreviewZoom.factor(event);
+        previewZoom = Math.max(0.05, Math.min(16, previewZoom * factor));
+        const stage = document.getElementById('previewStage');
+        if(stage){
+            const point = JinniPreviewZoom.point(event, stage);
             const ratio = previewZoom / oldZoom;
-            previewPan.x -= originX * (ratio - 1);
-            previewPan.y -= originY * (ratio - 1);
+            previewPan.x -= (point.x - stage.clientWidth / 2 - previewPan.x) * (ratio - 1);
+            previewPan.y -= (point.y - stage.clientHeight / 2 - previewPan.y) * (ratio - 1);
         }
-        applyPreviewTransform();
+        JinniPreviewZoom.render('smart-preview', applyPreviewTransform);
         return;
     }
     if(imageEditMode === 'grid' && gridOperationMode === 'join'){
         const stage = event.currentTarget;
         const oldZoom = imageEditZoom;
-        const factor = event.deltaY < 0 ? 1.12 : 1 / 1.12;
+        const factor = JinniPreviewZoom.factor(event);
         imageEditZoom = Math.max(0.15, Math.min(6.0, imageEditZoom * factor));
         const stageRect = stage.getBoundingClientRect();
         const mx = event.clientX - stageRect.left;
@@ -16922,7 +16962,7 @@ document.getElementById('imageEditStage').addEventListener('wheel', event => {
     }
     const stage = event.currentTarget;
     const oldZoom = imageEditZoom;
-    const factor = event.deltaY < 0 ? 1.12 : 1 / 1.12;
+    const factor = JinniPreviewZoom.factor(event);
     imageEditZoom = Math.max(0.15, Math.min(6.0, imageEditZoom * factor));
     const stageRect = stage.getBoundingClientRect();
     const mx = event.clientX - stageRect.left;
@@ -16987,3 +17027,8 @@ window.onload = async () => {
     syncApiKindToggleVisibility();
     render();
 };
+
+// Preserve the same world center when the navigation changes available space.
+(() => {let width=shell.clientWidth,height=shell.clientHeight;
+ new ResizeObserver(()=>{const w=shell.clientWidth,h=shell.clientHeight;if(w&&h&&width&&height&&canvas){viewport.x+=(w-width)/2;viewport.y+=(h-height)/2;applyViewport()}if(w&&h){width=w;height=h}}).observe(shell);
+})();

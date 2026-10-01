@@ -8,8 +8,8 @@
     <script>
         (function(){
             try {
-                var theme = localStorage.getItem('studio_theme') || localStorage.getItem('canvas_theme') || 'light';
-                if(theme === 'dark') {
+                var theme = localStorage.getItem('studio_theme') || localStorage.getItem('canvas_theme') || 'system';
+                if(theme === 'dark' || (theme === 'system' && matchMedia('(prefers-color-scheme: dark)').matches)) {
                     document.documentElement.classList.add('studio-theme-dark');
                     document.documentElement.classList.add('theme-dark');
                 }
@@ -18,9 +18,10 @@
     </script>
     <script src="/static/vendor/js/tailwindcss-cdn.js?v=2026.07.4.2.1783154122"></script>
     <script src="/static/vendor/js/lucide.js?v=2026.07.4.2.1783154122"></script>
-    <script src="/static/js/theme.js?v=2026.07.4.2.1783154122"></script>
-    <script src="/static/js/i18n.js?v=2026.07.4.2.1784104411"></script>
-    <script src="/static/js/image-preview.js?v=2026.07.4.2.1783154122"></script>
+    <script src="/static/js/preview-zoom.js?v=2026.07.4.2.1790798458"></script>
+    <script src="/static/js/theme.js?v=2026.07.4.2.1790798458"></script>
+    <script src="/static/js/i18n.js?v=2026.07.4.2.1790798458"></script>
+    <script src="/static/js/image-preview.js?v=2026.07.4.2.1790798458"></script>
     <script src="/static/js/history-bulk-manager.js?v=2026.07.4.2.1783154122"></script>
     <link rel="stylesheet" href="/static/css/image-mentions.css?v=2026.07.4.2.1784552837">
     <style>
@@ -166,7 +167,7 @@
         html.studio-theme-dark .result-status,body.studio-theme-dark .result-status,html.studio-theme-dark .online-toast,body.studio-theme-dark .online-toast { background:rgba(20,27,39,.96); border-color:#334155; }
         html.studio-theme-dark .result-status h3,body.studio-theme-dark .result-status h3,html.studio-theme-dark .online-toast strong,body.studio-theme-dark .online-toast strong { color:#f1f5f9; }
     </style>
-<link rel="stylesheet" href="/static/css/jinni-ui.css?v=2026.07.4.2">
+<link rel="stylesheet" href="/static/css/jinni-ui.css?v=2026.07.4.2.1790798844">
 </head>
 <body>
     <div class="container-box min-h-screen flex flex-col">

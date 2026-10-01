@@ -8,8 +8,8 @@
     <script>
         (function(){
             try {
-                var theme = localStorage.getItem('studio_theme') || localStorage.getItem('canvas_theme') || 'light';
-                if(theme === 'dark') {
+                var theme = localStorage.getItem('studio_theme') || localStorage.getItem('canvas_theme') || 'system';
+                if(theme === 'dark' || (theme === 'system' && matchMedia('(prefers-color-scheme: dark)').matches)) {
                     document.documentElement.classList.add('studio-theme-dark');
                     document.documentElement.classList.add('theme-dark');
                 }
@@ -17,10 +17,11 @@
         })();
     </script>
     <script src="/static/vendor/js/lucide.js?v=2026.07.4.2.1790691011"></script>
-    <script src="/static/js/theme.js?v=2026.07.4.2.1790691011"></script>
+    <script src="/static/js/preview-zoom.js?v=2026.07.4.2.1790798458"></script>
+    <script src="/static/js/theme.js?v=2026.07.4.2.1790798458"></script>
     <link rel="stylesheet" href="/static/css/theme.css?v=2026.07.4.2.1790691011">
     <link rel="stylesheet" href="/static/css/inspiration-space.css?v=2026.07.4.2.1790695718">
-<link rel="stylesheet" href="/static/css/jinni-ui.css?v=2026.07.4.2">
+<link rel="stylesheet" href="/static/css/jinni-ui.css?v=2026.07.4.2.1790798844">
 </head>
 <body>
     <main class="insp-shell">
@@ -61,7 +62,7 @@
                 <div id="emptyState" class="empty-state" hidden>
                     <i data-lucide="sparkles"></i>
                     <h2>暂无灵感图像</h2>
-                    <p>从在线生图或无限画布的图片预览里点击「加入灵感空间」，这里会保存独立副本和生成参数。</p>
+                    <p>从在线生图或传统画布的图片预览里点击「加入灵感空间」，这里会保存独立副本和生成参数。</p>
                 </div>
                 <div id="galleryGrid" class="gallery-grid"></div>
             </section>

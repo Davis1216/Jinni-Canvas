@@ -2,7 +2,7 @@
     if(!window.StudioI18n) return;
     window.StudioI18n.register({
         "smart.title": { zh: "智能画布", en: "Smart Canvas" },
-        "smart.engineApi": { zh: "API生成", en: "API" },
+        "smart.engineApi": { zh: "图像生成", en: "API" },
         "smart.engineVolcengine": { zh: "火山引擎", en: "Volcengine" },
         "smart.engineMs": { zh: "Modelscope生成", en: "Modelscope" },
         "smart.engineComfy": { zh: "ComfyUI生成", en: "ComfyUI" },
@@ -218,7 +218,7 @@
         "smart.toastUploadFail": { zh: "素材上传失败", en: "Media upload failed" },
         "smart.toastApiSettingsFail": { zh: "API 设置加载失败", en: "Failed to load API settings" },
         "smart.toastCanvasFail": { zh: "智能画布加载失败", en: "Failed to load smart canvas" },
-        "smart.errNoApiModel": { zh: "请先选择可用的 API 生图模型", en: "Please select an available API image model" },
+        "smart.errNoApiModel": { zh: "请先选择可用的 图像生成模型", en: "Please select an available API image model" },
         "smart.errNoVideoModel": { zh: "请先选择视频模型", en: "Please select a video model" },
         "smart.errNoOutImages": { zh: "没有返回图片", en: "No images returned" },
         "smart.errNoOutVideos": { zh: "没有返回视频", en: "No videos returned" },

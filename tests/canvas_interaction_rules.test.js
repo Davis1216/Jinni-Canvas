@@ -2,18 +2,18 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const rules = require('../static/js/canvas-interaction-rules.js');
 
-test('image generators require an explicit image output choice', () => {
+test('image generators accept single image and image group outputs', () => {
     assert.deepEqual(rules.allowedOutputKinds('generator', 'image'), ['single-image', 'image-group']);
     assert.deepEqual(rules.requiredOutputKinds('generator', 'image'), ['single-image', 'image-group']);
 });
 
-test('video and LTX Director only accept general output', () => {
-    assert.deepEqual(rules.allowedOutputKinds('video', 'general'), ['general']);
-    assert.deepEqual(rules.requiredOutputKinds('ltxDirector', 'general'), ['general']);
+test('video and LTX Director accept video and legacy general output', () => {
+    assert.deepEqual(rules.allowedOutputKinds('video', 'general'), ['video','general']);
+    assert.deepEqual(rules.requiredOutputKinds('ltxDirector', 'general'), ['video','general']);
 });
 
 test('dynamic RunningHub workflows require a lossless general output', () => {
-    assert.deepEqual(rules.allowedOutputKinds('rh', 'unknown'), ['single-image', 'image-group', 'general']);
+    assert.deepEqual(rules.allowedOutputKinds('rh', 'unknown'), ['single-image', 'image-group', 'text', 'video', 'general']);
     assert.deepEqual(rules.requiredOutputKinds('rh', 'unknown'), ['general']);
     assert.deepEqual(rules.requiredOutputKinds('rh', 'video'), ['general']);
 });
@@ -38,3 +38,5 @@ test('LLM accepts either text or connected media as request input', () => {
     assert.equal(rules.hasLLMRequestInput('   ', [], ['/output/reference.mp4']), true);
     assert.equal(rules.hasLLMRequestInput('', [], []), false);
 });
+
+test('LLM accepts explicit text and legacy general outputs',()=>assert.deepEqual(rules.allowedOutputKinds('llm'),['text','general']));

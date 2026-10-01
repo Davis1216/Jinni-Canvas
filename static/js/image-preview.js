@@ -28,7 +28,7 @@
                 width: 100%;
                 height: 100%;
                 object-fit: contain;
-                transition: transform .12s ease-out;
+                transition: none;
                 transform-origin: 0 0;
                 -webkit-user-drag: none;
                 user-select: none;
@@ -85,20 +85,19 @@
             e.preventDefault();
             e.stopPropagation();
             const rect = container.getBoundingClientRect();
-            const lx = e.clientX - rect.left;
-            const ly = e.clientY - rect.top;
+            const {x:lx,y:ly} = JinniPreviewZoom.point(e, container);
             const before = {
                 x: (lx - pan.x) / zoom,
                 y: (ly - pan.y) / zoom
             };
-            const factor = e.deltaY > 0 ? 0.9 : 1.1;
+            const factor = JinniPreviewZoom.factor(e);
             const nz = Math.max(minZoom, Math.min(maxZoom, zoom * factor));
             zoom = nz;
             pan = nz <= 1.001 ? { x:0, y:0 } : {
                 x: lx - before.x * nz,
                 y: ly - before.y * nz
             };
-            apply();
+            JinniPreviewZoom.render(container, apply);
         }
 
         function onDown(e){

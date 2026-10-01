@@ -103,14 +103,14 @@ def test_canvas_input_changes_refresh_every_connected_consumer():
     assert "generatedImageRefs(n).filter(ref => ref.kind === 'image')" in CANVAS_JS
 
 
-def test_output_nodes_are_explicitly_typed_and_required_before_api_calls():
+def test_output_nodes_are_explicitly_typed_and_automatically_created():
     for kind in ("single-image", "image-group", "general"):
         assert kind in CANVAS_JS
-    for label in ("单图输出", "图组输出", "通用输出"):
+    for label in ("单图输出", "图组输出", "文本输出", "视频输出"):
         assert label in CANVAS_HTML
     assert "function requireOutputConnection(" in CANVAS_JS
     assert "function normalizeCanvasOutputGraph(" in CANVAS_JS
-    assert "const missingOutputs = order.map" in CANVAS_JS
+    assert "const missingOutputs = order.map" not in CANVAS_JS
     assert "CANVAS_GENERATOR_TYPES.includes(from.type))" in CANVAS_JS
     assert "return to.type === 'output' && outputAcceptsSource(to, from);" in CANVAS_JS
 

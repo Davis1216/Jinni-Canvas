@@ -3,7 +3,7 @@
     const mac = /Mac|iPhone|iPad/.test(navigator.platform);
     const definitions = [
         ['image','上传图片','I'],['prompt','提示词','P'],['loop','循环','L'],['output','输出节点菜单','O'],
-        ['llm','LLM 节点','M'],['generate','API 生图','G'],['video','视频生成','V'],['group','组合成组','Mod+G'],
+        ['llm','LLM 节点','M'],['generate','图像生成','G'],['video','视频生成','V'],['group','组合成组','Mod+G'],
         ['effects','背景与动效','E'],['transfer','导入导出工作流','W'],['library','素材库','B'],['logs','日志','J'],
         ['selectAll','全选工作流','Mod+A'],['undo','撤销','Mod+Z'],['redo','重做','Mod+Shift+Z'],
         ['delete','删除所选',mac?'Backspace':'Delete'],['settings','设置','Mod+,'],['copy','复制','Mod+C'],['paste','粘贴','Mod+V'],

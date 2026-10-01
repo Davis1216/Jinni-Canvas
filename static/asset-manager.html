@@ -8,8 +8,8 @@
     <script>
         (function(){
             try {
-                var theme = localStorage.getItem('studio_theme') || localStorage.getItem('canvas_theme') || 'light';
-                if(theme === 'dark') {
+                var theme = localStorage.getItem('studio_theme') || localStorage.getItem('canvas_theme') || 'system';
+                if(theme === 'dark' || (theme === 'system' && matchMedia('(prefers-color-scheme: dark)').matches)) {
                     document.documentElement.classList.add('studio-theme-dark');
                     document.documentElement.classList.add('theme-dark');
                 }
@@ -17,10 +17,11 @@
         })();
     </script>
     <script src="/static/vendor/js/lucide.js?v=2026.07.4.2.1783154122"></script>
-    <script src="/static/js/theme.js?v=2026.07.4.2.1783154122"></script>
+    <script src="/static/js/preview-zoom.js?v=2026.07.4.2.1790798458"></script>
+    <script src="/static/js/theme.js?v=2026.07.4.2.1790798458"></script>
     <link rel="stylesheet" href="/static/css/theme.css?v=2026.07.4.2.1783154122">
     <link rel="stylesheet" href="/static/css/asset-manager.css?v=2026.07.4.2.1784279086">
-<link rel="stylesheet" href="/static/css/jinni-ui.css?v=2026.07.4.2">
+<link rel="stylesheet" href="/static/css/jinni-ui.css?v=2026.07.4.2.1790798844">
 </head>
 <body>
     <div class="asset-page">
@@ -48,7 +49,7 @@
 
     <input id="assetUploadInput" type="file" accept="image/*,video/*,audio/*,.json,.zip,application/json,application/zip" multiple hidden>
     <input id="promptPackInput" type="file" accept=".json,.jinni-prompts.json,application/json" hidden>
-    <script src="/static/js/asset-manager.js?v=2026.07.4.2.1784279086"></script>
+    <script src="/static/js/asset-manager.js?v=2026.07.4.2.1790800162"></script>
 <script src="/static/js/jinni-ui.js?v=2026.07.4.2"></script>
 </body>
 </html>

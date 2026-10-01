@@ -14,8 +14,8 @@
     <script>
         (function(){
             try {
-                var theme = localStorage.getItem('studio_theme') || localStorage.getItem('canvas_theme') || 'light';
-                if(theme === 'dark') {
+                var theme = localStorage.getItem('studio_theme') || localStorage.getItem('canvas_theme') || 'system';
+                if(theme === 'dark' || (theme === 'system' && matchMedia('(prefers-color-scheme: dark)').matches)) {
                     document.documentElement.classList.add('studio-theme-dark');
                     document.documentElement.classList.add('theme-dark');
                 }
@@ -24,8 +24,9 @@
         })();
     </script>
     <script src="/static/vendor/js/tailwindcss-cdn.js?v=2026.07.4.2.1790691011"></script>
-    <script src="/static/js/theme.js?v=2026.07.4.2.1790691011"></script>
-    <script src="/static/js/i18n.js?v=2026.07.4.2.1790691011"></script>
+    <script src="/static/js/preview-zoom.js?v=2026.07.4.2.1790798458"></script>
+    <script src="/static/js/theme.js?v=2026.07.4.2.1790798458"></script>
+    <script src="/static/js/i18n.js?v=2026.07.4.2.1790798458"></script>
     <style>
         @import url('/static/vendor/css/fonts.css?v=2026.07.4.2.1790691011');
 
@@ -136,7 +137,7 @@
 
         .app-shell {
             display: flex;
-            padding-left: calc(80px * var(--studio-ui-scale, 1));
+            padding-left: 0;
             width: 100%;
             height: 100vh;
             background: var(--bg);
@@ -146,7 +147,8 @@
 
         /* 侧边栏 */
         .sidebar {
-            position: absolute;
+            position: relative;
+            flex-shrink: 0;
             left: 0;
             top: 0;
             width: 80px;
@@ -1357,7 +1359,7 @@
             max-width: 42px;
         }
     </style>
-<link rel="stylesheet" href="/static/css/jinni-ui.css?v=2026.07.4.2">
+<link rel="stylesheet" href="/static/css/jinni-ui.css?v=2026.07.4.2.1790798844">
 </head>
 
 <body>
@@ -1365,7 +1367,7 @@
     <div class="app-shell">
         <aside class="sidebar" id="studioSidebar">
             <button class="logo-ring mb-12" id="sidebarLogoToggle" type="button" onclick="toggleSidebarPinned(event)" aria-pressed="false" title="固定导航栏">
-                <div class="w-1.5 h-1.5 rounded-full transition-colors" id="logo-dot" style="background:var(--text)"></div>
+                <svg class="jc-logo" viewBox="0 0 40 40" width="32" height="32" fill="none" aria-label="Jinni Canvas"><path d="M8 10h13v16c0 8-12 8-12 0" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M33 12a10 10 0 1 0 0 16" stroke="currentColor" stroke-width="3.4" stroke-linecap="round"/></svg>
             </button>
 
             <nav>
@@ -1376,7 +1378,7 @@
                         <rect x="14" y="14" width="7" height="7"></rect>
                         <rect x="3" y="14" width="7" height="7"></rect>
                     </svg>
-                    <span class="nav-text" data-i18n="nav.canvas">无限画布</span>
+                    <span class="nav-text" data-i18n="nav.canvas">传统画布</span>
                 </div>
                 <div class="nav-item" onclick="switchUI(this, 'inspiration-space')">
                     <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1455,11 +1457,11 @@
         </script>
 
         <main class="stage">
-            <iframe id="frame-canvas" data-src="/static/canvas-list.html?v=2026.07.4.2.1790746525" class="active"></iframe>
-            <iframe id="frame-inspiration-space" data-src="/static/inspiration-space.html?v=2026.07.4.2.1790747846" scrolling="yes"></iframe>
-            <iframe id="frame-asset-manager" data-src="/static/asset-manager.html?v=2026.07.4.2.1790732367" scrolling="yes"></iframe>
-            <iframe id="frame-usage-dashboard" data-src="/static/usage-dashboard.html?v=2026.07.4.2.1790732367" scrolling="yes"></iframe>
-            <iframe id="frame-api-settings" data-src="/static/api-settings.html?v=2026.07.4.2.1790698546" scrolling="yes"></iframe>
+            <iframe id="frame-canvas" data-src="/static/canvas-list.html?v=2026.07.4.2.1790799993" class="active"></iframe>
+            <iframe id="frame-inspiration-space" data-src="/static/inspiration-space.html?v=2026.07.4.2.1790799993" scrolling="yes"></iframe>
+            <iframe id="frame-asset-manager" data-src="/static/asset-manager.html?v=2026.07.4.2.1790800705" scrolling="yes"></iframe>
+            <iframe id="frame-usage-dashboard" data-src="/static/usage-dashboard.html?v=2026.07.4.2.1790799993" scrolling="yes"></iframe>
+            <iframe id="frame-api-settings" data-src="/static/api-settings.html?v=2026.07.4.2.1790800705" scrolling="yes"></iframe>
         </main>
     </div>
 
@@ -1797,15 +1799,15 @@
             // 标签随当前主题切换：暗色时提示切到白天，亮色时提示切到黑夜
             const label = document.querySelector('#theme-toggle-btn .side-pill-text');
             if (label) {
-                const key = dark ? 'common.lightMode' : 'common.darkMode';
-                label.dataset.i18n = key;
-                if (window.StudioI18n) label.textContent = window.StudioI18n.t(key);
+                label.removeAttribute('data-i18n');
+                label.textContent = {light:'浅色',dark:'深色',system:'跟随系统'}[StudioTheme.getMode()];
+                document.getElementById('theme-toggle-btn').title='主题：'+label.textContent+'（点击切换）';
             }
         }
 
         function toggleTheme() {
-            const current = window.StudioTheme ? window.StudioTheme.get() : 'light';
-            broadcastTheme(current === 'dark' ? 'light' : 'dark');
+            const modes=['light','dark','system'];
+            broadcastTheme(modes[(modes.indexOf(StudioTheme.getMode())+1)%3]);
         }
 
         function syncLanguageToFrame(frame) {
@@ -1826,6 +1828,7 @@
         // listen for theme changes triggered by theme.js
         window.addEventListener('studio-theme-change', (e) => {
             updateThemeIcon(e.detail.theme);
+            document.querySelectorAll('iframe').forEach(syncThemeToFrame);
         });
 
         window.addEventListener('studio-ui-scale-change', () => {
@@ -2546,8 +2549,8 @@
         }
     </script>
 <script src="/static/js/jinni-ui.js?v=2026.07.4.2"></script>
-<script src="/static/js/jinni-shortcuts.js?v=2026.07.4.2"></script>
-<script src="/static/js/jinni-settings.js?v=2026.07.4.2"></script>
+<script src="/static/js/jinni-shortcuts.js?v=2026.07.4.2.1790800162"></script>
+<script src="/static/js/jinni-settings.js?v=2026.07.4.2.1790798458"></script>
 </body>
 
 </html>

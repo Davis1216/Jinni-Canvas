@@ -33,7 +33,7 @@
         "nav.gpt": { zh: "头脑风暴", en: "Brainstorming" },
         "nav.knowledgeBase": { zh: "知识库", en: "Knowledge Base" },
         "nav.usageDashboard": { zh: "仪表盘", en: "Dashboard" },
-        "nav.canvas": { zh: "无限画布", en: "Infinite Canvas" },
+        "nav.canvas": { zh: "传统画布", en: "Infinite Canvas" },
         "nav.assetManager": { zh: "素材库", en: "Assets" },
         "bulk.manage": { zh: "管理", en: "Manage" },
         "bulk.selectAll": { zh: "全选", en: "Select All" },

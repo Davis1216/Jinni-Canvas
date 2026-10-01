@@ -3,7 +3,7 @@
     if(typeof module === 'object' && module.exports) module.exports = api;
     if(root) root.CanvasInteractionRules = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this, function(){
-    const OUTPUT_KINDS = Object.freeze(['single-image', 'image-group', 'general']);
+    const OUTPUT_KINDS = Object.freeze(['single-image', 'image-group', 'text', 'video', 'general']);
     const VIEWPORT_MIN_SCALE = 0.06;
     const VIEWPORT_MAX_SCALE = 3;
 
@@ -15,7 +15,8 @@
     }
 
     function allowedOutputKinds(nodeType, mediaKind='unknown'){
-        if(nodeType === 'llm' || nodeType === 'video' || nodeType === 'ltxDirector') return ['general'];
+        if(nodeType === 'llm') return ['text','general'];
+        if(nodeType === 'video' || nodeType === 'ltxDirector') return ['video','general'];
         if(nodeType === 'rh') return [...OUTPUT_KINDS];
         if(['generator', 'msgen', 'comfy'].includes(nodeType)) return ['single-image', 'image-group'];
         return [];

@@ -46,7 +46,7 @@ class CanvasInteractionRuleTests(unittest.TestCase):
     def test_output_choice_is_prominent_and_runninghub_config_is_lazy(self):
         self.assertIn('id="toolbarOutputBtn"', CANVAS_HTML)
         self.assertIn("openToolbarOutputMenu", CANVAS_JS)
-        for label in ("单图输出", "图组输出", "通用输出"):
+        for label in ("单图输出", "图组输出", "文本输出", "视频输出"):
             self.assertIn(label, CANVAS_HTML)
         load_config = CANVAS_JS.split("async function loadConfig(){", 1)[1].split("// 监听 API 设置页面", 1)[0]
         self.assertNotIn("rhWorkflowIds", load_config)

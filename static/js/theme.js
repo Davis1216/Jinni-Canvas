@@ -5,10 +5,11 @@
     const SCALE_OPTIONS = ['auto', '60', '65', '70', '75', '80', '85', '90', '95', '100', '115', '125', '140'];
 
     function currentTheme(){
-        return localStorage.getItem(KEY) || localStorage.getItem(LEGACY_KEY) || 'light';
+        try { return localStorage.getItem(KEY) || localStorage.getItem(LEGACY_KEY) || 'system'; } catch(e) { return 'system'; }
     }
 
-    function applyTheme(theme){
+    function applyTheme(theme=currentTheme()){
+        if(theme === 'system') theme = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
         const next = theme === 'dark' ? 'dark' : 'light';
         const dark = next === 'dark';
         document.documentElement.classList.toggle('studio-theme-dark', dark);
@@ -231,10 +232,11 @@
 
     window.StudioTheme = {
         key: KEY,
-        get: currentTheme,
+        get: () => currentTheme() === 'system' ? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : currentTheme(),
+        getMode: currentTheme,
         apply: applyTheme,
         set(theme){
-            const next = theme === 'dark' ? 'dark' : 'light';
+            const next = ['dark','light','system'].includes(theme) ? theme : 'system';
             localStorage.setItem(KEY, next);
             localStorage.setItem(LEGACY_KEY, next);
             applyTheme(next);
@@ -250,6 +252,7 @@
         set: setScaleMode
     };
 
+    matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if(currentTheme() === 'system') applyTheme('system'); });
     applyTheme(currentTheme());
     applyScale(currentScaleMode());
 
