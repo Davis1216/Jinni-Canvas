@@ -595,6 +595,7 @@ function openCreateDialog(worldPt){
     document.body.appendChild(el);
     createDialog=el;
     const kind='classic';
+    el.querySelector('.ws-create-cancel').addEventListener('click',closeCreateDialog);
     el.addEventListener('cancel',e=>{ if(el.dataset.pending==='true') e.preventDefault(); });
     el.addEventListener('click',e=>{
         const r=el.getBoundingClientRect();

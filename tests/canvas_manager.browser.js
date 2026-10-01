@@ -58,10 +58,22 @@ async (page) => {
     check(await page.locator('#boardWorld .ws-create-card').count()===0,'Create form must not occupy board space');
     await page.locator('.ws-create-input').fill('新画布');
     check(await page.locator('[data-kind="smart"]').count()===0,'Only classic canvas is available');
+    await page.locator('.ws-create-cancel').click();
+    await page.waitForTimeout(50);
+    check(await page.locator('dialog[open]').count()===0,'Cancel must dismiss the create dialog');
+    check(posts.length===0,'Cancel must not create a canvas');
+    await page.locator('#newCanvasBtn').click();
+    await page.locator('.ws-create-input').fill('新画布');
     failCreate=true;
     await page.locator('.ws-create-confirm').click();
     await page.locator('.ws-create-error:not([hidden])').waitFor();
     check(await page.locator('.ws-create-input').inputValue()==='新画布','Failed creation must retain the input');
+    await page.locator('.ws-create-cancel').click();
+    await page.waitForTimeout(50);
+    check(await page.locator('dialog[open]').count()===0,'Cancel must work after a failed creation');
+    check(posts.length===1,'Cancelling a failed creation must not retry it');
+    await page.locator('#newCanvasBtn').click();
+    await page.locator('.ws-create-input').fill('新画布');
     failCreate=false;
     await page.locator('.ws-create-confirm').dblclick();
     await page.waitForTimeout(250);
@@ -77,6 +89,12 @@ async (page) => {
     await page.locator('#newCanvasBtn').click();
     await page.keyboard.press('Escape');
     check(await page.locator('dialog[open]').count()===0,'Escape must dismiss the dialog');
+    await page.locator('#newCanvasBtn').click();
+    await page.locator('.ws-create-cancel').focus();
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(50);
+    check(await page.locator('dialog[open]').count()===0,'Keyboard activation must cancel the dialog');
+    check(posts.length===2,'Keyboard cancellation must not submit the form');
     for(const width of [360,480,760,1280]){
         await page.setViewportSize({width,height:700});
         await page.waitForTimeout(100);
