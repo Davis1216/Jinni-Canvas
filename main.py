@@ -38,6 +38,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, Response, StreamingResponse, JSONResponse
 from pydantic import BaseModel, Field
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 
 # Windows embeddable Python uses python310._pth isolation and does not add the
 # launched script's directory to sys.path. Register the project root explicitly
@@ -129,12 +130,14 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(GZipMiddleware, minimum_size=1024)
 
 @app.middleware("http")
 async def add_no_cache_headers(request: Request, call_next):
     response = await call_next(request)
     path = request.url.path
-    if path.startswith("/static") or path == "/" or path.endswith(".html") or path.endswith(".js") or path.endswith(".css"):
+    # 针对代码与页面保持无缓存以便热更新调试，但静态媒体与资产允许正常利用客户端缓存
+    if path == "/" or path.endswith(".html") or path.endswith(".js") or path.endswith(".css"):
         response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
         response.headers["Pragma"] = "no-cache"
         response.headers["Expires"] = "0"

@@ -16083,9 +16083,8 @@ function handleCanvasContextMenu(e){
     openCreateMenu(e.clientX, e.clientY);
 }
 
+// 统一顶层调度，避免同一右键事件在冒泡链上重复执行三次
 window.addEventListener('contextmenu', handleCanvasContextMenu, false);
-document.addEventListener('contextmenu', handleCanvasContextMenu, false);
-if(board) board.addEventListener('contextmenu', handleCanvasContextMenu, false);
 board.addEventListener('mousedown', e => {
     if(e.button !== 0) return;
     if(e.target.closest?.('#createMenu, #linkCreateMenu, #nodeInputMenu, #nodeOutputMenu, #imageNodeMenu, #nodeContextMenu, .zoom-dock, .bottom-dock')) return;
@@ -16167,9 +16166,8 @@ function handleCanvasWheel(e){
     scheduleViewportWheelRender();
 }
 
+// 仅在顶层 window 统一委托监听，避免 DOM 冒泡路径上重复触发三次
 window.addEventListener('wheel', handleCanvasWheel, { passive: false });
-document.addEventListener('wheel', handleCanvasWheel, { passive: false });
-if(board) board.addEventListener('wheel', handleCanvasWheel, { passive: false });
 board.addEventListener('dragover', e => {
     if(e.target.closest?.('.image-node')){
         dropOverlay.classList.remove('active');
